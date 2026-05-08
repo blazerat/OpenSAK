@@ -89,6 +89,8 @@ STRINGS: dict[str, str] = {
     # ── Toolbar ───────────────────────────────────────────────────────────────
     "toolbar_filter":               "Filter",
     "toolbar_clear_filter":         "Clear filter",
+    "toolbar_filter_combo_tooltip":  "Select saved filter",
+    "toolbar_filter_combo_none":     "None",
     "toolbar_refresh":              "Refresh",
 
     # ── Status bar ────────────────────────────────────────────────────────────
@@ -149,6 +151,15 @@ STRINGS: dict[str, str] = {
     "filter_tab_dates":             "Dates",
     "filter_tab_attributes":        "Attributes",
     "filter_tab_where":             "Where",
+    "filter_tab_misc":             "Other",
+    "filter_geo_group":            "Geographic location",
+    "filter_country_label":        "Country",
+    "filter_state_label":          "State/Region",
+    "filter_county_label":         "County",
+    "filter_user_flag_group":      "User Flag",
+    "filter_dnf_group":            "DNF (Did Not Find)",
+    "filter_fav_points_group":     "Favorite points",
+    "filter_found_date_group":     "Found by me date",
     "filter_where_description":     "Filter caches with a raw SQL WHERE clause against the caches table.",
     "filter_where_sql_placeholder": "e.g.  difficulty >= 4 AND terrain >= 4",
     "filter_where_info_tooltip":    "Show available columns and examples",

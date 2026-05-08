@@ -92,6 +92,8 @@ STRINGS: dict[str, str] = {
     # ── Toolbar ───────────────────────────────────────────────────────────────
     "toolbar_filter":               "Filter",
     "toolbar_clear_filter":         "Filter wissen",
+    "toolbar_filter_combo_tooltip":  "Opgeslagen filter selecteren",
+    "toolbar_filter_combo_none":     "Geen",
     "toolbar_refresh":              "Vernieuwen",
 
     # ── Status bar ────────────────────────────────────────────────────────────
@@ -152,6 +154,15 @@ STRINGS: dict[str, str] = {
     "filter_tab_dates":             "Datums",
     "filter_tab_attributes":        "Attributen",
     "filter_tab_where":             "Waar",
+    "filter_tab_misc":             "Overige",
+    "filter_geo_group":            "Geografische locatie",
+    "filter_country_label":        "Land",
+    "filter_state_label":          "Staat/Regio",
+    "filter_county_label":         "Gemeente",
+    "filter_user_flag_group":      "Gebruikersvlag",
+    "filter_dnf_group":            "DNF (Niet gevonden)",
+    "filter_fav_points_group":     "Favorietpunten",
+    "filter_found_date_group":     "Door mij gevonden datum",
     "filter_where_description":     "Filter caches met een SQL WHERE-clausule op de caches-tabel.",
     "filter_where_sql_placeholder": "bijv.  difficulty >= 4 AND terrain >= 4",
     "filter_where_info_tooltip":    "Beschikbare kolommen en voorbeelden weergeven",

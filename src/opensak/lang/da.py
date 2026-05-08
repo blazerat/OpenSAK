@@ -89,6 +89,8 @@ STRINGS: dict[str, str] = {
     # ── Toolbar ───────────────────────────────────────────────────────────────
     "toolbar_filter":               "Filter",
     "toolbar_clear_filter":         "Nulstil filter",
+    "toolbar_filter_combo_tooltip":  "Vælg gemt filter",
+    "toolbar_filter_combo_none":     "Ingen",
     "toolbar_refresh":              "Opdater",
 
     # ── Statusbar ─────────────────────────────────────────────────────────────
@@ -149,6 +151,15 @@ STRINGS: dict[str, str] = {
     "filter_tab_dates":             "Datoer",
     "filter_tab_attributes":        "Attributter",
     "filter_tab_where":             "Where",
+    "filter_tab_misc":             "Øvrigt",
+    "filter_geo_group":            "Geografisk placering",
+    "filter_country_label":        "Land",
+    "filter_state_label":          "Stat/Region",
+    "filter_county_label":         "Kommune",
+    "filter_user_flag_group":      "User Flag",
+    "filter_dnf_group":            "DNF (Did Not Find)",
+    "filter_fav_points_group":     "Favorit points",
+    "filter_found_date_group":     "Fundet af mig dato",
     "filter_where_description":     "Filtrer geocaches med en rå SQL WHERE-betingelse mod caches-tabellen.",
     "filter_where_sql_placeholder": "f.eks.  difficulty >= 4 AND terrain >= 4",
     "filter_where_info_tooltip":    "Vis tilgængelige kolonner og eksempler",

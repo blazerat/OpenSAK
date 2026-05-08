@@ -261,57 +261,70 @@ class AvailabilityFilter(BaseFilter):
 
 
 class CountryFilter(BaseFilter):
-    """Keep caches in any of *countries*."""
+    """Keep caches whose country contains *text* (case-insensitive)."""
     filter_type = "country"
 
-    def __init__(self, countries: list[str]):
-        self.countries = [c.strip() for c in countries]
+    def __init__(self, text: str):
+        self.text = text.strip()
 
     def matches(self, cache: Cache) -> bool:
-        return cache.country in self.countries
+        if not cache.country:
+            return False
+        return self.text.lower() in cache.country.lower()
 
     def to_dict(self) -> dict:
-        return {"filter_type": self.filter_type, "countries": self.countries}
+        return {"filter_type": self.filter_type, "text": self.text}
 
     @classmethod
     def from_dict(cls, data: dict) -> "CountryFilter":
-        return cls(data["countries"])
+        # Backwards compat: old format used "countries" list
+        if "countries" in data:
+            return cls(data["countries"][0] if data["countries"] else "")
+        return cls(data.get("text", ""))
 
 
 class StateFilter(BaseFilter):
-    """Keep caches in any of *states*."""
+    """Keep caches whose state/region contains *text* (case-insensitive)."""
     filter_type = "state"
 
-    def __init__(self, states: list[str]):
-        self.states = [s.strip() for s in states]
+    def __init__(self, text: str):
+        self.text = text.strip()
 
     def matches(self, cache: Cache) -> bool:
-        return cache.state in self.states
+        if not cache.state:
+            return False
+        return self.text.lower() in cache.state.lower()
 
     def to_dict(self) -> dict:
-        return {"filter_type": self.filter_type, "states": self.states}
+        return {"filter_type": self.filter_type, "text": self.text}
 
     @classmethod
     def from_dict(cls, data: dict) -> "StateFilter":
-        return cls(data["states"])
+        if "states" in data:
+            return cls(data["states"][0] if data["states"] else "")
+        return cls(data.get("text", ""))
 
 
 class CountyFilter(BaseFilter):
-    """Keep caches in any of *counties*."""
+    """Keep caches whose county contains *text* (case-insensitive)."""
     filter_type = "county"
 
-    def __init__(self, counties: list[str]):
-        self.counties = [c.strip() for c in counties]
+    def __init__(self, text: str):
+        self.text = text.strip()
 
     def matches(self, cache: Cache) -> bool:
-        return cache.county in self.counties
+        if not cache.county:
+            return False
+        return self.text.lower() in cache.county.lower()
 
     def to_dict(self) -> dict:
-        return {"filter_type": self.filter_type, "counties": self.counties}
+        return {"filter_type": self.filter_type, "text": self.text}
 
     @classmethod
     def from_dict(cls, data: dict) -> "CountyFilter":
-        return cls(data["counties"])
+        if "counties" in data:
+            return cls(data["counties"][0] if data["counties"] else "")
+        return cls(data.get("text", ""))
 
 
 class NameFilter(BaseFilter):
@@ -542,6 +555,184 @@ class HasCorrectedFilter(BaseFilter):
         return cls()
 
 
+class UserFlagFilter(BaseFilter):
+    """Keep caches based on user_flag value."""
+    filter_type = "user_flag"
+
+    def __init__(self, flagged: bool):
+        self.flagged = flagged
+
+    def matches(self, cache: Cache) -> bool:
+        return bool(cache.user_flag) == self.flagged
+
+    def to_dict(self) -> dict:
+        return {"filter_type": self.filter_type, "flagged": self.flagged}
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "UserFlagFilter":
+        return cls(flagged=data["flagged"])
+
+
+class DnfFilter(BaseFilter):
+    """Keep caches based on DNF (Did Not Find) flag."""
+    filter_type = "dnf"
+
+    def __init__(self, has_dnf: bool):
+        self.has_dnf = has_dnf
+
+    def matches(self, cache: Cache) -> bool:
+        return bool(cache.dnf) == self.has_dnf
+
+    def to_dict(self) -> dict:
+        return {"filter_type": self.filter_type, "has_dnf": self.has_dnf}
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "DnfFilter":
+        return cls(has_dnf=data["has_dnf"])
+
+
+class FavoritePointsFilter(BaseFilter):
+    """Keep caches with favorite_points within [min_pts, max_pts]."""
+    filter_type = "favorite_points"
+
+    def __init__(self, min_pts: int = 0, max_pts: int = 9999):
+        self.min_pts = min_pts
+        self.max_pts = max_pts
+
+    def matches(self, cache: Cache) -> bool:
+        pts = cache.favorite_points or 0
+        return self.min_pts <= pts <= self.max_pts
+
+    def to_dict(self) -> dict:
+        return {
+            "filter_type": self.filter_type,
+            "min_pts": self.min_pts,
+            "max_pts": self.max_pts,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "FavoritePointsFilter":
+        return cls(min_pts=data.get("min_pts", 0), max_pts=data.get("max_pts", 9999))
+
+
+class FoundByMeDateFilter(BaseFilter):
+    """Keep caches found by the user within an optional date range."""
+    filter_type = "found_by_me_date"
+
+    def __init__(
+        self,
+        from_date: Optional[datetime] = None,
+        to_date: Optional[datetime] = None,
+    ):
+        self.from_date = from_date
+        self.to_date = to_date
+
+    def matches(self, cache: Cache) -> bool:
+        if not cache.found:
+            return False
+        fd = cache.found_date
+        if fd is None:
+            return True  # found but no date — include
+        fd = fd.replace(tzinfo=None)
+        if self.from_date and fd < self.from_date:
+            return False
+        if self.to_date and fd > self.to_date:
+            return False
+        return True
+
+    def to_dict(self) -> dict:
+        return {
+            "filter_type": self.filter_type,
+            "from_date": self.from_date.isoformat() if self.from_date else None,
+            "to_date": self.to_date.isoformat() if self.to_date else None,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "FoundByMeDateFilter":
+        return cls(
+            from_date=datetime.fromisoformat(data["from_date"]) if data.get("from_date") else None,
+            to_date=datetime.fromisoformat(data["to_date"]) if data.get("to_date") else None,
+        )
+
+
+class DnfDateFilter(BaseFilter):
+    """Keep caches with a DNF date within an optional date range."""
+    filter_type = "dnf_date"
+
+    def __init__(
+        self,
+        from_date: Optional[datetime] = None,
+        to_date: Optional[datetime] = None,
+    ):
+        self.from_date = from_date
+        self.to_date = to_date
+
+    def matches(self, cache: Cache) -> bool:
+        if not cache.dnf:
+            return False
+        dd = cache.dnf_date
+        if dd is None:
+            return True
+        dd = dd.replace(tzinfo=None)
+        if self.from_date and dd < self.from_date:
+            return False
+        if self.to_date and dd > self.to_date:
+            return False
+        return True
+
+    def to_dict(self) -> dict:
+        return {
+            "filter_type": self.filter_type,
+            "from_date": self.from_date.isoformat() if self.from_date else None,
+            "to_date": self.to_date.isoformat() if self.to_date else None,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "DnfDateFilter":
+        return cls(
+            from_date=datetime.fromisoformat(data["from_date"]) if data.get("from_date") else None,
+            to_date=datetime.fromisoformat(data["to_date"]) if data.get("to_date") else None,
+        )
+
+
+class LastLogDateFilter(BaseFilter):
+    """Keep caches whose last_log_date falls within an optional date range."""
+    filter_type = "last_log_date"
+
+    def __init__(
+        self,
+        from_date: Optional[datetime] = None,
+        to_date: Optional[datetime] = None,
+    ):
+        self.from_date = from_date
+        self.to_date = to_date
+
+    def matches(self, cache: Cache) -> bool:
+        ld = cache.last_log_date
+        if ld is None:
+            return False
+        ld = ld.replace(tzinfo=None)
+        if self.from_date and ld < self.from_date:
+            return False
+        if self.to_date and ld > self.to_date:
+            return False
+        return True
+
+    def to_dict(self) -> dict:
+        return {
+            "filter_type": self.filter_type,
+            "from_date": self.from_date.isoformat() if self.from_date else None,
+            "to_date": self.to_date.isoformat() if self.to_date else None,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "LastLogDateFilter":
+        return cls(
+            from_date=datetime.fromisoformat(data["from_date"]) if data.get("from_date") else None,
+            to_date=datetime.fromisoformat(data["to_date"]) if data.get("to_date") else None,
+        )
+
+
 # ── Filter registry (for deserialisation) ─────────────────────────────────────
 
 FILTER_REGISTRY: dict[str, type[BaseFilter]] = {
@@ -567,7 +758,13 @@ FILTER_REGISTRY: dict[str, type[BaseFilter]] = {
     "has_corrected": HasCorrectedFilter,
     "premium":       PremiumFilter,
     "non_premium":   NonPremiumFilter,
-    "where_clause":  WhereClauseFilter,
+    "where_clause":       WhereClauseFilter,
+    "user_flag":          UserFlagFilter,
+    "dnf":                DnfFilter,
+    "favorite_points":    FavoritePointsFilter,
+    "found_by_me_date":   FoundByMeDateFilter,
+    "dnf_date":           DnfDateFilter,
+    "last_log_date":      LastLogDateFilter,
 }
 
 

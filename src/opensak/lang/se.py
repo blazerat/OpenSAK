@@ -89,6 +89,8 @@ STRINGS: dict[str, str] = {
     # ── Toolbar ───────────────────────────────────────────────────────────────
     "toolbar_filter":               "Filtrera",
     "toolbar_clear_filter":         "Rensa filter",
+    "toolbar_filter_combo_tooltip":  "Välj sparat filter",
+    "toolbar_filter_combo_none":     "Inget",
     "toolbar_refresh":              "Uppdatera",
 
     # ── Status bar ────────────────────────────────────────────────────────────
@@ -149,6 +151,15 @@ STRINGS: dict[str, str] = {
     "filter_tab_dates":             "Datum",
     "filter_tab_attributes":        "Attribut",
     "filter_tab_where":             "Where",
+    "filter_tab_misc":             "Övrigt",
+    "filter_geo_group":            "Geografisk plats",
+    "filter_country_label":        "Land",
+    "filter_state_label":          "Stat/Region",
+    "filter_county_label":         "Kommun",
+    "filter_user_flag_group":      "Användarflagga",
+    "filter_dnf_group":            "DNF (Hittades ej)",
+    "filter_fav_points_group":     "Favoritpoäng",
+    "filter_found_date_group":     "Datum funnet av mig",
     "filter_where_description":     "Filtrera geocacher med en SQL WHERE-sats direkt mot tabellen caches.",
     "filter_where_sql_placeholder": "t.ex.  difficulty >= 4 AND terrain >= 4",
     "filter_where_info_tooltip":    "Visa tillgängliga kolumner och exempel",

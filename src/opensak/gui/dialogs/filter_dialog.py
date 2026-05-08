@@ -1,10 +1,12 @@
 """
 src/opensak/gui/dialogs/filter_dialog.py — Komplet filter dialog.
 
-Tre faner:
-1. Generelt  — navn, type, D/T, afstand, fundet, tilgængelighed osv.
-2. Datoer    — udlagt dato, seneste log dato
-3. Attributter — alle Groundspeak attributter
+Fem faner:
+1. Generelt    — navn, type, D/T, afstand, fundet, tilgængelighed osv.
+2. Datoer      — udlagt dato, fundet dato, DNF dato, seneste log dato
+3. Øvrigt      — land/stat/kommune, user flag, DNF, favorit points
+4. Attributter — alle Groundspeak attributter
+5. Where       — rå SQL WHERE-betingelse
 
 Understøtter gem/indlæs filterprofiler.
 """
@@ -33,11 +35,14 @@ from opensak.filters.engine import (
     DifficultyFilter, TerrainFilter,
     FoundFilter, NotFoundFilter,
     AvailableFilter, ArchivedFilter, AvailabilityFilter,
-    CountryFilter, NameFilter, GcCodeFilter,
+    CountryFilter, StateFilter, CountyFilter,
+    NameFilter, GcCodeFilter,
     PlacedByFilter, OwnerFilter, DistanceFilter,
     AttributeFilter, HasTrackableFilter, HasCorrectedFilter,
     PremiumFilter, NonPremiumFilter,
     WhereClauseFilter,
+    UserFlagFilter, DnfFilter, FavoritePointsFilter,
+    FoundByMeDateFilter, DnfDateFilter, LastLogDateFilter,
     FilterProfile,
 )
 
@@ -262,10 +267,12 @@ class FilterDialog(QDialog):
         self._tabs = QTabWidget()
         self._general_tab = self._build_general_tab()
         self._dates_tab = self._build_dates_tab()
+        self._misc_tab = self._build_misc_tab()
         self._attributes_tab = self._build_attributes_tab()
         self._where_tab = self._build_where_tab()
         self._tabs.addTab(self._general_tab, tr("settings_tab_general"))
         self._tabs.addTab(self._dates_tab, tr("filter_tab_dates"))
+        self._tabs.addTab(self._misc_tab, tr("filter_tab_misc"))
         self._tabs.addTab(self._attributes_tab, tr("filter_tab_attributes"))
         self._tabs.addTab(self._where_tab, tr("filter_tab_where"))
         layout.addWidget(self._tabs)
@@ -483,67 +490,140 @@ class FilterDialog(QDialog):
         layout.setSpacing(10)
         layout.setContentsMargins(10, 10, 10, 10)
 
+        def _make_date_group(title: str):
+            """Hjælper: lav en from/to dato-gruppe og returner (group, from_en, from_dt, to_en, to_dt)."""
+            group = QGroupBox(title)
+            grp_layout = QFormLayout(group)
+            from_en = QCheckBox(tr("filter_from"))
+            from_dt = QDateEdit()
+            from_dt.setCalendarPopup(True)
+            from_dt.setDate(QDate(2000, 1, 1))
+            from_dt.setEnabled(False)
+            from_en.toggled.connect(from_dt.setEnabled)
+            row1 = QHBoxLayout()
+            row1.addWidget(from_en)
+            row1.addWidget(from_dt)
+            row1.addStretch()
+            grp_layout.addRow(row1)
+            to_en = QCheckBox(tr("filter_to"))
+            to_dt = QDateEdit()
+            to_dt.setCalendarPopup(True)
+            to_dt.setDate(QDate.currentDate())
+            to_dt.setEnabled(False)
+            to_en.toggled.connect(to_dt.setEnabled)
+            row2 = QHBoxLayout()
+            row2.addWidget(to_en)
+            row2.addWidget(to_dt)
+            row2.addStretch()
+            grp_layout.addRow(row2)
+            return group, from_en, from_dt, to_en, to_dt
+
         # Udlagt dato
-        hidden_group = QGroupBox(tr("filter_hidden_date_group"))
-        hidden_layout = QFormLayout(hidden_group)
+        g, self._hidden_from_enabled, self._hidden_from, self._hidden_to_enabled, self._hidden_to = \
+            _make_date_group(tr("filter_hidden_date_group"))
+        layout.addRow(g)
 
-        self._hidden_from_enabled = QCheckBox(tr("filter_from"))
-        self._hidden_from = QDateEdit()
-        self._hidden_from.setCalendarPopup(True)
-        self._hidden_from.setDate(QDate(2000, 1, 1))
-        self._hidden_from.setEnabled(False)
-        self._hidden_from_enabled.toggled.connect(self._hidden_from.setEnabled)
-        hidden_row1 = QHBoxLayout()
-        hidden_row1.addWidget(self._hidden_from_enabled)
-        hidden_row1.addWidget(self._hidden_from)
-        hidden_row1.addStretch()
-        hidden_layout.addRow(hidden_row1)
+        # Fundet af mig dato
+        g, self._found_from_enabled, self._found_from, self._found_to_enabled, self._found_to = \
+            _make_date_group(tr("filter_found_date_group"))
+        layout.addRow(g)
 
-        self._hidden_to_enabled = QCheckBox(tr("filter_to"))
-        self._hidden_to = QDateEdit()
-        self._hidden_to.setCalendarPopup(True)
-        self._hidden_to.setDate(QDate.currentDate())
-        self._hidden_to.setEnabled(False)
-        self._hidden_to_enabled.toggled.connect(self._hidden_to.setEnabled)
-        hidden_row2 = QHBoxLayout()
-        hidden_row2.addWidget(self._hidden_to_enabled)
-        hidden_row2.addWidget(self._hidden_to)
-        hidden_row2.addStretch()
-        hidden_layout.addRow(hidden_row2)
-
-        layout.addRow(hidden_group)
+        # DNF dato
+        g, self._dnf_date_from_enabled, self._dnf_date_from, self._dnf_date_to_enabled, self._dnf_date_to = \
+            _make_date_group(tr("col_dnf_date"))
+        layout.addRow(g)
 
         # Seneste log dato
-        log_group = QGroupBox(tr("filter_log_date_group"))
-        log_layout = QFormLayout(log_group)
-
-        self._log_from_enabled = QCheckBox(tr("filter_from"))
-        self._log_from = QDateEdit()
-        self._log_from.setCalendarPopup(True)
-        self._log_from.setDate(QDate(2000, 1, 1))
-        self._log_from.setEnabled(False)
-        self._log_from_enabled.toggled.connect(self._log_from.setEnabled)
-        log_row1 = QHBoxLayout()
-        log_row1.addWidget(self._log_from_enabled)
-        log_row1.addWidget(self._log_from)
-        log_row1.addStretch()
-        log_layout.addRow(log_row1)
-
-        self._log_to_enabled = QCheckBox(tr("filter_to"))
-        self._log_to = QDateEdit()
-        self._log_to.setCalendarPopup(True)
-        self._log_to.setDate(QDate.currentDate())
-        self._log_to.setEnabled(False)
-        self._log_to_enabled.toggled.connect(self._log_to.setEnabled)
-        log_row2 = QHBoxLayout()
-        log_row2.addWidget(self._log_to_enabled)
-        log_row2.addWidget(self._log_to)
-        log_row2.addStretch()
-        log_layout.addRow(log_row2)
-
-        layout.addRow(log_group)
+        g, self._log_from_enabled, self._log_from, self._log_to_enabled, self._log_to = \
+            _make_date_group(tr("filter_log_date_group"))
+        layout.addRow(g)
 
         return widget
+
+    def _build_misc_tab(self) -> QWidget:
+        """Øvrigt filter fane — land, user flag, DNF, favorit points."""
+        outer = QWidget()
+        outer_layout = QVBoxLayout(outer)
+        outer_layout.setContentsMargins(0, 0, 0, 0)
+
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+
+        inner = QWidget()
+        layout = QFormLayout(inner)
+        layout.setSpacing(8)
+        layout.setContentsMargins(10, 10, 10, 10)
+
+        # Land / Stat / Kommune
+        geo_group = QGroupBox(tr("filter_geo_group"))
+        geo_layout = QFormLayout(geo_group)
+
+        self._country_filter = QLineEdit()
+        self._country_filter.setPlaceholderText(tr("filter_contains_placeholder"))
+        geo_layout.addRow(tr("filter_country_label"), self._country_filter)
+
+        self._state_filter = QLineEdit()
+        self._state_filter.setPlaceholderText(tr("filter_contains_placeholder"))
+        geo_layout.addRow(tr("filter_state_label"), self._state_filter)
+
+        self._county_filter = QLineEdit()
+        self._county_filter.setPlaceholderText(tr("filter_contains_placeholder"))
+        geo_layout.addRow(tr("filter_county_label"), self._county_filter)
+
+        layout.addRow(geo_group)
+
+        # User Flag
+        flag_group = QGroupBox(tr("filter_user_flag_group"))
+        flag_layout = QHBoxLayout(flag_group)
+        self._flag_yes = QCheckBox(tr("yes"))
+        self._flag_yes.setChecked(True)
+        self._flag_no  = QCheckBox(tr("no"))
+        self._flag_no.setChecked(True)
+        flag_layout.addWidget(self._flag_yes)
+        flag_layout.addWidget(self._flag_no)
+        flag_layout.addStretch()
+        layout.addRow(flag_group)
+
+        # DNF
+        dnf_group = QGroupBox(tr("filter_dnf_group"))
+        dnf_layout = QHBoxLayout(dnf_group)
+        self._dnf_yes = QCheckBox(tr("yes"))
+        self._dnf_yes.setChecked(True)
+        self._dnf_no  = QCheckBox(tr("no"))
+        self._dnf_no.setChecked(True)
+        dnf_layout.addWidget(self._dnf_yes)
+        dnf_layout.addWidget(self._dnf_no)
+        dnf_layout.addStretch()
+        layout.addRow(dnf_group)
+
+        # Favorit points
+        fav_group = QGroupBox(tr("filter_fav_points_group"))
+        fav_layout = QHBoxLayout(fav_group)
+        self._fav_enabled = QCheckBox(tr("filter_enable"))
+        self._fav_enabled.toggled.connect(self._on_fav_toggled)
+        fav_layout.addWidget(self._fav_enabled)
+        fav_layout.addWidget(QLabel(tr("filter_from")))
+        self._fav_min = QDoubleSpinBox()
+        self._fav_min.setRange(0, 9999)
+        self._fav_min.setDecimals(0)
+        self._fav_min.setValue(0)
+        self._fav_min.setEnabled(False)
+        fav_layout.addWidget(self._fav_min)
+        fav_layout.addWidget(QLabel(tr("filter_to")))
+        self._fav_max = QDoubleSpinBox()
+        self._fav_max.setRange(0, 9999)
+        self._fav_max.setDecimals(0)
+        self._fav_max.setValue(9999)
+        self._fav_max.setEnabled(False)
+        fav_layout.addWidget(self._fav_max)
+        fav_layout.addStretch()
+        layout.addRow(fav_group)
+
+        inner.setLayout(layout)
+        scroll.setWidget(inner)
+        outer_layout.addWidget(scroll)
+        return outer
 
     def _build_attributes_tab(self) -> QWidget:
         """Attributter filter fane med scrollbar."""
@@ -748,6 +828,10 @@ class FilterDialog(QDialog):
     def _on_dist_toggled(self, checked: bool) -> None:
         self._dist_max.setEnabled(checked)
 
+    def _on_fav_toggled(self, checked: bool) -> None:
+        self._fav_min.setEnabled(checked)
+        self._fav_max.setEnabled(checked)
+
     def _enable_all_types(self) -> None:
         for cb in self._type_checks.values():
             cb.setChecked(True)
@@ -785,8 +869,24 @@ class FilterDialog(QDialog):
     def _reset_dates(self) -> None:
         self._hidden_from_enabled.setChecked(False)
         self._hidden_to_enabled.setChecked(False)
+        self._found_from_enabled.setChecked(False)
+        self._found_to_enabled.setChecked(False)
+        self._dnf_date_from_enabled.setChecked(False)
+        self._dnf_date_to_enabled.setChecked(False)
         self._log_from_enabled.setChecked(False)
         self._log_to_enabled.setChecked(False)
+
+    def _reset_misc(self) -> None:
+        self._country_filter.clear()
+        self._state_filter.clear()
+        self._county_filter.clear()
+        self._flag_yes.setChecked(True)
+        self._flag_no.setChecked(True)
+        self._dnf_yes.setChecked(True)
+        self._dnf_no.setChecked(True)
+        self._fav_enabled.setChecked(False)
+        self._fav_min.setValue(0)
+        self._fav_max.setValue(9999)
 
     def _reset_attributes(self) -> None:
         for ja_cb, nej_cb, ingen_cb in self._attr_boxes.values():
@@ -797,6 +897,7 @@ class FilterDialog(QDialog):
     def _reset_all(self) -> None:
         self._reset_general()
         self._reset_dates()
+        self._reset_misc()
         self._reset_attributes()
         if self._where_tab is not None:
             self._where_sql_general.clear()
@@ -811,6 +912,8 @@ class FilterDialog(QDialog):
             self._reset_general()
         elif tab is self._dates_tab:
             self._reset_dates()
+        elif tab is self._misc_tab:
+            self._reset_misc()
         elif tab is self._attributes_tab:
             self._reset_attributes()
 
@@ -901,24 +1004,18 @@ class FilterDialog(QDialog):
         if cc_yes and not cc_no:
             fs.add(HasCorrectedFilter())
 
-        # Datoer
+        # Datoer — hjælper til at konvertere QDate til datetime
+        def _qdate_to_dt(qdate, end_of_day=False) -> datetime:
+            return datetime(
+                qdate.year(), qdate.month(), qdate.day(),
+                23, 59, 59 if end_of_day else 0,
+            )
+
+        # Udlagt dato
         if self._hidden_from_enabled.isChecked() or self._hidden_to_enabled.isChecked():
             from opensak.filters.engine import BaseFilter
-            from_date = (
-                datetime(
-                    self._hidden_from.date().year(),
-                    self._hidden_from.date().month(),
-                    self._hidden_from.date().day()
-                ) if self._hidden_from_enabled.isChecked() else None
-            )
-            to_date = (
-                datetime(
-                    self._hidden_to.date().year(),
-                    self._hidden_to.date().month(),
-                    self._hidden_to.date().day(),
-                    23, 59, 59
-                ) if self._hidden_to_enabled.isChecked() else None
-            )
+            from_date = _qdate_to_dt(self._hidden_from.date()) if self._hidden_from_enabled.isChecked() else None
+            to_date   = _qdate_to_dt(self._hidden_to.date(), end_of_day=True) if self._hidden_to_enabled.isChecked() else None
 
             class HiddenDateFilter(BaseFilter):
                 filter_type = "hidden_date_range"
@@ -938,6 +1035,58 @@ class FilterDialog(QDialog):
                     return {"filter_type": self.filter_type}
 
             fs.add(HiddenDateFilter(from_date, to_date))
+
+        # Fundet af mig dato
+        if self._found_from_enabled.isChecked() or self._found_to_enabled.isChecked():
+            fs.add(FoundByMeDateFilter(
+                from_date=_qdate_to_dt(self._found_from.date()) if self._found_from_enabled.isChecked() else None,
+                to_date=_qdate_to_dt(self._found_to.date(), end_of_day=True) if self._found_to_enabled.isChecked() else None,
+            ))
+
+        # DNF dato
+        if self._dnf_date_from_enabled.isChecked() or self._dnf_date_to_enabled.isChecked():
+            fs.add(DnfDateFilter(
+                from_date=_qdate_to_dt(self._dnf_date_from.date()) if self._dnf_date_from_enabled.isChecked() else None,
+                to_date=_qdate_to_dt(self._dnf_date_to.date(), end_of_day=True) if self._dnf_date_to_enabled.isChecked() else None,
+            ))
+
+        # Seneste log dato
+        if self._log_from_enabled.isChecked() or self._log_to_enabled.isChecked():
+            fs.add(LastLogDateFilter(
+                from_date=_qdate_to_dt(self._log_from.date()) if self._log_from_enabled.isChecked() else None,
+                to_date=_qdate_to_dt(self._log_to.date(), end_of_day=True) if self._log_to_enabled.isChecked() else None,
+            ))
+
+        # Øvrigt — Land / Stat / Kommune
+        if self._country_filter.text().strip():
+            fs.add(CountryFilter(self._country_filter.text().strip()))
+        if self._state_filter.text().strip():
+            fs.add(StateFilter(self._state_filter.text().strip()))
+        if self._county_filter.text().strip():
+            fs.add(CountyFilter(self._county_filter.text().strip()))
+
+        # User Flag
+        flag_yes = self._flag_yes.isChecked()
+        flag_no  = self._flag_no.isChecked()
+        if flag_yes and not flag_no:
+            fs.add(UserFlagFilter(flagged=True))
+        elif flag_no and not flag_yes:
+            fs.add(UserFlagFilter(flagged=False))
+
+        # DNF
+        dnf_yes = self._dnf_yes.isChecked()
+        dnf_no  = self._dnf_no.isChecked()
+        if dnf_yes and not dnf_no:
+            fs.add(DnfFilter(has_dnf=True))
+        elif dnf_no and not dnf_yes:
+            fs.add(DnfFilter(has_dnf=False))
+
+        # Favorit points
+        if self._fav_enabled.isChecked():
+            fs.add(FavoritePointsFilter(
+                min_pts=int(self._fav_min.value()),
+                max_pts=int(self._fav_max.value()),
+            ))
 
         # Attributter
         attr_mode_and = self._attr_mode_all.isChecked()
@@ -1123,6 +1272,51 @@ class FilterDialog(QDialog):
             elif ftype == "where_clause":
                 if self._where_tab is not None:
                     self._where_sql_general.setPlainText(getattr(f, "sql", ""))
+            elif ftype == "country":
+                self._country_filter.setText(getattr(f, "text", ""))
+            elif ftype == "state":
+                self._state_filter.setText(getattr(f, "text", ""))
+            elif ftype == "county":
+                self._county_filter.setText(getattr(f, "text", ""))
+            elif ftype == "user_flag":
+                flagged = getattr(f, "flagged", True)
+                self._flag_yes.setChecked(flagged)
+                self._flag_no.setChecked(not flagged)
+            elif ftype == "dnf":
+                has_dnf = getattr(f, "has_dnf", True)
+                self._dnf_yes.setChecked(has_dnf)
+                self._dnf_no.setChecked(not has_dnf)
+            elif ftype == "favorite_points":
+                self._fav_enabled.setChecked(True)
+                self._fav_min.setValue(getattr(f, "min_pts", 0))
+                self._fav_max.setValue(getattr(f, "max_pts", 9999))
+            elif ftype == "found_by_me_date":
+                if getattr(f, "from_date", None):
+                    self._found_from_enabled.setChecked(True)
+                    d = f.from_date
+                    self._found_from.setDate(QDate(d.year, d.month, d.day))
+                if getattr(f, "to_date", None):
+                    self._found_to_enabled.setChecked(True)
+                    d = f.to_date
+                    self._found_to.setDate(QDate(d.year, d.month, d.day))
+            elif ftype == "dnf_date":
+                if getattr(f, "from_date", None):
+                    self._dnf_date_from_enabled.setChecked(True)
+                    d = f.from_date
+                    self._dnf_date_from.setDate(QDate(d.year, d.month, d.day))
+                if getattr(f, "to_date", None):
+                    self._dnf_date_to_enabled.setChecked(True)
+                    d = f.to_date
+                    self._dnf_date_to.setDate(QDate(d.year, d.month, d.day))
+            elif ftype == "last_log_date":
+                if getattr(f, "from_date", None):
+                    self._log_from_enabled.setChecked(True)
+                    d = f.from_date
+                    self._log_from.setDate(QDate(d.year, d.month, d.day))
+                if getattr(f, "to_date", None):
+                    self._log_to_enabled.setChecked(True)
+                    d = f.to_date
+                    self._log_to.setDate(QDate(d.year, d.month, d.day))
             # Andre/inline filtre ignoreres stille (fx gammel hidden_date)
 
     # ── Apply ─────────────────────────────────────────────────────────────────

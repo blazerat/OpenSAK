@@ -200,7 +200,7 @@ def test_archived_filter(tmp_db):
 
 def test_country_filter(tmp_db):
     with get_session() as s:
-        results = apply_filters(s, FilterSet().add(CountryFilter(["Denmark"])))
+        results = apply_filters(s, FilterSet().add(CountryFilter("Denmark")))
     for c in results:
         assert c.country == "Denmark"
     assert "GC00005" not in {c.gc_code for c in results}
@@ -208,7 +208,7 @@ def test_country_filter(tmp_db):
 
 def test_state_filter(tmp_db):
     with get_session() as s:
-        results = apply_filters(s, FilterSet().add(StateFilter(["Zealand"])))
+        results = apply_filters(s, FilterSet().add(StateFilter("Zealand")))
     codes = {c.gc_code for c in results}
     assert "GC00001" in codes
     assert "GC00002" in codes
@@ -217,7 +217,7 @@ def test_state_filter(tmp_db):
 
 def test_county_filter(tmp_db):
     with get_session() as s:
-        results = apply_filters(s, FilterSet().add(CountyFilter(["Copenhagen"])))
+        results = apply_filters(s, FilterSet().add(CountyFilter("Copenhagen")))
     codes = {c.gc_code for c in results}
     assert "GC00001" in codes
     assert "GC00002" in codes
@@ -402,9 +402,9 @@ def test_filter_serialisation_roundtrip():
         NotFoundFilter(),
         AvailableFilter(),
         ArchivedFilter(),
-        CountryFilter(["Denmark"]),
-        StateFilter(["Zealand"]),
-        CountyFilter(["Copenhagen"]),
+        CountryFilter("Denmark"),
+        StateFilter("Zealand"),
+        CountyFilter("Copenhagen"),
         NameFilter("traditional"),
         GcCodeFilter("GC123"),
         PlacedByFilter("owner"),

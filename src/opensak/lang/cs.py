@@ -89,6 +89,8 @@ STRINGS: dict[str, str] = {
     # ── Toolbar ───────────────────────────────────────────────────────────────
     "toolbar_filter":               "Filtr",
     "toolbar_clear_filter":         "Zrušit filtr",
+    "toolbar_filter_combo_tooltip":  "Vybrat uložený filtr",
+    "toolbar_filter_combo_none":     "Žádný",
     "toolbar_refresh":              "Obnovit",
 
     # ── Status bar ────────────────────────────────────────────────────────────
@@ -149,6 +151,15 @@ STRINGS: dict[str, str] = {
     "filter_tab_dates":             "Data",
     "filter_tab_attributes":        "Atributy",
     "filter_tab_where":             "Where",
+    "filter_tab_misc":             "Ostatní",
+    "filter_geo_group":            "Geografická poloha",
+    "filter_country_label":        "Země",
+    "filter_state_label":          "Stát/Kraj",
+    "filter_county_label":         "Okres",
+    "filter_user_flag_group":      "Uživatelský příznak",
+    "filter_dnf_group":            "DNF (Nenalezeno)",
+    "filter_fav_points_group":     "Oblíbené body",
+    "filter_found_date_group":     "Datum nalezení mnou",
     "filter_where_description":     "Filtrujte cache pomocí SQL klauzule WHERE přímo nad tabulkou caches.",
     "filter_where_sql_placeholder": "např.  difficulty >= 4 AND terrain >= 4",
     "filter_where_info_tooltip":    "Zobrazit dostupné sloupce a příklady",
