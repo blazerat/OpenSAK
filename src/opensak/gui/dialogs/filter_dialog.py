@@ -41,7 +41,7 @@ from opensak.filters.engine import (
     AttributeFilter, HasTrackableFilter, HasCorrectedFilter,
     PremiumFilter, NonPremiumFilter,
     WhereClauseFilter,
-    UserFlagFilter, DnfFilter, FavoritePointsFilter,
+    UserFlagFilter, DnfFilter, FtfFilter, FavoritePointsFilter,
     FoundByMeDateFilter, DnfDateFilter, LastLogDateFilter,
     FilterProfile,
 )
@@ -597,6 +597,18 @@ class FilterDialog(QDialog):
         dnf_layout.addStretch()
         layout.addRow(dnf_group)
 
+        # FTF
+        ftf_group = QGroupBox(tr("filter_ftf_group"))
+        ftf_layout = QHBoxLayout(ftf_group)
+        self._ftf_yes = QCheckBox(tr("yes"))
+        self._ftf_yes.setChecked(True)
+        self._ftf_no  = QCheckBox(tr("no"))
+        self._ftf_no.setChecked(True)
+        ftf_layout.addWidget(self._ftf_yes)
+        ftf_layout.addWidget(self._ftf_no)
+        ftf_layout.addStretch()
+        layout.addRow(ftf_group)
+
         # Favorit points
         fav_group = QGroupBox(tr("filter_fav_points_group"))
         fav_layout = QHBoxLayout(fav_group)
@@ -884,6 +896,8 @@ class FilterDialog(QDialog):
         self._flag_no.setChecked(True)
         self._dnf_yes.setChecked(True)
         self._dnf_no.setChecked(True)
+        self._ftf_yes.setChecked(True)
+        self._ftf_no.setChecked(True)
         self._fav_enabled.setChecked(False)
         self._fav_min.setValue(0)
         self._fav_max.setValue(9999)
@@ -1080,6 +1094,14 @@ class FilterDialog(QDialog):
             fs.add(DnfFilter(has_dnf=True))
         elif dnf_no and not dnf_yes:
             fs.add(DnfFilter(has_dnf=False))
+
+        # FTF
+        ftf_yes = self._ftf_yes.isChecked()
+        ftf_no  = self._ftf_no.isChecked()
+        if ftf_yes and not ftf_no:
+            fs.add(FtfFilter(has_ftf=True))
+        elif ftf_no and not ftf_yes:
+            fs.add(FtfFilter(has_ftf=False))
 
         # Favorit points
         if self._fav_enabled.isChecked():
@@ -1286,6 +1308,10 @@ class FilterDialog(QDialog):
                 has_dnf = getattr(f, "has_dnf", True)
                 self._dnf_yes.setChecked(has_dnf)
                 self._dnf_no.setChecked(not has_dnf)
+            elif ftype == "ftf":
+                has_ftf = getattr(f, "has_ftf", True)
+                self._ftf_yes.setChecked(has_ftf)
+                self._ftf_no.setChecked(not has_ftf)
             elif ftype == "favorite_points":
                 self._fav_enabled.setChecked(True)
                 self._fav_min.setValue(getattr(f, "min_pts", 0))

@@ -161,6 +161,7 @@ STRINGS: dict[str, str] = {
     "filter_county_label":         "Gemeente",
     "filter_user_flag_group":      "Gebruikersvlag",
     "filter_dnf_group":            "DNF (Niet gevonden)",
+    "filter_ftf_group":            "FTF (First to Find) 🥇",
     "filter_fav_points_group":     "Favorietpunten",
     "filter_found_date_group":     "Door mij gevonden datum",
     "filter_where_description":     "Filter caches met een SQL WHERE-clausule op de caches-tabel.",
@@ -556,6 +557,7 @@ STRINGS: dict[str, str] = {
     "wp_cb_found":                  "Door mij gevonden",
     "wp_cb_dnf":                    "DNF (Did Not Find)",
     "wp_cb_favorite":               "Favoriet ★",
+    "wp_cb_ftf":                    "FTF (First to Find)",
 
     # ── Filter dialog — GC code placeholder ──────────────────────────────────
     "filter_gc_placeholder":        "bijv. GC123",

@@ -158,6 +158,7 @@ STRINGS: dict[str, str] = {
     "filter_county_label":         "Okres",
     "filter_user_flag_group":      "Uživatelský příznak",
     "filter_dnf_group":            "DNF (Nenalezeno)",
+    "filter_ftf_group":            "FTF (První u keše) 🥇",
     "filter_fav_points_group":     "Oblíbené body",
     "filter_found_date_group":     "Datum nalezení mnou",
     "filter_where_description":     "Filtrujte cache pomocí SQL klauzule WHERE přímo nad tabulkou caches.",
@@ -555,6 +556,7 @@ STRINGS: dict[str, str] = {
     "wp_cb_found":                  "Nalezeno mnou",
     "wp_cb_dnf":                    "DNF (Nenalezeno)",
     "wp_cb_favorite":               "Oblíbené ★",
+    "wp_cb_ftf":                    "FTF (První u keše)",
 
     # ── Filter dialog — GC code placeholder ──────────────────────────────────
     "filter_gc_placeholder":        "např. GC123",

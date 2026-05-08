@@ -158,6 +158,7 @@ STRINGS: dict[str, str] = {
     "filter_county_label":         "Landkreis",
     "filter_user_flag_group":      "Benutzer-Flag",
     "filter_dnf_group":            "DNF (Nicht gefunden)",
+    "filter_ftf_group":            "FTF (First to Find) 🥇",
     "filter_fav_points_group":     "Favoritenpunkte",
     "filter_found_date_group":     "Von mir gefunden Datum",
     "filter_where_description":     "Geocaches mit einer SQL-WHERE-Klausel gegen die caches-Tabelle filtern.",
@@ -554,6 +555,7 @@ STRINGS: dict[str, str] = {
     "wp_cb_found":                  "Habe ich gefunden",
     "wp_cb_dnf":                    "DNF (Did Not Find)",
     "wp_cb_favorite":               "Favorit ★",
+    "wp_cb_ftf":                    "FTF (First to Find)",
 
     # ── Filter dialog — GC code placeholder ──────────────────────────────────
     "filter_gc_placeholder":        "z.B. GC123",

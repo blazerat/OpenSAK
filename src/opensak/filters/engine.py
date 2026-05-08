@@ -591,6 +591,24 @@ class DnfFilter(BaseFilter):
         return cls(has_dnf=data["has_dnf"])
 
 
+class FtfFilter(BaseFilter):
+    """Keep caches based on FTF (First to Find) flag."""
+    filter_type = "ftf"
+
+    def __init__(self, has_ftf: bool):
+        self.has_ftf = has_ftf
+
+    def matches(self, cache: Cache) -> bool:
+        return bool(cache.first_to_find) == self.has_ftf
+
+    def to_dict(self) -> dict:
+        return {"filter_type": self.filter_type, "has_ftf": self.has_ftf}
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "FtfFilter":
+        return cls(has_ftf=data["has_ftf"])
+
+
 class FavoritePointsFilter(BaseFilter):
     """Keep caches with favorite_points within [min_pts, max_pts]."""
     filter_type = "favorite_points"
@@ -761,6 +779,7 @@ FILTER_REGISTRY: dict[str, type[BaseFilter]] = {
     "where_clause":       WhereClauseFilter,
     "user_flag":          UserFlagFilter,
     "dnf":                DnfFilter,
+    "ftf":                FtfFilter,
     "favorite_points":    FavoritePointsFilter,
     "found_by_me_date":   FoundByMeDateFilter,
     "dnf_date":           DnfDateFilter,

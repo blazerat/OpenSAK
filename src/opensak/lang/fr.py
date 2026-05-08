@@ -158,6 +158,7 @@ STRINGS: dict[str, str] = {
     "filter_county_label":         "Département",
     "filter_user_flag_group":      "Drapeau utilisateur",
     "filter_dnf_group":            "DNF (Non trouvé)",
+    "filter_ftf_group":            "FTF (Premier trouveur) 🥇",
     "filter_fav_points_group":     "Points favoris",
     "filter_found_date_group":     "Date trouvé par moi",
     "filter_where_description":     "Filtrer les caches avec une clause SQL WHERE brute sur la table caches.",
@@ -554,6 +555,7 @@ STRINGS: dict[str, str] = {
     "wp_cb_found":                  "Trouvée par moi",
     "wp_cb_dnf":                    "DNF (Did Not Find)",
     "wp_cb_favorite":               "Favori ★",
+    "wp_cb_ftf":                    "FTF (Premier trouveur)",
 
     # ── Fenêtre de filtre — espace réservé du code GC ─────────────────────────
     "filter_gc_placeholder":        "ex. GC123",

@@ -158,6 +158,7 @@ STRINGS: dict[str, str] = {
     "filter_county_label":         "Kommun",
     "filter_user_flag_group":      "Användarflagga",
     "filter_dnf_group":            "DNF (Hittades ej)",
+    "filter_ftf_group":            "FTF (First to Find) 🥇",
     "filter_fav_points_group":     "Favoritpoäng",
     "filter_found_date_group":     "Datum funnet av mig",
     "filter_where_description":     "Filtrera geocacher med en SQL WHERE-sats direkt mot tabellen caches.",
@@ -554,6 +555,7 @@ STRINGS: dict[str, str] = {
     "wp_cb_found":                  "Hittad av mig",
     "wp_cb_dnf":                    "DNF (Did Not Find)",
     "wp_cb_favorite":               "Favorit ★",
+    "wp_cb_ftf":                    "FTF (First to Find)",
 
     # ── Filter dialog — GC code placeholder ──────────────────────────────────
     "filter_gc_placeholder":        "t.e.x. GC123",

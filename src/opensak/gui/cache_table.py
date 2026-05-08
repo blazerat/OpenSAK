@@ -408,28 +408,36 @@ class CacheTableModel(QAbstractTableModel):
 
     def flags(self, index: QModelIndex):
         base = super().flags(index)
-        if index.isValid() and self._columns[index.column()] == "user_flag":
+        if index.isValid() and self._columns[index.column()] in ("user_flag", "first_to_find"):
             return base | Qt.ItemFlag.ItemIsEditable
         return base
 
     def setData(self, index: QModelIndex, value, role=Qt.ItemDataRole.EditRole) -> bool:
-        """Toggle user_flag når brugeren klikker på Flag-kolonnen."""
+        """Toggle user_flag eller first_to_find når brugeren klikker på kolonnen."""
         if not index.isValid():
             return False
         col = self._columns[index.column()]
-        if col != "user_flag":
+        if col not in ("user_flag", "first_to_find"):
             return False
         cache = self._caches[index.row()]
-        new_flag = not bool(cache.user_flag)
         from opensak.db.database import get_session
         from opensak.db.models import Cache as CacheModel
-        with get_session() as session:
-            c = session.query(CacheModel).filter_by(gc_code=cache.gc_code).first()
-            if c:
-                c.user_flag = new_flag
-        cache.user_flag = new_flag
+        if col == "user_flag":
+            new_val = not bool(cache.user_flag)
+            with get_session() as session:
+                c = session.query(CacheModel).filter_by(gc_code=cache.gc_code).first()
+                if c:
+                    c.user_flag = new_val
+            cache.user_flag = new_val
+            self.flags_changed.emit()
+        else:  # first_to_find
+            new_val = not bool(cache.first_to_find)
+            with get_session() as session:
+                c = session.query(CacheModel).filter_by(gc_code=cache.gc_code).first()
+                if c:
+                    c.first_to_find = new_val
+            cache.first_to_find = new_val
         self.dataChanged.emit(index, index, [Qt.ItemDataRole.DisplayRole])
-        self.flags_changed.emit()
         return True
 
     def reload_columns(self) -> None:
@@ -838,11 +846,11 @@ class CacheTableView(QTableView):
         """)
 
     def mousePressEvent(self, event) -> None:
-        """Klik på user_flag-kolonnen toggler flaget direkte."""
+        """Klik på user_flag- eller first_to_find-kolonnen toggler feltet direkte."""
         index = self.indexAt(event.pos())
         if index.isValid():
             col = self._model._columns[index.column()]
-            if col == "user_flag" and event.button() == Qt.MouseButton.LeftButton:
+            if col in ("user_flag", "first_to_find") and event.button() == Qt.MouseButton.LeftButton:
                 self._model.setData(index, None)
                 return
         super().mousePressEvent(event)
