@@ -8,6 +8,42 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 For planned features and known issues see the [GitHub Issues list](https://github.com/AgreeDK/opensak/issues).
 
+## [1.13.7] — 2026-05-08
+
+### Added
+
+- **Filter profile dropdown in toolbar** — A new dropdown next to the 🔍 filter button lets you
+  switch between saved filter profiles instantly without opening the filter dialog. Selecting a
+  profile applies it immediately; selecting *None* clears the active filter. The active profile
+  is remembered per database and restored automatically on startup and when switching databases.
+
+- **New filter tab: Other** — A fifth tab has been added to the filter dialog with additional
+  filter options:
+  - **Country / State / County** — text contains search (case-insensitive)
+  - **User Flag** — filter on whether the user flag is set or not
+  - **DNF** — filter on Did Not Find status
+  - **Favorite points** — filter by a minimum/maximum favorite point count
+
+- **Extended Dates tab** — Two new date range filters have been added alongside the existing
+  *Hidden date* and *Last log date* filters:
+  - **Found by me date** — filter on when you personally found the cache
+  - **DNF date** — filter on when a DNF was recorded
+
+### Fixed
+
+- **Filter profile not persisted across restarts** — Selecting a filter profile from the toolbar
+  dropdown was not remembered when OpenSAK restarted. The active profile is now saved to
+  QSettings per database alongside the sort order and restored on next launch.
+
+- **Selecting "None" in filter dropdown did not update cache list** — Switching back to no filter
+  via the toolbar dropdown now immediately refreshes the cache list.
+
+- **Country / State / County filters returned no results** — These filters previously required
+  an exact match against a list. They now use case-insensitive *contains* search, consistent
+  with the Name and GC code filters.
+
+---
+
 ## [1.13.6] — 2026-05-07
 
 ### Added
@@ -185,282 +221,3 @@ For planned features and known issues see the [GitHub Issues list](https://githu
   databases. An adaptive debounce and minimum-character threshold reduce unnecessary queries while
   typing. Search settings (debounce delay and minimum characters) are available in the new
   *Advanced* tab in the Settings dialog.
-- **Column widths are remembered** (fixes #96) — Manual column width adjustments are now saved
-  and restored when the application is restarted.
-- **Larger Save button in filter dialog** (fixes #98) — The *Save* button in the filter dialog
-  is now larger and easier to click.
-
-### Fixed
-
-- **Home point not saved from Settings** (fixes #183) — Changes made to the home point in the
-  Settings dialog were not persisted. The home point is now saved correctly.
-- **Home point defaulting to Copenhagen** (fixes #183) — New databases incorrectly used
-  Copenhagen as the default home location instead of the location chosen during setup.
-- **Map not centred on home point at startup** (fixes #183) — The map now correctly centres on
-  the active home point when the application loads.
-- **Corrected coordinates** (fixes #73, #167) — Corrected coordinates from GPX files are now
-  imported and stored. Caches with corrected coordinates are marked with an indicator in the
-  cache list, and a new filter option lets you filter on whether a cache has corrected coordinates.
-- **WHERE filter tooltip not translated** (fixes #170) — The tooltip/popup for the WHERE filter
-  field was always shown in English. It is now translated in all 7 languages.
-
----
-
-## [1.12.0] — 2026-05-01
-
-### Fixed
-
-- **Attribute filter duplicates and missing header** (fixes #139) — The right-hand column in
-  the attribute filter now has a proper section header. Duplicate entries that appeared when
-  the filter dialog was opened more than once have been removed.
-- **Missing geocache attributes** (fixes #139) — Three additional attribute IDs were missing
-  after the initial fix: Jeeps (jeep tours), Drinking Water, and Livestock. All three are now
-  present with translations in all 7 languages.
-- **Database dialog — hardcoded strings** (fixes #149) — Several labels and button captions in
-  the Database Manager dialog were hardcoded in English and are now fully translated via `tr()`.
-- **Database dialog — path preview missing** (fixes #150) — The live path preview (folder +
-  database name + `.db`) was not shown when creating a new database. It now updates as you type.
-- **Database dialog — details label** (fixes #152) — The details/description label in the
-  Database Manager was untranslated. Now uses `tr()` correctly.
-- **Database dialog — selection lost on switch** (fixes #153) — Switching databases in the
-  Database Manager dialog caused the selection highlight to be lost. The active database is now
-  kept selected after a switch.
-- **Home point — Activate button not disabled** (fixes #162) — The *Activate* button was enabled
-  even when the selected home point was already the active one. It is now disabled when the point
-  is already active. Home points are also stored per database, so switching databases restores
-  the correct home point for that database.
-- **Status icon showed 'C' on macOS** (fixes #156) — A spurious `C` icon appeared in the status
-  column on macOS due to a platform-specific rendering difference. The icon is no longer shown.
-- **Home dropdown — duplicate marker** (fixes #163) — The home point dropdown in the toolbar
-  showed a double marker (★★) for the active entry. The selection colour was also hardcoded gray
-  instead of following the system theme. Both issues are now fixed.
-- **Edit home waypoint creates duplicate** (fixes #157) — Editing the name of an existing home
-  waypoint and saving created a new entry instead of updating the existing one. The save logic
-  now correctly identifies the existing record and updates it in place.
-
----
-
-## [1.11.18] — 2026-04-30
-### Fixed
-- Version string bump to 1.11.18 (1.11.16 was not updated)
-
----
-
-## [1.11.17] — 2026-04-30
-### Added
-- **Where-filter** (closes #17) — a powerful SQL-based OR filter that mirrors GSAK's
-  "Where" functionality. Instead of chaining multiple passes through the database,
-  a single filter expression combines any number of conditions (cache type, D/T,
-  hidden date, size, attributes, …) into one efficient query. Contributed by Fabio.
-- **Database switcher dropdown** in the toolbar (closes #17) — switch between databases
-  without opening the Database Manager dialog.
-
-### Fixed
-- **Lat/Lon columns** (fixes #84) — latitude and longitude are now shown in the correct
-  human-readable format (DMM / DMS / DD according to the user's preference) instead of
-  raw decimal degrees.
-- **Container sort** (fixes #90) — the Size/Container column now sorts in a logical order
-  (Nano → Micro → Small → Regular → Large → Very Large → Other) instead of alphabetically.
-- **Log counter** (fixes #87) — a new *Logs* column shows the total number of log entries
-  for each cache. The count is populated automatically for existing databases via a migration.
-- **Lab Cache label** — Lab Caches now show an `L` label in the size/type indicator column,
-  consistent with the labels used for other special cache types.
-
----
-
-## [1.11.16] — 2026-04-29
-### Fixed
-- Search field duplicated in filter dialog (fixes #86) — rolled back the change introduced
-  in #80 that caused the search field to appear twice.
-
----
-
-## [1.11.15] — 2026-04-29
-### Added
-- **Swedish translation** (`lang/se.py`) — contributed by Hans
-- **German translation** (`lang/de.py`) — contributed by Hans
-
----
-
-## [1.11.14] — 2026-04-28
-### Fixed
-- Unit and e2e test split introduced in v1.11.0 — corrected CI pipeline configuration
-
----
-
-## [1.11.0] — 2026-04-27
-### Added
-- Unit/e2e test infrastructure split — contributed by Fabio
-
----
-
-## [1.4.5] — 2026-04-04
-### Fixed
-- **Import result dialog hardcoded strings** (fixes #7) — dialog now uses `tr()` throughout
-
----
-
-## [1.4.4] — 2026-04-04
-### Added
-- **Czech translation** (`lang/cs.py`) — contributed by Michal Gavlík
-
----
-
-## [1.4.3] — 2026
-### Fixed
-- Security improvements and minor bug fixes
-
----
-
-## [1.4.2] — 2026
-### Fixed
-- GPX import: added support for `groundspeak/cache/1/0` namespace (used by My Finds PQ), resolving issue #2
-
----
-
-## [1.4.1] — 2026
-### Added
-- **Portuguese translation** (`lang/pt.py`) — contributed by Fabio
-- Translation completeness tests added
-
----
-
-## [1.4.0] — 2026
-### Added
-- **Trip Planner** — new dialog to plan a geocaching trip:
-  - **Radius tab** — select caches within a set distance from the active home point; sort by distance, difficulty, terrain, date or name
-  - **Route tab (A→B→…)** — find caches along a multi-point route (up to 10 waypoints); caches sorted in driving order along the route
-  - Route points can be typed in any coordinate format (DMM, DMS, DD) with live validation, or picked directly from saved home points
-  - Route points can be reordered with ▲/▼ buttons or drag-and-drop
-  - Common filters: max cache count, not-found only, available only
-  - **🗺️ Show on map** — opens a non-blocking map popup showing selected caches on an interactive OSM map
-  - Export selected caches directly to GPS device or GPX file
-- **Home points list** — replace single home coordinate with a named list (e.g. Home, Cottage, Hotel):
-  - Add, edit, activate and delete points from Settings
-  - Accepts any coordinate format (DMM, DMS, DD) with live validation; displays in your chosen format
-  - Active point marked with ★ in the list
-  - **Quick-switch dropdown** in the toolbar — switch active home point instantly without opening Settings
-  - Distance column and trip planner update immediately when home point changes
-
-### Fixed
-- Settings menu renamed from "Tools" to "Settings" to avoid duplicate "Tools" entry in menu bar
-
----
-
-## [1.3.5] — 2026
-### Added
-- Corrected coordinates now included as a filter option in the filter dialog
-
----
-
-## [1.3.4] — 2026
-### Fixed
-- Import of large GSAK exports no longer fails
-
----
-
-## [1.3.3] — 2026
-### Fixed
-- D/T filter not displaying correctly on smaller screens
-- Filter dialog resize and move behaviour corrected
-
----
-
-## [1.3.2] — 2026
-### Fixed
-- D/T filter display issue
-- Corrected coordinate display in detail panel
-
----
-
-## [1.3.1] — 2026
-### Added
-- **Corrected Coordinates** — add solved coordinates to mystery caches:
-  - Add corrected coordinate via right-click menu or detail panel
-  - Corrected waypoint shown on map with orange pin overlay
-  - Corrected coordinate used in GPS export
-
----
-
-## [1.3.0] — 2026
-### Added
-- **Geocaching Tools menu** — new dedicated menu in the menu bar with five geocaching utilities:
-  - **⇄ Coordinate Converter** (`Ctrl+K`) — convert between DD, DMM and DMS; open result in map
-  - **📐 Coordinate Projection** (`Ctrl+P`) — project a new coordinate from start point, bearing and distance
-  - **🔢 Digit Checksum** — sum all digits in a coordinate; shows N/S and E/W parts separately
-  - **⊕ Midpoint** — calculate the great-circle midpoint between two coordinates
-  - **📏 Distance & Bearing** — distance and azimuth (both directions) between two coordinates
-- **Coordinate format preference** in Settings — choose between DMM (default, geocaching standard), DMS and DD
-- **Coordinate converter button** (⇄) in the cache detail panel next to coordinates
-- All tools pre-fill with the currently selected cache's coordinates where applicable
-
----
-
-## [1.2.1] — 2026
-### Fixed
-- macOS release now ships as two separate installers (arm64 and x86_64) instead of a Universal Binary that exceeded GitHub's 2 GB file size limit
-
----
-
-## [1.2.0] — 2026
-### Added
-- **French translation** (`lang/fr.py`) — contributed by Pierre LEJEUNE (@theyoungstone)
-- `CONTRIBUTORS.md` — contributor credits
-
-### Fixed
-- Version number in About dialog now read dynamically from `__init__.py` — no longer hardcoded in translation files
-- Filter dialog now opens tall enough to show all options without manual resizing
-- GC code placeholder in filter dialog is now translated
-- Red "no device" hint text in GPS dialog now wraps correctly instead of being truncated
-- All hardcoded Danish strings in waypoint dialog replaced with `tr()` calls
-- Cancel/Save buttons in waypoint dialog now translated correctly in all languages
-
-### Changed
-- Default language on first launch changed from Danish to English
-
----
-
-## [1.1.0] — 2026
-### Added
-- **GitHub Actions CI/CD pipeline** — automatic builds on version tag push
-- **Windows installer** — `.exe` packaged with PyInstaller, distributed as `.zip`
-- **Linux AppImage** — single-file executable for all major distributions
-- **macOS installer** — `.dmg` for Apple Silicon (arm64) and Intel (x86_64)
-- **GPS export** — send caches directly to a Garmin GPS device via USB
-- **Delete GPX files on device** before upload (with confirmation dialog and file list)
-- **Save as GPX file** — export to any local path
-- **Language support** — Danish and English built in; easily extensible
-- **Language switcher** in Settings dialog — takes effect on next restart
-- i18n engine (`tr()`) covering all ~220 UI strings across the entire application
-
----
-
-## [0.2.0] — 2026
-### Added
-- **Advanced filter dialog** with 3 tabs (General, Dates, Attributes)
-- **Filter toolbar** — 🔍 Filter (`Ctrl+F`) and ❌ Clear filter
-- **ROT13 hint decoding** — one click to decode / re-hide
-- **Search in logs** with real-time match highlighting
-- **Status icons** — ✅ found, ❌ DNF, 🔒 archived, ⚠️ unavailable
-- **Click GC code** → opens cache page on geocaching.com
-- **Click coordinates** → opens in preferred map app
-- **Right-click context menu** in cache list
-- **Configurable map app** — Google Maps or OpenStreetMap
-- **Update finds from reference database** (My Finds PQ workflow)
-- **Favourite ★ column**
-- **Waypoint CRUD** — add, edit and delete caches manually
-- **Column chooser** — 17+ columns, toggle on/off
-
----
-
-## [0.1.0] — 2026
-### Added
-- Import GPX files and Pocket Query ZIP files
-- SQLite database with all Groundspeak fields
-- Multiple databases with manager dialog
-- Centre point per database
-- Filter engine with 18 filter types and AND/OR nesting
-- Saved filter profiles
-- Interactive OSM map with colour-coded pins and clustering
-- Cache detail panel with description, hints and logs
-- Settings — home coordinates, distance unit, map app
