@@ -907,8 +907,14 @@ class CacheTableView(QTableView):
                  else Qt.SortOrder.DescendingOrder)
         self._last_sort_col = col_idx
         self._last_sort_asc = ascending
+        # Bloker sort_changed så apply_sort ikke trigger _save_sort_for_active_db
+        # (dette er et internt gendan-kald, ikke en bruger-handling)
+        self._model.blockSignals(True)
         self._model.sort(col_idx, order)
+        self._model.blockSignals(False)
+        self.horizontalHeader().blockSignals(True)
         self.horizontalHeader().setSortIndicator(col_idx, order)
+        self.horizontalHeader().blockSignals(False)
 
     def load_caches(self, caches: list[Cache]) -> None:
         # Bloker row-changed signalet under load så første cache ikke
@@ -917,11 +923,16 @@ class CacheTableView(QTableView):
         self.selectionModel().blockSignals(True)
         self._model.load(caches)
         # Genanvend sortering - beginResetModel() nulstiller Qt sort-indikatoren
+        # Bloker sort_changed så load ikke trigger _save_sort_for_active_db
         if self._last_sort_col is not None:
             order = (Qt.SortOrder.AscendingOrder if self._last_sort_asc
                      else Qt.SortOrder.DescendingOrder)
+            self._model.blockSignals(True)
             self._model.sort(self._last_sort_col, order)
+            self._model.blockSignals(False)
+            self.horizontalHeader().blockSignals(True)
             self.horizontalHeader().setSortIndicator(self._last_sort_col, order)
+            self.horizontalHeader().blockSignals(False)
         self.clearSelection()
         self.setCurrentIndex(self._model.index(-1, -1))
         self.selectionModel().blockSignals(False)

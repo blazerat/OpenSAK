@@ -495,6 +495,22 @@ class MainWindow(QMainWindow):
         self._act_clear_filter.triggered.connect(self._clear_filter)
         tb.addAction(self._act_clear_filter)
 
+        # Filter-profil dropdown
+        self._filter_profile_combo = QComboBox()
+        self._filter_profile_combo.setMinimumWidth(140)
+        self._filter_profile_combo.setMaximumWidth(200)
+        self._filter_profile_combo.setToolTip(tr("toolbar_filter_combo_tooltip"))
+        self._filter_profile_combo.setSizeAdjustPolicy(
+            QComboBox.SizeAdjustPolicy.AdjustToContents
+        )
+        filter_combo_action = QWidgetAction(self)
+        filter_combo_action.setDefaultWidget(self._filter_profile_combo)
+        tb.addAction(filter_combo_action)
+        self._filter_profile_combo.currentIndexChanged.connect(
+            self._on_filter_profile_combo_changed
+        )
+        self._populate_filter_profile_combo()
+
         tb.addSeparator()
 
         # Hjem-dropdown
@@ -1251,33 +1267,66 @@ class MainWindow(QMainWindow):
         self._save_sort_for_active_db()
 
     def _save_sort_for_active_db(self) -> None:
-        """Gem aktuel sortering per database i QSettings."""
+        """Gem aktuel sortering og aktivt filter-profil per database i QSettings."""
         from opensak.db.manager import get_db_manager
         from PySide6.QtCore import QSettings
         manager = get_db_manager()
         if not manager.active:
+            print("DEBUG save: ingen aktiv database")
             return
         s = QSettings("OpenSAK Project", "OpenSAK")
-        key = f"sort/{manager.active.path}"
+        key = f"sort/{str(manager.active.path)}"
         s.setValue(f"{key}/field", self._current_sort.field)
         s.setValue(f"{key}/ascending", self._current_sort.ascending)
+        s.setValue(f"{key}/filter_profile", self._active_filter_name)
         s.sync()
 
     def _load_sort_for_active_db(self) -> None:
-        """Indlaes gemt sortering for den aktive database fra QSettings."""
+        """Indlaes gemt sortering og filter-profil for den aktive database fra QSettings."""
         from opensak.db.manager import get_db_manager
         from PySide6.QtCore import QSettings
+        from opensak.filters.engine import FilterProfile
         manager = get_db_manager()
         if not manager.active:
+            print("DEBUG load: ingen aktiv database")
             return
         s = QSettings("OpenSAK Project", "OpenSAK")
-        key = f"sort/{manager.active.path}"
+        key = f"sort/{str(manager.active.path)}"
         field = s.value(f"{key}/field", "name")
         ascending = s.value(f"{key}/ascending", True, type=bool)
         self._current_sort = SortSpec(field, ascending=ascending)
         # Genanvend sort-indikatoren i tabellen hvis den allerede er loaded
         if hasattr(self, "_cache_table"):
             self._cache_table.apply_sort(field, ascending)
+        # Genindlæs gemt filter-profil for denne database
+        profile_name = s.value(f"{key}/filter_profile", "")
+        if profile_name:
+            paths = FilterProfile.list_profiles()
+            for path in paths:
+                try:
+                    profile = FilterProfile.load(path)
+                    if profile.name == profile_name:
+                        self._current_filterset = profile.filterset
+                        self._current_sort = profile.sort
+                        self._active_filter_name = profile.name
+                        if hasattr(self, "_act_clear_filter"):
+                            self._act_clear_filter.setEnabled(True)
+                        if hasattr(self, "_filter_lbl"):
+                            self._filter_lbl.setText(f"🔍 {profile.name}")
+                        if hasattr(self, "_filter_profile_combo"):
+                            self._populate_filter_profile_combo(select_name=profile.name)
+                        return
+                except Exception as e:
+                    print(f"DEBUG load: fejl ved indlæsning af {path}: {e}")
+        # Ingen gemt profil — nulstil filter
+        self._current_filterset = FilterSet()
+        self._active_filter_name = ""
+        if hasattr(self, "_act_clear_filter"):
+            self._act_clear_filter.setEnabled(False)
+        if hasattr(self, "_filter_lbl"):
+            self._filter_lbl.setText("")
+        if hasattr(self, "_filter_profile_combo"):
+            self._populate_filter_profile_combo(select_name=None)
 
     # ── Trip Planner guard ────────────────────────────────────────────────────
 
@@ -1316,6 +1365,7 @@ class MainWindow(QMainWindow):
         label = profile_name if profile_name else tr("filter_active_label")
         self._filter_lbl.setText(f"🔍 {label}")
         self._quick_filter.setCurrentIndex(0)
+        self._populate_filter_profile_combo(select_name=profile_name)
         with get_session() as session:
             from opensak.filters.engine import apply_filters
             caches = apply_filters(session, filterset, sort)
@@ -1334,8 +1384,69 @@ class MainWindow(QMainWindow):
         self._active_filter_name = ""
         self._act_clear_filter.setEnabled(False)
         self._filter_lbl.setText("")
+        self._populate_filter_profile_combo(select_name=None)
         self._refresh_cache_list()
         self._statusbar.showMessage(tr("status_filter_reset"), 3000)
+
+    def _populate_filter_profile_combo(self, select_name: str | None = None) -> None:
+        """Genindlæs alle gemte filter-profiler i toolbar-dropdown.
+
+        Kalder blockSignals for at undgå at currentIndexChanged-signalet
+        afirer mens vi udfylder listen.
+        """
+        from opensak.filters.engine import FilterProfile
+        self._filter_profile_combo.blockSignals(True)
+        self._filter_profile_combo.clear()
+        self._filter_profile_combo.addItem(tr("toolbar_filter_combo_none"), userData=None)
+        paths = FilterProfile.list_profiles()
+        for path in paths:
+            try:
+                profile = FilterProfile.load(path)
+                self._filter_profile_combo.addItem(profile.name, userData=path)
+            except Exception:
+                pass
+        # Sæt valgt element
+        if select_name:
+            idx = self._filter_profile_combo.findText(select_name)
+            self._filter_profile_combo.setCurrentIndex(idx if idx >= 0 else 0)
+        else:
+            self._filter_profile_combo.setCurrentIndex(0)
+        self._filter_profile_combo.blockSignals(False)
+
+    def _on_filter_profile_combo_changed(self, index: int) -> None:
+        """Bruger har valgt en profil i toolbar-dropdown — anvend filteret øjeblikkeligt."""
+        if index == 0:
+            # "Ingen" valgt — ryd aktivt filter
+            self._clear_filter()
+            return
+        path = self._filter_profile_combo.itemData(index)
+        if path is None:
+            return
+        from opensak.filters.engine import FilterProfile
+        try:
+            profile = FilterProfile.load(path)
+        except Exception as exc:
+            self._statusbar.showMessage(str(exc), 4000)
+            return
+        self._current_filterset = profile.filterset
+        self._current_sort = profile.sort
+        self._active_filter_name = profile.name
+        self._save_sort_for_active_db()
+        self._act_clear_filter.setEnabled(True)
+        self._filter_lbl.setText(f"🔍 {profile.name}")
+        self._quick_filter.setCurrentIndex(0)
+        with get_session() as session:
+            from opensak.filters.engine import apply_filters
+            caches = apply_filters(session, profile.filterset, profile.sort)
+        self._cache_table.load_caches(caches)
+        self._map_widget.load_caches(caches)
+        count = self._cache_table.row_count()
+        if count == 1:
+            self._count_lbl.setText(tr("count_cache_single"))
+        else:
+            self._count_lbl.setText(tr("count_caches", count=count))
+        self._statusbar.showMessage(tr("status_filter_result", count=count), 3000)
+        self._update_info_bar()
 
     def _open_column_chooser(self) -> None:
         if self._trip_planner_active():
