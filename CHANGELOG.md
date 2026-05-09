@@ -22,6 +22,8 @@ For planned features and known issues see the [GitHub Issues list](https://githu
   target, making it possible to import a PQ directly into a specific database without switching
   the active database first. Works with both drag & drop and the normal Browse button.
 
+## [1.13.9] — 2026-05-09
+
 ### Added
 
 - **File → Export menu with GPX, LOC and GGZ support** (closes #203) — A new *Export* submenu
@@ -39,7 +41,6 @@ For planned features and known issues see the [GitHub Issues list](https://githu
   item has been moved from the *GPS* menu to the new *File → Export* submenu, where it fits
   better alongside the other file export formats.
 
-## [1.13.8] — 2026-05-08
 ## [1.13.8] — 2026-05-08
 
 ### Added
