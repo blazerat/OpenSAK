@@ -484,22 +484,6 @@ class MainWindow(QMainWindow):
 
         tb.addSeparator()
 
-        # GPS
-        gps_act = QAction(f"📤  {tr('gps_dialog_title')}", self)
-        gps_act.setToolTip(tr("gps_dialog_title") + " (Ctrl+G)")
-        gps_act.triggered.connect(self._open_gps_export)
-        tb.addAction(gps_act)
-
-        tb.addSeparator()
-
-        # Turplanlægger
-        trip_act = QAction(f"🗺️  {tr('toolbar_trip')}", self)
-        trip_act.setToolTip(tr("toolbar_trip_tooltip") + " (Ctrl+T)")
-        trip_act.triggered.connect(self._open_trip_planner)
-        tb.addAction(trip_act)
-
-        tb.addSeparator()
-
         # Filter
         self._act_filter = QAction(f"🔍  {tr('toolbar_filter')}", self)
         self._act_filter.setShortcut("Ctrl+F")
@@ -533,6 +517,22 @@ class MainWindow(QMainWindow):
             self._on_filter_profile_combo_changed
         )
         self._populate_filter_profile_combo()
+
+        tb.addSeparator()
+
+        # GPS
+        gps_act = QAction(f"📤  {tr('gps_dialog_title')}", self)
+        gps_act.setToolTip(tr("gps_dialog_title") + " (Ctrl+G)")
+        gps_act.triggered.connect(self._open_gps_export)
+        tb.addAction(gps_act)
+
+        tb.addSeparator()
+
+        # Turplanlægger
+        trip_act = QAction(f"🗺️  {tr('toolbar_trip')}", self)
+        trip_act.setToolTip(tr("toolbar_trip_tooltip") + " (Ctrl+T)")
+        trip_act.triggered.connect(self._open_trip_planner)
+        tb.addAction(trip_act)
 
         tb.addSeparator()
 
@@ -642,7 +642,10 @@ class MainWindow(QMainWindow):
         if s.window_geometry:
             self.restoreGeometry(s.window_geometry)
         if s.window_state:
-            self.restoreState(s.window_state)
+            # Version 2: toolbar-rækkefølge ændret (Filter før GPS/Trip Planner).
+            # Hvis gemt state er fra en ældre version ignoreres den automatisk,
+            # så toolbar-layoutet altid er korrekt efter en opgradering.
+            self.restoreState(s.window_state, 2)
         self._load_sort_for_active_db()
 
         # Gendan splitter-størrelser som procentandele af vinduets størrelse.
@@ -753,7 +756,7 @@ class MainWindow(QMainWindow):
     def closeEvent(self, event) -> None:
         s = get_settings()
         s.window_geometry = self.saveGeometry()
-        s.window_state    = self.saveState()
+        s.window_state    = self.saveState(2)
         self._save_splitter_ratios()
         s.sync()
         # Stop update workers so they don't make network calls after window close
