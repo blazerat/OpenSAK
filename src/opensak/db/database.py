@@ -58,6 +58,12 @@ _engine: Engine | None = None
 _SessionLocal: sessionmaker | None = None
 _migrated_paths: set = set()  # undgår at køre migrationer to gange på samme DB
 
+# Schema version stored in the SQLite header (PRAGMA user_version). MUST be
+# bumped to the highest migration number whenever a new migration is added
+# below — _run_migrations() skips the whole block when the database already
+# reports this version, so a stale constant means new migrations never run.
+SCHEMA_VERSION = 11
+
 
 def init_db(db_path: Path | None = None) -> Engine:
     """
@@ -120,6 +126,17 @@ def _run_migrations(engine: Engine) -> None:
     over hvis ja — så er det sikkert at kalde ved hver opstart.
     """
     with engine.connect() as conn:
+        # ── Gate: skip all probes when the DB is already at the current schema ─
+        # Every migration below is idempotent but still runs ~10 PRAGMA
+        # table_info probes on each launch. Once a database reports the current
+        # SCHEMA_VERSION we can skip the whole block and only pay a single
+        # PRAGMA user_version read. Existing databases default to user_version=0
+        # and run the (idempotent) migrations once, after which the version is
+        # stamped and subsequent launches short-circuit here.
+        current_version = conn.execute(text("PRAGMA user_version")).scalar() or 0
+        if current_version >= SCHEMA_VERSION:
+            return
+
         # ── Migration 1: Tilføj is_corrected til user_notes ──────────────────
         existing_notes = [
             row[1]
@@ -364,6 +381,12 @@ def _run_migrations(engine: Engine) -> None:
         if created_idx:
             conn.commit()
             print(f"Migration: oprettede {len(created_idx)} indexes på caches ({', '.join(created_idx)})")
+
+        # ── Stamp the schema version so the next launch skips the probes ─────
+        # PRAGMA does not accept bind parameters; SCHEMA_VERSION is a trusted
+        # int constant, so inlining it is safe.
+        conn.execute(text(f"PRAGMA user_version = {SCHEMA_VERSION}"))
+        conn.commit()
 
 
 def dispose_engine(db_path: Path | None = None) -> None:
