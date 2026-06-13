@@ -979,6 +979,44 @@ SORT_FIELDS: dict[str, Any] = {
 }
 
 
+def _sql_order_expr(field: str):
+    """Return a SQLAlchemy ORDER BY expression mirroring SORT_FIELDS[*field*],
+    or None if the field must be sorted in Python.
+
+    Only numeric / boolean / date columns are ordered in SQL: the expression
+    reproduces the Python key exactly (COALESCE for the ``x or default``
+    fallbacks). Text fields are deliberately excluded — SQLite's lower() is
+    ASCII-only and would diverge from Python's Unicode str.lower() on accented
+    values. Derived / model-only fields (distance, bearing, log_count,
+    last_log, corrected, lat/lon) are also excluded and stay in Python.
+
+    The caller must append Cache.id as a final tiebreaker so the SQL order
+    matches Python's *stable* sort (ties keep the id-ascending load order).
+    """
+    from sqlalchemy import func
+    return {
+        # Numeric (mirror "x or 0.0/0/999999")
+        "difficulty":      func.coalesce(Cache.difficulty, 0.0),
+        "terrain":         func.coalesce(Cache.terrain, 0.0),
+        "favorite_points": func.coalesce(Cache.favorite_points, 0),
+        "user_sort":       func.coalesce(Cache.user_sort, 999999),
+        # Boolean (mirror int(x) / int(x or False) → 0/1)
+        "found":           Cache.found,
+        "archived":        Cache.archived,
+        "dnf":             Cache.dnf,
+        "premium_only":    Cache.premium_only,
+        "favorite":        Cache.favorite_point,
+        "first_to_find":   func.coalesce(Cache.first_to_find, 0),
+        "user_flag":       func.coalesce(Cache.user_flag, 0),
+        # Dates — plain column ordering (NULLs first ascending in SQLite, i.e.
+        # treated as earliest). This also fixes the latent SORT_FIELDS bug where
+        # "x or 0" mixes datetime and int and raises TypeError on mixed NULLs.
+        "hidden_date":     Cache.hidden_date,
+        "found_date":      Cache.found_date,
+        "dnf_date":        Cache.dnf_date,
+    }.get(field)
+
+
 @dataclass
 class SortSpec:
     """Defines a sort operation on the result list."""
@@ -1136,26 +1174,41 @@ def apply_filters(
             if updated is not None:
                 query = updated
 
+    # Resolve sort early so column-backed fields can be ordered in SQL.
+    if sort is None:
+        sort = SortSpec("name", ascending=True)
+
+    # Push ORDER BY into SQL for the safe (numeric/boolean/date) fields. The
+    # Python filter pass below preserves row order, so a SQL-ordered result
+    # stays ordered. A trailing Cache.id keeps the order identical to Python's
+    # stable sort (ties retain the id-ascending load order). The distance sort
+    # needs a live reference point, so it always stays in Python.
+    sql_sorted = False
+    if not (sort.field == "distance" and distance_from):
+        order_expr = _sql_order_expr(sort.field)
+        if order_expr is not None:
+            direction = order_expr.asc() if sort.ascending else order_expr.desc()
+            query = query.order_by(direction, Cache.id.asc())
+            sql_sorted = True
+
     all_caches = query.all()
 
-    # Apply filters
+    # Apply filters (order-preserving — keeps any SQL ORDER BY intact)
     if filterset:
         results = [c for c in all_caches if filterset.matches(c)]
     else:
         results = list(all_caches)
 
-    # Sort
-    if sort is None:
-        sort = SortSpec("name", ascending=True)
-
-    if sort.field == "distance" and distance_from:
-        lat, lon = distance_from
-        results.sort(
-            key=lambda c: _haversine_km(lat, lon, c.latitude or 0, c.longitude or 0),
-            reverse=not sort.ascending,
-        )
-    elif sort.field in SORT_FIELDS:
-        results.sort(key=SORT_FIELDS[sort.field], reverse=not sort.ascending)
+    # Sort in Python only for fields not handled by SQL above.
+    if not sql_sorted:
+        if sort.field == "distance" and distance_from:
+            lat, lon = distance_from
+            results.sort(
+                key=lambda c: _haversine_km(lat, lon, c.latitude or 0, c.longitude or 0),
+                reverse=not sort.ascending,
+            )
+        elif sort.field in SORT_FIELDS:
+            results.sort(key=SORT_FIELDS[sort.field], reverse=not sort.ascending)
 
     if limit:
         results = results[:limit]

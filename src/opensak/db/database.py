@@ -320,6 +320,47 @@ def _run_migrations(engine: Engine) -> None:
             conn.commit()
             print(f"Migration: tilføjede caches.last_log_date og opdaterede {result.rowcount} caches")
 
+        # ── Migration 11: indexes for filter/sort columns (#214 phase 3) ─────
+        # Phase 2 pushed the common filters into the SQL WHERE clause; these
+        # indexes let SQLite satisfy those predicates (and ORDER BY) without a
+        # full table scan on large databases. CREATE INDEX IF NOT EXISTS is
+        # idempotent and cheap once the index exists, so it is safe to run on
+        # every startup. Index names follow SQLAlchemy's ix_<table>_<col>
+        # convention, so a future index=True on the model would reuse the same
+        # name rather than create a duplicate.
+        # Note: country/state/county are intentionally NOT indexed — their
+        # filters use LIKE '%text%' (substring), which a B-tree index cannot
+        # satisfy, so an index there would be pure write overhead. cache_type
+        # (exact IN), the difficulty/terrain ranges, the date columns used by
+        # ORDER BY, and the availability composite are all sargable.
+        index_specs = [
+            ("ix_caches_cache_type",    "cache_type"),
+            ("ix_caches_difficulty",    "difficulty"),
+            ("ix_caches_terrain",       "terrain"),
+            ("ix_caches_hidden_date",   "hidden_date"),
+            ("ix_caches_found_date",    "found_date"),
+            ("ix_caches_last_log_date", "last_log_date"),
+            ("ix_caches_found",         "found"),
+            # Composite for the availability quick-filter (archived + available)
+            ("ix_caches_archived_available", "archived, available"),
+        ]
+        existing_idx = {
+            row[0]
+            for row in conn.execute(text(
+                "SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='caches'"
+            )).fetchall()
+        }
+        created_idx = []
+        for idx_name, cols in index_specs:
+            if idx_name not in existing_idx:
+                conn.execute(text(
+                    f"CREATE INDEX IF NOT EXISTS {idx_name} ON caches ({cols})"
+                ))
+                created_idx.append(idx_name)
+        if created_idx:
+            conn.commit()
+            print(f"Migration: oprettede {len(created_idx)} indexes på caches ({', '.join(created_idx)})")
+
 
 def dispose_engine(db_path: Path | None = None) -> None:
     """
