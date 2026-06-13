@@ -334,6 +334,7 @@ class MapWidget(QWidget):
         super().__init__(parent)
         self._caches: list[Cache] = []
         self._ready = False
+        self._cleaned = False
         self._pending_caches = None
         self._pending_refresh = None
         self._pending_home = None
@@ -536,9 +537,21 @@ class MapWidget(QWidget):
             self._run_js("panToHome()")
 
     def _cleanup_webengine(self) -> None:
-        """Slet QWebEnginePage før Qt rydder QWebEngineProfile op.
-        Kaldes via QApplication.aboutToQuit signalet — skal køre BEFORE
-        profilen destrueres for at undgå 'Expect troubles' advarsel."""
+        """Slet QWebEnginePage FØR QWebEngineProfile destrueres.
+
+        The map uses a parent-less off-the-record QWebEngineProfile + QWebEnginePage.
+        Without an explicit, ordered teardown they are released by Python GC in a
+        nondeterministic order; when the profile is collected before its page Qt
+        logs 'Release of profile requested but WebEnginePage still not deleted.
+        Expect troubles!' and leaks Chromium state. Across a long e2e run that
+        accumulation eventually crashes the render process (SIGTRAP).
+
+        Must therefore run on every window close — not only QApplication.aboutToQuit
+        — so each MapWidget tears its page down before its profile. Idempotent:
+        connected to both closeEvent (via MainWindow) and aboutToQuit."""
+        if self._cleaned:
+            return
+        self._cleaned = True
         try:
             self._ready = False
             self._view.setPage(None)

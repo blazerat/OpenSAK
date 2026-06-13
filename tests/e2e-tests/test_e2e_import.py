@@ -123,14 +123,3 @@ def test_import_dialog_worker_succeeds(qtbot, tmp_path, monkeypatch):
     assert dlg._any_success
     log_text = dlg._log.toPlainText()
     assert "GC12345" in log_text or "2" in log_text
-
-    # import_completed is emitted from ImportWorker.run()'s final line
-    # (all_done), so the QThread may still be winding down here. Join it before
-    # the dialog is torn down — otherwise Qt aborts the process with
-    # "QThread: Destroyed while thread is still running" (core dump in CI).
-    worker = dlg._worker
-    try:
-        if worker is not None and worker.isRunning():
-            worker.wait(10_000)
-    except RuntimeError:
-        pass  # already deleted via finished→deleteLater; nothing to join
