@@ -343,6 +343,10 @@ def _run_migrations(engine: Engine) -> None:
             ("ix_caches_found",         "found"),
             # Composite for the availability quick-filter (archived + available)
             ("ix_caches_archived_available", "archived, available"),
+            # Composite for DistanceFilter's lat/lon bounding-box pre-narrow
+            # (#214 phase 4). Leading latitude column serves the latitude
+            # BETWEEN range; longitude refines.
+            ("ix_caches_lat_lon", "latitude, longitude"),
         ]
         existing_idx = {
             row[0]

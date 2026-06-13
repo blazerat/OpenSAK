@@ -43,6 +43,31 @@ def _haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
 
+def haversine_km_batch(lat0: float, lon0: float, lats, lons):
+    """Great-circle distance (km) from (lat0, lon0) to each (lats[i], lons[i]).
+
+    Vectorised with numpy when available — turning a per-row Python loop over
+    tens of thousands of caches (run on every table refresh) into a single
+    array operation. Falls back to a Python list comprehension if numpy is not
+    installed, so behaviour is identical either way (within float tolerance).
+    Returns a numpy array or a list of floats; callers index/iterate it.
+    """
+    try:
+        import numpy as np
+    except ImportError:
+        return [_haversine_km(lat0, lon0, la, lo) for la, lo in zip(lats, lons)]
+
+    R = 6371.0
+    p0 = math.radians(lat0)
+    l0 = math.radians(lon0)
+    la = np.radians(np.asarray(lats, dtype=float))
+    lo = np.radians(np.asarray(lons, dtype=float))
+    dphi = la - p0
+    dlam = lo - l0
+    a = np.sin(dphi / 2) ** 2 + math.cos(p0) * np.cos(la) * np.sin(dlam / 2) ** 2
+    return R * 2 * np.arctan2(np.sqrt(a), np.sqrt(1 - a))
+
+
 # ── Base filter ───────────────────────────────────────────────────────────────
 
 class BaseFilter(ABC):
@@ -515,6 +540,31 @@ class DistanceFilter(BaseFilter):
         self.lon = lon
         self.max_km = max_km
         self.min_km = min_km
+
+    def apply_to_query(self, query):
+        """Pre-narrow with a lat/lon bounding box that *contains* the circle.
+
+        The box is a conservative superset of the max_km circle, so SQLite can
+        discard far-away caches (using the (latitude, longitude) index) before
+        any Python object is built, while matches() still applies the exact
+        haversine test — results are therefore identical. Skipped (returns None,
+        i.e. pure Python) for max_km<=0 or near the poles / antimeridian, where
+        a simple box could wrap and wrongly drop matches.
+        """
+        if self.max_km <= 0 or not (-89.0 < self.lat < 89.0):
+            return None
+        dlat = self.max_km / 111.0  # ~111 km per degree of latitude
+        coslat = math.cos(math.radians(self.lat))
+        if coslat <= 1e-6:
+            return None
+        dlon = self.max_km / (111.0 * coslat)
+        if dlon >= 180.0 or self.lon - dlon < -180.0 or self.lon + dlon > 180.0:
+            return None  # box would wrap the antimeridian — let Python handle it
+        from sqlalchemy import and_
+        return query.filter(and_(
+            Cache.latitude.between(self.lat - dlat, self.lat + dlat),
+            Cache.longitude.between(self.lon - dlon, self.lon + dlon),
+        ))
 
     def matches(self, cache: Cache) -> bool:
         if cache.latitude is None or cache.longitude is None:
@@ -1049,11 +1099,13 @@ def annotate_distances(
     Return a dict mapping cache.id → distance_km from (lat, lon).
     Useful for displaying distances in the UI without filtering.
     """
-    return {
-        c.id: _haversine_km(lat, lon, c.latitude, c.longitude)
-        for c in caches
-        if c.latitude is not None and c.longitude is not None
-    }
+    valid = [c for c in caches if c.latitude is not None and c.longitude is not None]
+    if not valid:
+        return {}
+    dists = haversine_km_batch(
+        lat, lon, [c.latitude for c in valid], [c.longitude for c in valid]
+    )
+    return {c.id: float(dists[i]) for i, c in enumerate(valid)}
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────

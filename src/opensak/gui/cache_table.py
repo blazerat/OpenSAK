@@ -13,7 +13,7 @@ from PySide6.QtGui import QColor, QFont
 from PySide6.QtWidgets import QTableView, QHeaderView, QAbstractItemView, QMenu, QApplication
 
 from opensak.db.models import Cache
-from opensak.filters.engine import _haversine_km
+from opensak.filters.engine import _haversine_km, haversine_km_batch
 from opensak.gui.settings import get_settings
 from opensak.coords import format_coords, format_lat, format_lon, format_lat, format_lon
 from opensak.lang import tr
@@ -31,6 +31,27 @@ def _bearing_deg(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     x = math.sin(dlon) * math.cos(la2)
     y = math.cos(la1) * math.sin(la2) - math.sin(la1) * math.cos(la2) * math.cos(dlon)
     return (math.degrees(math.atan2(x, y)) + 360) % 360
+
+
+def _bearing_deg_batch(lat0: float, lon0: float, lats, lons):
+    """Vectorised bearing (deg 0-360) from (lat0, lon0) to each (lats[i], lons[i]).
+
+    numpy-accelerated counterpart of _bearing_deg, used to compute every cache's
+    bearing in one array op on table refresh. Falls back to a Python loop when
+    numpy is unavailable. Returns a numpy array or a list of floats.
+    """
+    try:
+        import numpy as np
+    except ImportError:
+        return [_bearing_deg(lat0, lon0, la, lo) for la, lo in zip(lats, lons)]
+
+    r = math.pi / 180
+    la0 = lat0 * r
+    la = np.asarray(lats, dtype=float) * r
+    dlon = (np.asarray(lons, dtype=float) - lon0) * r
+    x = np.sin(dlon) * np.cos(la)
+    y = math.cos(la0) * np.sin(la) - math.sin(la0) * np.cos(la) * np.cos(dlon)
+    return (np.degrees(np.arctan2(x, y)) + 360) % 360
 
 
 def _bearing_compass(deg: float) -> str:
@@ -453,18 +474,26 @@ class CacheTableModel(QAbstractTableModel):
         self.endResetModel()
 
     def _update_distances(self) -> None:
+        # Vectorised: compute distance + bearing for every cache in one numpy
+        # pass instead of a per-row Python loop. This runs on every table
+        # refresh, so on large databases (100k+ caches) the loop was a real
+        # per-keystroke cost; the batch form is ~negligible.
         settings = get_settings()
         self._distances = {}
-        for c in self._caches:
-            if c.latitude is not None and c.longitude is not None:
-                self._distances[c.id] = _haversine_km(
-                    settings.home_lat, settings.home_lon,
-                    c.latitude, c.longitude
-                )
-                self._bearings[c.id] = _bearing_deg(
-                    settings.home_lat, settings.home_lon,
-                    c.latitude, c.longitude
-                )
+        self._bearings = {}
+        valid = [
+            c for c in self._caches
+            if c.latitude is not None and c.longitude is not None
+        ]
+        if not valid:
+            return
+        lats = [c.latitude for c in valid]
+        lons = [c.longitude for c in valid]
+        dists = haversine_km_batch(settings.home_lat, settings.home_lon, lats, lons)
+        bears = _bearing_deg_batch(settings.home_lat, settings.home_lon, lats, lons)
+        for i, c in enumerate(valid):
+            self._distances[c.id] = float(dists[i])
+            self._bearings[c.id] = float(bears[i])
 
     def cache_at(self, row: int) -> Optional[Cache]:
         if 0 <= row < len(self._caches):
