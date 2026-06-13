@@ -25,6 +25,22 @@ from opensak.db.database import init_db, make_session
 from opensak.db.models import Cache
 
 
+@pytest.fixture(autouse=True)
+def _no_network_update_check(monkeypatch):
+    """Never reach the GitHub releases API during any test.
+
+    MainWindow starts a background ``UpdateCheckWorker`` (and the monkey test
+    fires the manual "Check for updates" action), each of which ran a real
+    ``urlopen()`` to GitHub. ``QThread.quit()`` cannot interrupt a blocking
+    socket, so on CI those threads stay stuck in ``getaddrinfo`` and are still
+    running at teardown — Qt then aborts the process ("QThread: Destroyed while
+    thread is still running", SIGABRT / exit 134). Stubbing the fetch keeps the
+    whole worker code path exercised but instant and offline, which removes the
+    entire class of network-teardown crashes. Tests must never touch the network.
+    """
+    monkeypatch.setattr("opensak.updater.fetch_latest_release", lambda: None)
+
+
 @pytest.fixture(scope="module")
 def tmp_db(tmp_path_factory):
     """Create a fresh SQLite DB in a temp directory for a test module."""
