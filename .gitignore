@@ -43,3 +43,7 @@ gc_token.json
 
 # Planning docs (local only for now)
 docs/plans/
+
+# Local skill tooling (caveman skills)
+.agents/
+skills-lock.json
