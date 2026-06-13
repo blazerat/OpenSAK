@@ -1,5 +1,5 @@
 """
-tests/unit-tests/test_dialogs.py — Phase 5: pure-logic dialog tests.
+tests/unit-tests/test_dialogs.py — pure-logic dialog tests.
 
 Covers CoordConverterDialog, ChecksumDialog, DistanceBearingDialog,
 MidpointDialog, and ProjectionDialog.  DB-backed dialogs are deferred.

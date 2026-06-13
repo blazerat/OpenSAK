@@ -1,9 +1,9 @@
 """
-tests/unit-tests/test_phase3_sql_sort.py — Phase 3 tests.
+tests/unit-tests/test_sort_sql.py — SQL-pushed sort parity.
 
-Phase 3 (a) adds indexes for the filter/sort columns and (b) pushes ORDER BY
+The engine (a) adds indexes for the filter/sort columns and (b) pushes ORDER BY
 into SQL for the safe numeric/boolean/date sort fields. Pushing the sort into
-SQL must produce *exactly* the same order the old Python sort produced —
+SQL must produce *exactly* the same order the equivalent Python sort produces —
 including stability (ties keep the id-ascending load order) and NULL handling.
 
 These tests assert:

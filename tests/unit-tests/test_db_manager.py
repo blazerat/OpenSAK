@@ -1,5 +1,5 @@
 """
-tests/unit-tests/test_db_manager.py — Phase 5: DatabaseManager unit tests.
+tests/unit-tests/test_db_manager.py — DatabaseManager unit tests.
 
 QSettings is fully mocked — no real settings file is written or read.
 Requires pytest-qt for QApplication; skipped automatically when unavailable.

@@ -686,7 +686,7 @@ def test_where_clause_in_nested_filterset(tmp_db):
 
 
 def test_apply_filters_defers_description_blobs(tmp_db):
-    """Phase 1: the large free-text blobs are deferred on the table query.
+    """The large free-text blobs are deferred on the table query.
 
     short_description / long_description / encoded_hints are never shown in the
     cache table (only in the detail panel, which loads each cache separately).
@@ -709,7 +709,7 @@ def test_apply_filters_defers_description_blobs(tmp_db):
 
 
 def test_apply_filters_results_unchanged_with_deferral(tmp_db):
-    """Phase 1: deferring blobs must not change which caches are returned."""
+    """Deferring blobs must not change which caches are returned."""
     with get_session() as s:
         all_codes = {c.gc_code for c in apply_filters(s)}
         fs = FilterSet(mode="AND")

@@ -1,7 +1,7 @@
 """
-tests/unit-tests/test_phase5_importer.py — Phase 5 importer throughput tests.
+tests/unit-tests/test_importer_perf.py — Importer throughput / fast-path tests.
 
-Phase 5 speeds up the importer without changing what it writes:
+The importer is tuned for speed without changing what it writes:
   * a single ``{gc_code: id}`` preload replaces the per-cache ``filter_by`` SELECT
     (a brand-new cache is now detected by a dict miss, not a round-trip)
   * child deletes use ``synchronize_session=False`` and the extra/companion
@@ -28,7 +28,7 @@ from opensak.importer import (
     _exit_bulk_import_pragmas,
 )
 
-from tests.data import SAMPLE_GPX, SAMPLE_WPTS_GPX, write_gpx
+from tests.data import SAMPLE_GPX, SAMPLE_WPTS_GPX, write_gpx, cache_wpt, build_gpx
 
 
 @pytest.fixture
@@ -155,19 +155,14 @@ def test_synchronous_restored_after_import(tmp_path, gpx_file):
 # ── Batch failure isolation (fast path falls back to per-cache) ───────────────
 
 def _cache_block(gc: str, gs_id: int, log_id: str) -> str:
-    return (
-        f'<wpt lat="55.{gs_id}" lon="12.{gs_id}"><n>{gc}</n>'
-        f'<type>Geocache|Traditional Cache</type>'
-        f'<groundspeak:cache id="{gs_id}" archived="False" available="True" '
-        f'xmlns:groundspeak="http://www.groundspeak.com/cache/1/0/1">'
-        f'<groundspeak:name>{gc}</groundspeak:name>'
-        f'<groundspeak:type>Traditional Cache</groundspeak:type>'
-        f'<groundspeak:logs><groundspeak:log id="{log_id}">'
-        f'<groundspeak:date>2025-01-0{gs_id}T00:00:00Z</groundspeak:date>'
-        f'<groundspeak:type>Found it</groundspeak:type>'
-        f'<groundspeak:finder id="{gs_id}">F{gs_id}</groundspeak:finder>'
-        f'<groundspeak:text encoded="False">log</groundspeak:text>'
-        f'</groundspeak:log></groundspeak:logs></groundspeak:cache></wpt>'
+    """One cache carrying a single Found-it log with the given log_id."""
+    return cache_wpt(
+        gc, gs_id=gs_id, lat=f"55.{gs_id}", lon=f"12.{gs_id}",
+        logs=[{
+            "id": log_id, "type": "Found it",
+            "finder_id": gs_id, "finder": f"F{gs_id}",
+            "date": f"2025-01-0{gs_id}T00:00:00Z", "text": "log",
+        }],
     )
 
 
@@ -179,12 +174,10 @@ def test_batch_failure_isolates_only_bad_cache(tmp_path):
     the first cache survives while only the second is skipped.
     """
     init_db(db_path=tmp_path / "iso.db")
-    gpx = (
-        '<?xml version="1.0" encoding="utf-8"?>'
-        '<gpx version="1.0" creator="t" xmlns="http://www.topografix.com/GPX/1/0">'
-        + _cache_block("GCAAA01", 1, "DUPLICATE")
-        + _cache_block("GCAAA02", 2, "DUPLICATE")
-        + '</gpx>'
+    gpx = build_gpx(
+        _cache_block("GCAAA01", 1, "DUPLICATE"),
+        _cache_block("GCAAA02", 2, "DUPLICATE"),
+        creator="t",
     )
     f = write_gpx(tmp_path, "iso.gpx", gpx)
 

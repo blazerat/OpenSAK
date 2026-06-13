@@ -1,10 +1,10 @@
 """
-tests/unit-tests/test_phase6_migrations_gate.py — Phase 6 tests.
+tests/unit-tests/test_migrations.py — Startup migration gate (PRAGMA user_version).
 
-Phase 6 gates the startup migration block behind PRAGMA user_version so a
-database already at the current schema skips the ~10 idempotent PRAGMA
-table_info probes that ran on every launch. The migrations themselves are
-unchanged; only the gate (skip-when-current, stamp-after-run) is new.
+The startup migration block is gated behind PRAGMA user_version so a database
+already at the current schema skips the ~10 idempotent PRAGMA table_info probes
+that would otherwise run on every launch. The migrations themselves are
+unchanged; only the gate (skip-when-current, stamp-after-run) is exercised here.
 
 Tests assert:
   * init_db stamps user_version to SCHEMA_VERSION

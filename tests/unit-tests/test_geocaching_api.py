@@ -1,5 +1,5 @@
 """
-tests/unit-tests/test_geocaching_api.py — Phase 3: network-mocked API tests.
+tests/unit-tests/test_geocaching_api.py — network-mocked API tests.
 
 No real HTTP calls — urllib.request.urlopen is patched with unittest.mock.patch.
 """

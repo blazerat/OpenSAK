@@ -1,9 +1,9 @@
 """
-tests/unit-tests/test_filter_sql_parity.py — Phase 2 parity tests.
+tests/unit-tests/test_filter_sql_parity.py — SQL/Python filter parity tests.
 
-Phase 2 pushes the cheap, index-friendly filters into the SQL WHERE clause via
-BaseFilter.apply_to_query(). This must never change *which* caches are returned
-compared with the pure-Python matches() pass.
+The engine pushes the cheap, index-friendly filters into the SQL WHERE clause
+via BaseFilter.apply_to_query(). This must never change *which* caches are
+returned compared with the pure-Python matches() pass.
 
 Every test here asserts:
 

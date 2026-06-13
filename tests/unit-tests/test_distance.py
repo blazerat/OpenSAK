@@ -1,7 +1,7 @@
 """
-tests/unit-tests/test_phase4_distance.py — Phase 4 tests.
+tests/unit-tests/test_distance.py — Distance/bearing math + DistanceFilter.
 
-Phase 4 vectorises the great-circle distance/bearing computation (numpy) and
+The engine vectorises the great-circle distance/bearing computation (numpy) and
 adds a lat/lon bounding-box pre-narrow to DistanceFilter so distance filtering
 on large databases does not haversine every row in Python.
 

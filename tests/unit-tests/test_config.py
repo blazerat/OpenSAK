@@ -1,5 +1,5 @@
 """
-tests/unit-tests/test_config.py — Phase 4: config path and language preference tests.
+tests/unit-tests/test_config.py — config path and language preference tests.
 """
 
 import json
