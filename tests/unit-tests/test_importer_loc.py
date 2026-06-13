@@ -12,29 +12,19 @@ from opensak.db.database import init_db, make_session
 from opensak.db.models import Cache
 from opensak.importer import import_loc, import_gpx
 
+from tests.data import make_loc, cache_wpt, build_gpx
+
 # db_session and make_cache fixtures come from conftest.py
 
 
-# ── Synthetic .loc content ────────────────────────────────────────────────────
+# ── Synthetic .loc content (built via tests.data.make_loc) ────────────────────
 
-def _make_loc(waypoints: list[dict]) -> str:
-    """Build a minimal .loc XML string from a list of waypoint dicts."""
-    wpts = ""
-    for wp in waypoints:
-        wpts += f"""
-  <waypoint>
-    <name id="{wp['gc_code']}">{wp.get('name', wp['gc_code'])}</name>
-    <coord lat="{wp['lat']}" lon="{wp['lon']}"/>
-  </waypoint>"""
-    return f'<?xml version="1.0" encoding="UTF-8"?>\n<loc version="1.0">{wpts}\n</loc>'
-
-
-SAMPLE_LOC = _make_loc([
+SAMPLE_LOC = make_loc([
     {"gc_code": "GC11111", "name": "Forest Cache", "lat": "55.100", "lon": "12.100"},
     {"gc_code": "GC22222", "name": "City Cache",   "lat": "55.200", "lon": "12.200"},
 ])
 
-SINGLE_LOC = _make_loc([
+SINGLE_LOC = make_loc([
     {"gc_code": "GC33333", "name": "Single Cache", "lat": "56.000", "lon": "10.000"},
 ])
 
@@ -174,8 +164,8 @@ class TestImportLocUpsert:
         assert total == 2
 
     def test_reimport_updates_name(self, tmp_path, db_session):
-        original = _make_loc([{"gc_code": "GC55555", "name": "Old Name", "lat": "55.0", "lon": "12.0"}])
-        updated  = _make_loc([{"gc_code": "GC55555", "name": "New Name", "lat": "55.0", "lon": "12.0"}])
+        original = make_loc([{"gc_code": "GC55555", "name": "Old Name", "lat": "55.0", "lon": "12.0"}])
+        updated  = make_loc([{"gc_code": "GC55555", "name": "New Name", "lat": "55.0", "lon": "12.0"}])
 
         p = tmp_path / "cache.loc"
         p.write_text(original)
@@ -192,30 +182,10 @@ class TestImportLocUpsert:
 
 # ── import_gpx — progress_cb ─────────────────────────────────────────────────
 
-MINIMAL_GPX = """\
-<?xml version="1.0" encoding="utf-8"?>
-<gpx xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-     version="1.0"
-     creator="Groundspeak Pocket Query"
-     xmlns="http://www.topografix.com/GPX/1/0">
-  <wpt lat="55.6761" lon="12.5683">
-    <time>2024-06-01T00:00:00</time>
-    <n>GC77777</n>
-    <desc>Progress Test Cache</desc>
-    <urlname>Progress Test Cache</urlname>
-    <type>Geocache|Traditional Cache</type>
-    <groundspeak:cache id="7777" archived="False" available="True"
-        xmlns:groundspeak="http://www.groundspeak.com/cache/1/0/1">
-      <groundspeak:name>Progress Test Cache</groundspeak:name>
-      <groundspeak:placed_by>Tester</groundspeak:placed_by>
-      <groundspeak:type>Traditional Cache</groundspeak:type>
-      <groundspeak:container>Small</groundspeak:container>
-      <groundspeak:difficulty>1.0</groundspeak:difficulty>
-      <groundspeak:terrain>1.0</groundspeak:terrain>
-    </groundspeak:cache>
-  </wpt>
-</gpx>
-"""
+MINIMAL_GPX = build_gpx(cache_wpt(
+    "GC77777", name="Progress Test Cache",
+    lat=55.6761, lon=12.5683, gs_id=7777, difficulty=1.0, terrain=1.0,
+))
 
 
 class TestImportGpxProgressCallback:
