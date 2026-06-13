@@ -16,7 +16,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
-import time
 from lxml import etree
 from sqlalchemy.orm import Session
 import tempfile
@@ -450,34 +449,42 @@ def _parse_extra_wpt(wpt_el) -> Optional[dict]:
 
 
 def _insert_extra_wpts(session: Session, extra_wpts: list, commit_every: int = 500) -> int:
-    """Insert/update extra waypoints.
+    """Insert/update extra (inline) waypoints.
 
-    Bygger ét suffix→cache_id lookup i RAM for at undgå 11.000 LIKE-queries.
-    Committer til disk for hver commit_every caches.
+    Builds one suffix→cache_id lookup in RAM to avoid a LIKE query per waypoint,
+    and deletes all stale waypoints for the affected caches in a single batched
+    ``DELETE ... WHERE cache_id IN (...)`` rather than one fetch-sync DELETE per
+    suffix. Commits to disk every *commit_every* caches to keep RAM flat.
     """
-    t0 = time.time()
-
-    # Hent alle gc_codes på én gang og byg suffix→cache_id dict i RAM
-    all_caches = session.query(Cache.id, Cache.gc_code).all()
+    # Build suffix→cache_id once (suffix == gc_code without the 2-char prefix).
     suffix_to_cache_id: dict[str, int] = {}
-    for cache_id, gc_code in all_caches:
+    for cache_id, gc_code in session.query(Cache.id, Cache.gc_code):
         if gc_code and len(gc_code) > 2:
             suffix_to_cache_id[gc_code[2:]] = cache_id
 
-    # Grupper waypoints per suffix
+    # Group waypoints per suffix.
     wpts_by_suffix: dict[str, list] = {}
     for wp in extra_wpts:
         wpts_by_suffix.setdefault(wp["suffix"], []).append(wp)
 
+    # One batched delete of every affected cache's stale waypoints, chunked to
+    # stay under SQLite's bound-parameter limit.
+    target_ids = list({
+        suffix_to_cache_id[s] for s in wpts_by_suffix if s in suffix_to_cache_id
+    })
+    for i in range(0, len(target_ids), 500):
+        chunk = target_ids[i:i + 500]
+        session.query(Waypoint).filter(
+            Waypoint.cache_id.in_(chunk)
+        ).delete(synchronize_session=False)
+    session.flush()
+
     count = 0
     batch = 0
-
     for suffix, wps in wpts_by_suffix.items():
         cache_id = suffix_to_cache_id.get(suffix)
         if cache_id is None:
             continue
-
-        session.query(Waypoint).filter_by(cache_id=cache_id).delete(synchronize_session="fetch")
 
         for wp in wps:
             session.add(Waypoint(
@@ -494,11 +501,9 @@ def _insert_extra_wpts(session: Session, extra_wpts: list, commit_every: int = 5
 
         batch += 1
         if batch % commit_every == 0:
-            t1 = time.time()
             session.commit()
             session.expunge_all()
-    
-    t1 = time.time()
+
     session.commit()
     return count
 
@@ -563,27 +568,95 @@ def _parse_loc_waypoint(wpt_el) -> Optional[dict]:
 
 # ── DB upsert ─────────────────────────────────────────────────────────────────
 
-def _upsert_cache(session: Session, data: dict, source_file: str) -> tuple[Cache, bool]:
+def _load_existing_gc_map(session: Session) -> dict[str, int]:
+    """Return ``{gc_code: cache.id}`` for every cache already in the database.
+
+    Loaded once at the start of an import so :func:`_upsert_cache` can tell new
+    from existing caches without a ``SELECT`` per row. Only two indexed columns
+    are fetched, so this is a single light scan even on a large database.
+    """
+    return {gc: cid for gc, cid in session.query(Cache.gc_code, Cache.id)}
+
+
+from sqlalchemy import text as _sa_text
+
+
+def _enter_bulk_import_pragmas(session: Session) -> None:
+    """Relax SQLite durability on the import connection for speed.
+
+    With WAL enabled the database defaults to ``synchronous=FULL``, which fsyncs
+    on every batch commit — the dominant cost of a large import. ``NORMAL`` under
+    WAL is crash-safe (it can only lose the last transaction on an OS/power loss,
+    never corrupt the file) and removes those fsyncs. A larger page cache cuts
+    B-tree page churn while thousands of rows are inserted.
+
+    These are connection-level settings and the connection is pooled and reused,
+    so :func:`_exit_bulk_import_pragmas` MUST restore them once the import ends.
+    """
+    session.execute(_sa_text("PRAGMA synchronous=NORMAL"))
+    session.execute(_sa_text("PRAGMA cache_size=-65536"))  # ~64 MB page cache
+    session.commit()
+
+
+def _exit_bulk_import_pragmas(session: Session) -> None:
+    """Restore full durability on the import connection (see above).
+
+    Called from the importer's ``finally`` block, so the session may have just
+    committed or been rolled back. We roll back first to guarantee a clean state,
+    then re-apply the defaults; any failure here is swallowed so it never masks a
+    real import error.
+    """
+    try:
+        session.rollback()
+        session.execute(_sa_text("PRAGMA synchronous=FULL"))
+        session.execute(_sa_text("PRAGMA cache_size=-2000"))  # SQLite default
+        session.commit()
+    except Exception:
+        pass
+
+
+def _upsert_cache(
+    session: Session,
+    data: dict,
+    source_file: str,
+    existing_ids: dict[str, int] | None = None,
+) -> tuple[Cache, bool]:
     """
     Insert or update a Cache row from parsed GPX data.
     Returns (cache_object, created: bool).
+
+    *existing_ids* is an optional ``{gc_code: cache.id}`` map preloaded once per
+    import (see :func:`_load_existing_gc_map`). When supplied, a brand-new cache
+    is detected by a dict miss — no per-cache ``SELECT`` is issued, which is the
+    dominant cost on a fresh import of a large Pocket Query (every lookup would
+    otherwise return ``None``). Existing caches are loaded by primary key. When
+    omitted the function falls back to the original per-cache lookup.
     """
-    existing = session.query(Cache).filter_by(gc_code=data["gc_code"]).first()
-    created  = existing is None
+    gc_code = data["gc_code"]
+
+    if existing_ids is not None:
+        cid = existing_ids.get(gc_code)
+        existing = session.get(Cache, cid) if cid is not None else None
+    else:
+        existing = session.query(Cache).filter_by(gc_code=gc_code).first()
+    created = existing is None
 
     if created:
-        cache = Cache(gc_code=data["gc_code"])
+        cache = Cache(gc_code=gc_code)
         session.add(cache)
     else:
         cache = existing
         # Clear old child records so they are rebuilt fresh.
-        # flush() is required immediately after delete so SQLite sees the
-        # deletions before the new rows are added in the same batch —
-        # otherwise the UNIQUE constraint on logs.log_id will fire.
-        session.query(Log).filter_by(cache_id=cache.id).delete(synchronize_session="fetch")
-        session.query(Attribute).filter_by(cache_id=cache.id).delete(synchronize_session="fetch")
-        session.query(Trackable).filter_by(cache_id=cache.id).delete(synchronize_session="fetch")
-        session.query(Waypoint).filter_by(cache_id=cache.id).delete(synchronize_session="fetch")
+        # synchronize_session=False skips the SELECT-then-evaluate the ORM would
+        # otherwise run to keep in-memory objects in sync — we never load these
+        # collections during import, so there is nothing in the identity map to
+        # synchronise. The DELETEs still execute immediately. flush() afterwards
+        # forces them to disk before the new rows are added in the same batch,
+        # otherwise the UNIQUE constraint on logs.log_id would fire.
+        session.query(Log).filter_by(cache_id=cache.id).delete(synchronize_session=False)
+        session.query(Attribute).filter_by(cache_id=cache.id).delete(synchronize_session=False)
+        session.query(Trackable).filter_by(cache_id=cache.id).delete(synchronize_session=False)
+        session.query(Waypoint).filter_by(cache_id=cache.id).delete(synchronize_session=False)
         session.flush()
 
     # Scalar fields
@@ -813,31 +886,131 @@ def _upsert_cache(session: Session, data: dict, source_file: str) -> tuple[Cache
     return cache, created
 
 
+def _flush_cache_batch(
+    session: Session,
+    batch: list[dict],
+    source: str,
+    existing_ids: dict[str, int],
+    result: "ImportResult",
+) -> None:
+    """Persist a batch of parsed cache dicts, updating *result* counts in place.
+
+    Fast path: the whole batch runs under a single ``SAVEPOINT``. A per-cache
+    ``begin_nested()`` is the single most expensive part of a large import (the
+    SAVEPOINT/RELEASE round-trip plus SQLAlchemy's per-savepoint state machine),
+    so collapsing it to one savepoint per batch roughly halves import time.
+
+    Correctness is preserved by a fallback: if anything in the batch fails (a
+    malformed cache, a UNIQUE collision, an in-file duplicate gc_code), the batch
+    savepoint is rolled back and the batch is replayed cache-by-cache under
+    per-cache savepoints, so only the offending cache is skipped — exactly the
+    isolation the old per-cache loop gave, but paid for only when it is needed.
+    """
+    if not batch:
+        return
+
+    sp = session.begin_nested()
+    try:
+        # Defer result/existing_ids mutations until the savepoint commits, so a
+        # mid-batch failure leaves both untouched before the replay.
+        pending: list[tuple[Cache, bool]] = []
+        for data in batch:
+            cache, created = _upsert_cache(session, data, source, existing_ids)
+            pending.append((cache, created))
+        sp.commit()  # RELEASE — flushes, assigning new primary keys
+    except Exception:
+        sp.rollback()
+        _flush_cache_batch_isolated(session, batch, source, existing_ids, result)
+        return
+
+    for cache, created in pending:
+        if created:
+            result.created += 1
+            existing_ids[cache.gc_code] = cache.id
+        else:
+            result.updated += 1
+
+
+def _flush_cache_batch_isolated(
+    session: Session,
+    batch: list[dict],
+    source: str,
+    existing_ids: dict[str, int],
+    result: "ImportResult",
+) -> None:
+    """Replay a batch one cache at a time so a single bad cache only skips itself."""
+    for data in batch:
+        cell = session.begin_nested()
+        try:
+            cache, created = _upsert_cache(session, data, source, existing_ids)
+            cell.commit()
+            if created:
+                result.created += 1
+                existing_ids[cache.gc_code] = cache.id
+            else:
+                result.updated += 1
+        except Exception as e:
+            cell.rollback()
+            result.errors.append(f"DB error for {data.get('gc_code', '?')} in {source}: {e}")
+            result.skipped += 1
+
+
 def _link_extra_waypoints(
     session: Session,
     extra: dict[str, list[dict]],
 ) -> int:
     """
-    Match parsed extra waypoints to caches already in the DB and insert them.
-    Returns number of waypoints inserted.
+    Match parsed companion (-wpts.gpx) waypoints to caches already in the DB and
+    insert them. The link is "gc_code ends with suffix" (e.g. waypoint 'PK2345'
+    → cache 'GC12345'). Returns number of waypoints inserted.
+
+    Instead of a ``LIKE '%suffix'`` full-table scan per suffix, the caches are
+    loaded once and indexed by their trailing characters per suffix-length, so
+    each suffix resolves in O(1). Stale waypoints for the matched caches are
+    cleared in a single batched DELETE.
     """
+    if not extra:
+        return 0
+
+    # Build an ends-with index: for each suffix length present, map the cache's
+    # trailing chars of that length → cache_id (first match wins, matching the
+    # old .first() semantics).
+    lengths = {len(s) for s in extra if s}
+    tail_index: dict[int, dict[str, int]] = {n: {} for n in lengths}
+    for cid, gc in session.query(Cache.id, Cache.gc_code):
+        if not gc:
+            continue
+        for n in lengths:
+            if len(gc) >= n:
+                tail_index[n].setdefault(gc[-n:], cid)
+
+    # Resolve each suffix to a cache_id once.
+    resolved: dict[str, int] = {}
+    for suffix in extra:
+        cid = tail_index.get(len(suffix), {}).get(suffix)
+        if cid is not None:
+            resolved[suffix] = cid
+
+    if not resolved:
+        return 0
+
+    # Batched delete of stale waypoints for every matched cache.
+    target_ids = list(set(resolved.values()))
+    for i in range(0, len(target_ids), 500):
+        chunk = target_ids[i:i + 500]
+        session.query(Waypoint).filter(
+            Waypoint.cache_id.in_(chunk)
+        ).delete(synchronize_session=False)
+    session.flush()
+
     count = 0
     for suffix, wpts in extra.items():
-        # Find any cache whose gc_code ends with this suffix
-        cache = (
-            session.query(Cache)
-            .filter(Cache.gc_code.like(f"%{suffix}"))
-            .first()
-        )
-        if cache is None:
+        cache_id = resolved.get(suffix)
+        if cache_id is None:
             continue
-
-        # Remove stale extra waypoints for this cache (keep DB clean on re-import)
-        session.query(Waypoint).filter_by(cache_id=cache.id).delete()
-
         for wp in wpts:
             session.add(Waypoint(
-                cache=cache,
+                cache_id=cache_id,
                 prefix=wp["prefix"],
                 wp_type=wp["wp_type"],
                 name=wp["name"],
@@ -953,9 +1126,13 @@ def import_gpx(
     result = ImportResult()
     source = gpx_path.name
     db_session = make_session()
-    
+
     extra_wpts: list = []
     processed_count = 0
+
+    # Preload existing gc_codes once so new caches skip the per-cache SELECT.
+    existing_ids = _load_existing_gc_map(db_session)
+    _enter_bulk_import_pragmas(db_session)
 
     try:
         # Stream the XML using iterparse to avoid loading the entire file into RAM
@@ -965,6 +1142,12 @@ def import_gpx(
             tag=None  
         )
 
+        # Parsed cache dicts are buffered and written one batch per SAVEPOINT
+        # (see _flush_cache_batch). Each dict holds plain Python strings, so the
+        # streaming element-clearing below still keeps RAM flat — only up to
+        # batch_size dicts are held at a time.
+        batch: list[dict] = []
+
         for event, elem in context:
             # Handle tags regardless of namespace version
             local_tag = etree.QName(elem).localname
@@ -972,23 +1155,9 @@ def import_gpx(
             if local_tag == "wpt":
                 try:
                     data = _parse_wpt(elem)
-                    
+
                     if data is not None:
-                        # Use a SAVEPOINT so a failure in one cache does NOT
-                        # roll back the entire batch — only this single cache.
-                        nested = db_session.begin_nested()
-                        try:
-                            _, created = _upsert_cache(db_session, data, source)
-                            nested.commit()
-                            if created:
-                                result.created += 1
-                            else:
-                                result.updated += 1
-                        except Exception as e:
-                            nested.rollback()
-                            result.errors.append(f"Error in {source}: {e}")
-                            result.skipped += 1
-                        
+                        batch.append(data)
                         processed_count += 1
                         if progress_cb:
                             progress_cb(processed_count)
@@ -999,12 +1168,6 @@ def import_gpx(
                             extra_wpts.append(extra)
                         else:
                             result.skipped += 1
-                            
-                    # Batch commit to disk and clear session to save RAM
-                    if processed_count % batch_size == 0:
-                        db_session.commit()
-                        db_session.expunge_all()
-
                 except Exception as e:
                     result.errors.append(f"Error in {source}: {e}")
                     result.skipped += 1
@@ -1014,7 +1177,16 @@ def import_gpx(
                     while elem.getprevious() is not None:
                         del elem.getparent()[0]
 
-        # Final commit for remaining caches
+                # Flush a full batch to disk and clear the session to save RAM.
+                if len(batch) >= batch_size:
+                    _flush_cache_batch(db_session, batch, source, existing_ids, result)
+                    batch.clear()
+                    db_session.commit()
+                    db_session.expunge_all()
+
+        # Flush the trailing partial batch and commit the remainder.
+        _flush_cache_batch(db_session, batch, source, existing_ids, result)
+        batch.clear()
         db_session.commit()
 
         # Handle Extra Waypoints (Deduplication and Linking)
@@ -1044,6 +1216,7 @@ def import_gpx(
         db_session.rollback()
         result.errors.append(f"Fatal error importing {source}: {e}")
     finally:
+        _exit_bulk_import_pragmas(db_session)
         db_session.close()
 
     return result
@@ -1096,25 +1269,22 @@ def import_zip(zip_path: Path, session: Session | None = None, progress_cb=None)
 
         # Step 2: Write all parsed data sequentially (single session, no contention)
         db_session = make_session()
+        # Preload once, shared across every GPX in the zip so a cache created
+        # from one file is recognised when another references the same gc_code.
+        existing_ids = _load_existing_gc_map(db_session)
+        _enter_bulk_import_pragmas(db_session)
         try:
             for gpx_path, caches, extra_wpts, companion_data in parsed_files:
                 source = gpx_path.name
 
-                for data in caches:
-                    nested = db_session.begin_nested()
-                    try:
-                        _, created = _upsert_cache(db_session, data, source)
-                        nested.commit()
-                        if created:
-                            overall_result.created += 1
-                        else:
-                            overall_result.updated += 1
-                    except Exception as e:
-                        nested.rollback()
-                        overall_result.errors.append(f"DB error for {data.get('gc_code', '?')}: {e}")
-                        overall_result.skipped += 1
-
-                db_session.commit()
+                # Write each file's caches one batch per SAVEPOINT (with a
+                # per-cache fallback on failure — see _flush_cache_batch).
+                for i in range(0, len(caches), 200):
+                    _flush_cache_batch(
+                        db_session, caches[i:i + 200], source,
+                        existing_ids, overall_result,
+                    )
+                    db_session.commit()
                 db_session.expunge_all()
 
                 # Deduplicate and insert extra waypoints from main GPX
@@ -1137,6 +1307,7 @@ def import_zip(zip_path: Path, session: Session | None = None, progress_cb=None)
             db_session.rollback()
             raise
         finally:
+            _exit_bulk_import_pragmas(db_session)
             db_session.close()
 
     return overall_result
