@@ -27,6 +27,9 @@ def settings(tmp_path, monkeypatch):
     QSettings.setDefaultFormat(QSettings.Format.IniFormat)
     QSettings.setPath(QSettings.Format.IniFormat, QSettings.Scope.UserScope, str(tmp_path))
     s = AppSettings()
+    # setPath alone does not reliably redirect the 2-arg QSettings on macOS, so
+    # bind AppSettings to an explicit temp INI — keeps the real user settings clean.
+    s._s = QSettings(str(tmp_path / "settings.ini"), QSettings.Format.IniFormat)
     monkeypatch.setattr(sd, "get_settings", lambda: s)
     monkeypatch.setattr("opensak.gui.settings.get_settings", lambda: s)
 
