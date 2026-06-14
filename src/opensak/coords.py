@@ -159,20 +159,9 @@ def parse_coords(text: str) -> Coordinate | None:
             lon = -lon
         return lat, lon
 
-    # ── DMM: "N55 47.250 E012 25.000" ────────────────────────────────────────
-    m = re.match(
-        r'^([NSns])\s*(\d{1,3})\s+(\d+\.\d+)\s+([EWew])\s*(\d{1,3})\s+(\d+\.\d+)$',
-        text
-    )
-    if m:
-        lat_h, lat_d, lat_m, lon_h, lon_d, lon_m = m.groups()
-        lat = int(lat_d) + float(lat_m) / 60
-        lon = int(lon_d) + float(lon_m) / 60
-        if lat_h.upper() == "S":
-            lat = -lat
-        if lon_h.upper() == "W":
-            lon = -lon
-        return lat, lon
+    # Plain DMM "N55 47.250 E012 25.000" is already matched by the DMM° branch
+    # above (the degree sign and apostrophe are optional there), so no separate
+    # branch is needed.
 
     # ── DMS: "N55° 47' 15.00" E012° 25' 00.00"" ──────────────────────────────
     m = re.match(
