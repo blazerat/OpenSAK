@@ -6,6 +6,13 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **Export progress shows how far it has reached** (closes #207) — the GPS, file (GPX/LOC/GGZ)
+  and KML export dialogs now display a determinate progress bar with the number of caches
+  processed and the percentage (e.g. `320 / 500 (64%)`) instead of an indeterminate "running"
+  bar, giving a sense of how long the export will take. Suggested in issue #207.
+
 For planned features and known issues see the [GitHub Issues list](https://github.com/AgreeDK/opensak/issues).
 
 ## [1.13.11] — 2026-05-29
