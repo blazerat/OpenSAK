@@ -262,6 +262,24 @@ class TestDisposeEngine:
         assert database._engine is None
 
 
+class TestModelReprs:
+    def test_waypoint_repr(self):
+        assert "Waypoint" in repr(Waypoint(prefix="PK", cache_id=1))
+
+    def test_log_repr(self):
+        assert "Log" in repr(Log(log_type="Found it", finder="Tester"))
+
+    def test_attribute_repr(self):
+        assert "Attribute" in repr(Attribute(name="Kids", is_on=True))
+        assert "Attribute" in repr(Attribute(name="Dogs", is_on=False))
+
+    def test_trackable_repr(self):
+        assert "Trackable" in repr(Trackable())
+
+    def test_usernote_repr(self):
+        assert "UserNote" in repr(UserNote(cache_id=1))
+
+
 class TestInitDbDefaultPath:
     def test_uses_manager_active_path(self, tmp_path, monkeypatch):
         path = tmp_path / "managed.db"
