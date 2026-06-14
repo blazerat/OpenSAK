@@ -45,7 +45,7 @@ jobs:
       - name: Create ZIP
         shell: powershell
         run: Compress-Archive -Path dist/OpenSAK -DestinationPath dist/OpenSAK-${{ github.ref_name }}-Windows.zip
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: OpenSAK-${{ github.ref_name }}-Windows
           path: dist/OpenSAK-${{ github.ref_name }}-Windows.zip
@@ -96,7 +96,7 @@ jobs:
             echo "AppImage failed - creating tar.gz fallback"
             tar -czf OpenSAK-${{ github.ref_name }}-Linux-x86_64.tar.gz -C dist OpenSAK/
           fi
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: OpenSAK-${{ github.ref_name }}-Linux
           path: |
@@ -136,7 +136,7 @@ jobs:
             OpenSAK-${{ github.ref_name }}-macOS-arm64.dmg \
             dist/OpenSAK.app \
           || (cd dist && zip -r ../OpenSAK-${{ github.ref_name }}-macOS-arm64.zip OpenSAK.app && echo "Fallback ZIP created")
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: OpenSAK-${{ github.ref_name }}-macOS-arm64
           path: |
@@ -176,7 +176,7 @@ jobs:
             OpenSAK-${{ github.ref_name }}-macOS-x86_64.dmg \
             dist/OpenSAK.app \
           || (cd dist && zip -r ../OpenSAK-${{ github.ref_name }}-macOS-x86_64.zip OpenSAK.app && echo "Fallback ZIP created")
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: OpenSAK-${{ github.ref_name }}-macOS-x86_64
           path: |
