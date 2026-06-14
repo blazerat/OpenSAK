@@ -21,6 +21,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   output). Exports now reload the full cache data first, so GPX/LOC/GGZ/KML files always include
   hints, logs and waypoints.
 
+- **Re-importing an exported GPX no longer imports 0 caches** — OpenSAK exports GPX 1.1 (with the
+  Groundspeak data wrapped in `<extensions>`), but the importer only recognised GPX 1.0 with the
+  Groundspeak block as a direct child, so importing an OpenSAK-exported file (or any GPX 1.1 file)
+  found nothing. The importer now reads both GPX 1.0 and 1.1.
+
 For planned features and known issues see the [GitHub Issues list](https://github.com/AgreeDK/opensak/issues).
 
 ## [1.13.11] — 2026-05-29
