@@ -1,4 +1,4 @@
-"""tests/e2e-tests/test_e2e_cache_detail.py — cache detail panel scenarios."""
+# tests/e2e-tests/test_e2e_cache_detail.py — cache detail panel scenarios.
 
 import pytest
 
@@ -27,7 +27,7 @@ def _select_by_gc(window, qtbot, gc_code: str) -> None:
 
 
 def test_selecting_cache_shows_name_in_title(seeded_window, qtbot):
-    """Clicking the first row sets the detail panel title to that cache's name."""
+    # Clicking the first row sets the detail panel title to that cache's name.
     window = seeded_window
     _select_row(window, qtbot, 0)
 
@@ -37,14 +37,14 @@ def test_selecting_cache_shows_name_in_title(seeded_window, qtbot):
 
 
 def test_detail_panel_shows_gc_code(seeded_window, qtbot):
-    """After selecting GC12345 the detail panel GC-code label reads 'GC12345'."""
+    # After selecting GC12345 the detail panel GC-code label reads 'GC12345'.
     window = seeded_window
     _select_by_gc(window, qtbot, "GC12345")
     assert window._detail_panel._gc_code_lbl.text() == "GC12345"
 
 
 def test_detail_panel_shows_difficulty_terrain(seeded_window, qtbot):
-    """The D/T label is populated after a cache is selected."""
+    # The D/T label is populated after a cache is selected.
     window = seeded_window
     _select_row(window, qtbot, 0)
 
@@ -54,7 +54,7 @@ def test_detail_panel_shows_difficulty_terrain(seeded_window, qtbot):
 
 
 def test_detail_panel_clears_between_caches(seeded_window, qtbot):
-    """Selecting a second cache replaces the detail panel content."""
+    # Selecting a second cache replaces the detail panel content.
     window = seeded_window
     table = window._cache_table
     model = table.model()
@@ -74,7 +74,7 @@ def test_detail_panel_clears_between_caches(seeded_window, qtbot):
 
 
 def test_hint_tab_shows_raw_encoded_text(seeded_window, qtbot):
-    """The hint browser initially shows the raw (ROT13-encoded) hint text."""
+    # The hint browser initially shows the raw (ROT13-encoded) hint text.
     window = seeded_window
     _select_by_gc(window, qtbot, "GC12345")
 
@@ -83,7 +83,7 @@ def test_hint_tab_shows_raw_encoded_text(seeded_window, qtbot):
 
 
 def test_decode_button_rot13_decodes_hint(seeded_window, qtbot):
-    """Clicking 'Decode' translates 'Under a rock.' via ROT13 to 'Haqre n ebpx.'."""
+    # Clicking 'Decode' translates 'Under a rock.' via ROT13 to 'Haqre n ebpx.'.
     window = seeded_window
     _select_by_gc(window, qtbot, "GC12345")
 
@@ -98,7 +98,7 @@ def test_decode_button_rot13_decodes_hint(seeded_window, qtbot):
 
 
 def test_encode_button_restores_raw_hint(seeded_window, qtbot):
-    """Clicking 'Encode' after 'Decode' restores the original hint text."""
+    # Clicking 'Encode' after 'Decode' restores the original hint text.
     window = seeded_window
     _select_by_gc(window, qtbot, "GC12345")
 
@@ -116,7 +116,7 @@ def test_encode_button_restores_raw_hint(seeded_window, qtbot):
 
 
 def test_log_search_filters_visible_log_entries(seeded_window, qtbot):
-    """Typing in the log search field re-renders logs to show only matching entries."""
+    # Typing in the log search field re-renders logs to show only matching entries.
     window = seeded_window
     _select_by_gc(window, qtbot, "GC12345")
 
@@ -130,7 +130,7 @@ def test_log_search_filters_visible_log_entries(seeded_window, qtbot):
 
 
 def test_log_search_clear_restores_all_logs(seeded_window, qtbot):
-    """Clearing the log search field shows all log entries again."""
+    # Clearing the log search field shows all log entries again.
     window = seeded_window
     _select_by_gc(window, qtbot, "GC12345")
 

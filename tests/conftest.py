@@ -1,12 +1,9 @@
-"""
-tests/conftest.py — Shared fixtures for OpenSAK tests.
-"""
+# tests/conftest.py — shared fixtures for OpenSAK tests.
 
 import os
 
-# QtWebEngine's Chromium stack crashes the headless test process (SIGTRAP); swap
-# in native Qt widgets and keep any stray WebEngine view off the GPU. Must run
-# before any widget is constructed, hence at conftest import time.
+# QtWebEngine's Chromium stack crashes the headless process (SIGTRAP); force native
+# widgets and keep stray WebEngine views off the GPU, before any widget is built.
 os.environ.setdefault("OPENSAK_DISABLE_WEBENGINE", "1")
 os.environ.setdefault(
     "QTWEBENGINE_CHROMIUM_FLAGS",
@@ -30,7 +27,7 @@ def _no_network_update_check(monkeypatch):
 
 @pytest.fixture(scope="module")
 def tmp_db(tmp_path_factory):
-    """Create a fresh SQLite DB in a temp directory for a test module."""
+    # Create a fresh SQLite DB in a temp directory for a test module.
     db_path = tmp_path_factory.mktemp("data") / "test.db"
     init_db(db_path=db_path)
     return db_path
@@ -38,7 +35,7 @@ def tmp_db(tmp_path_factory):
 
 @pytest.fixture
 def db_session(tmp_path):
-    """Fresh isolated DB + bare Session for each test. Caller must commit."""
+    # Fresh isolated DB + bare Session for each test. Caller must commit.
     db_path = tmp_path / "test.db"
     init_db(db_path=db_path)
     session = make_session()
@@ -48,7 +45,7 @@ def db_session(tmp_path):
 
 @pytest.fixture
 def make_cache():
-    """Return a factory that builds Cache instances with sensible defaults."""
+    # Return a factory that builds Cache instances with sensible defaults.
     def _factory(gc_code: str = "GC12345", **kwargs) -> Cache:
         defaults = dict(
             name="Test Cache",

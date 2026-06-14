@@ -1,4 +1,4 @@
-"""tests/data.py — synthetic GPX/.loc test data and programmatic builders."""
+# tests/data.py — synthetic GPX/.loc test data and programmatic builders.
 
 import zipfile
 from pathlib import Path
@@ -123,7 +123,7 @@ INLINE_WPT_SUFFIX = (
 
 
 def make_variant_gpx(gc1="GCABCDE", gc2="GCFGHIJ", log1="333", log2="444"):
-    """Return a SAMPLE_GPX variant with different GC codes and log IDs."""
+    # Return a SAMPLE_GPX variant with different GC codes and log IDs.
     return (SAMPLE_GPX
         .replace("GC12345", gc1)
         .replace("GC99999", gc2)
@@ -132,12 +132,12 @@ def make_variant_gpx(gc1="GCABCDE", gc2="GCFGHIJ", log1="333", log2="444"):
 
 
 def make_gpx_with_inline_wpt():
-    """Return SAMPLE_GPX with an extra inline parking waypoint appended."""
+    # Return SAMPLE_GPX with an extra inline parking waypoint appended.
     return SAMPLE_GPX.replace("</gpx>", INLINE_WPT_SUFFIX)
 
 
 def write_gpx(tmp_path: Path, name: str, content: str) -> Path:
-    """Write GPX content to a file and return the path."""
+    # Write GPX content to a file and return the path.
     f = tmp_path / name
     f.write_text(content, encoding="utf-8")
     return f
@@ -221,7 +221,7 @@ def cache_wpt(
 
 
 def build_gpx(*wpt_blocks: str, creator: str = "Groundspeak Pocket Query") -> str:
-    """Wrap one or more ``<wpt>`` blocks (from :func:`cache_wpt`) into a GPX doc."""
+    # Wrap one or more ``<wpt>`` blocks (from :func:`cache_wpt`) into a GPX doc.
     return (
         '<?xml version="1.0" encoding="utf-8"?>'
         f'<gpx version="1.0" creator="{creator}" '
@@ -231,7 +231,7 @@ def build_gpx(*wpt_blocks: str, creator: str = "Groundspeak Pocket Query") -> st
 
 
 def make_loc(waypoints: list[dict]) -> str:
-    """Build a ``.loc`` document from waypoint dicts (keys: gc_code, name?, lat, lon)."""
+    # Build a ``.loc`` document from waypoint dicts (keys: gc_code, name?, lat, lon).
     wpts = "".join(
         "\n  <waypoint>"
         f'\n    <name id="{wp["gc_code"]}">{wp.get("name", wp["gc_code"])}</name>'
@@ -259,7 +259,7 @@ def seed_standard_caches(work_dir: Path) -> None:
 
 
 def make_fake_manager(db_path: Path, name: str = "E2ETest"):
-    """Return a lightweight DatabaseManager stand-in for monkeypatching."""
+    # Return a lightweight DatabaseManager stand-in for monkeypatching.
     from opensak.db.manager import DatabaseInfo
 
     class _FakeManager:

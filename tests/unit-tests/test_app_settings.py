@@ -1,4 +1,4 @@
-"""tests/unit-tests/test_app_settings.py — AppSettings / HomePoint (temp-INI)."""
+# tests/unit-tests/test_app_settings.py — AppSettings / HomePoint (temp-INI).
 
 from types import SimpleNamespace
 

@@ -1,4 +1,4 @@
-"""tests/e2e-tests/test_e2e_import.py — import scenarios (GPX/ZIP + ImportDialog worker)."""
+# tests/e2e-tests/test_e2e_import.py — import scenarios (GPX/ZIP + ImportDialog worker).
 
 import pytest
 
@@ -11,7 +11,7 @@ from PySide6.QtCore import Qt
 
 
 def test_gpx_import_populates_table(empty_window, qtbot, tmp_path):
-    """After importing a GPX file the main window table shows the imported caches."""
+    # After importing a GPX file the main window table shows the imported caches.
     from opensak.db.database import get_session
     from opensak.importer import import_gpx
     from tests.data import SAMPLE_GPX
@@ -32,7 +32,7 @@ def test_gpx_import_populates_table(empty_window, qtbot, tmp_path):
 
 
 def test_duplicate_import_is_idempotent(empty_window, qtbot, tmp_path):
-    """Importing the same GPX a second time must not increase the row count."""
+    # Importing the same GPX a second time must not increase the row count.
     from opensak.db.database import get_session
     from opensak.importer import import_gpx
     from tests.data import SAMPLE_GPX
@@ -56,7 +56,7 @@ def test_duplicate_import_is_idempotent(empty_window, qtbot, tmp_path):
 
 
 def test_zip_import_populates_table(empty_window, qtbot, tmp_path):
-    """Importing a PQ ZIP file adds caches to the table."""
+    # Importing a PQ ZIP file adds caches to the table.
     from opensak.db.database import get_session
     from opensak.importer import import_zip
     from tests.data import SAMPLE_GPX, SAMPLE_WPTS_GPX, make_zip

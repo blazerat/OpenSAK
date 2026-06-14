@@ -1,6 +1,4 @@
-"""
-tests/unit-tests/test_flags.py — Feature flag resolution tests.
-"""
+# tests/unit-tests/test_flags.py — feature flag resolution tests.
 
 import pytest
 

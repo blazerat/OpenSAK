@@ -1,4 +1,4 @@
-"""tests/unit-tests/test_importer_loc.py — import_loc() parsing + import_gpx progress_cb."""
+# tests/unit-tests/test_importer_loc.py — import_loc() parsing + import_gpx progress_cb.
 
 import pytest
 from pathlib import Path
@@ -49,7 +49,7 @@ NON_GC_LOC = """\
 
 @pytest.fixture
 def loc_file(tmp_path):
-    """Write SAMPLE_LOC to a temp file and return its path."""
+    # Write SAMPLE_LOC to a temp file and return its path.
     p = tmp_path / "test.loc"
     p.write_text(SAMPLE_LOC, encoding="utf-8")
     return p

@@ -1,4 +1,4 @@
-"""tests/unit-tests/test_database_dialog.py — database manager + new-database dialogs."""
+# tests/unit-tests/test_database_dialog.py — database manager + new-database dialogs.
 
 from datetime import datetime
 from pathlib import Path

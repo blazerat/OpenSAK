@@ -1,4 +1,4 @@
-"""tests/unit-tests/test_garmin.py — Garmin GPX/LOC/GGZ generation/export (no device needed)."""
+# tests/unit-tests/test_garmin.py — Garmin GPX/LOC/GGZ generation/export (no device needed).
 
 import io
 import xml.etree.ElementTree as ET

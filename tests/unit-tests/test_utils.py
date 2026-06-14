@@ -1,4 +1,4 @@
-"""tests/unit-tests/test_utils.py — validate_gc_code() and get_import_type()."""
+# tests/unit-tests/test_utils.py — validate_gc_code() and get_import_type().
 
 import pytest
 from pathlib import Path

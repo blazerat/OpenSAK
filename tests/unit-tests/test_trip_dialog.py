@@ -1,4 +1,4 @@
-"""tests/unit-tests/test_trip_dialog.py — trip planner geometry, dialog, map preview."""
+# tests/unit-tests/test_trip_dialog.py — trip planner geometry, dialog, map preview.
 
 from types import SimpleNamespace
 

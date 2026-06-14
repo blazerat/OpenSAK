@@ -1,6 +1,4 @@
-"""
-tests/e2e-tests/conftest.py — Shared fixtures for e2e GUI tests.
-"""
+# tests/e2e-tests/conftest.py — shared fixtures for e2e GUI tests.
 
 import pytest
 
@@ -25,7 +23,7 @@ def _quiet_startup(monkeypatch):
 
 
 def _make_window(qtbot, tmp_path, monkeypatch, *, name: str, seed: bool):
-    """Build a shown MainWindow on a throwaway DB (shared by the window fixtures)."""
+    # Build a shown MainWindow on a throwaway DB (shared by the window fixtures).
     import opensak.db.manager as mgr_module
     from opensak.db.database import init_db
     from opensak.lang import load_language
@@ -56,11 +54,11 @@ def _make_window(qtbot, tmp_path, monkeypatch, *, name: str, seed: bool):
 
 @pytest.fixture
 def seeded_window(qtbot, tmp_path, monkeypatch):
-    """MainWindow backed by a throwaway database pre-seeded with 4 test caches."""
+    # MainWindow backed by a throwaway database pre-seeded with 4 test caches.
     yield from _make_window(qtbot, tmp_path, monkeypatch, name="E2ETest", seed=True)
 
 
 @pytest.fixture
 def empty_window(qtbot, tmp_path, monkeypatch):
-    """MainWindow backed by a fresh empty database (0 caches)."""
+    # MainWindow backed by a fresh empty database (0 caches).
     yield from _make_window(qtbot, tmp_path, monkeypatch, name="E2EEmpty", seed=False)

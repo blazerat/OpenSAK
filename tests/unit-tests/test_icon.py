@@ -1,4 +1,4 @@
-"""tests/unit-tests/test_icon.py — app icon loader + OpenSAKMessageBox."""
+# tests/unit-tests/test_icon.py — app icon loader + OpenSAKMessageBox.
 
 import shutil
 import sys

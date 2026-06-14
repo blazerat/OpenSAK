@@ -1,4 +1,4 @@
-"""tests/unit-tests/test_filter_dialog.py — complete filter dialog (build/load/profiles)."""
+# tests/unit-tests/test_filter_dialog.py — complete filter dialog (build/load/profiles).
 
 from datetime import datetime
 from types import SimpleNamespace

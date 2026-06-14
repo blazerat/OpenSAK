@@ -1,4 +1,4 @@
-"""tests/unit-tests/test_gps_dialog.py — GPS/Garmin export dialog + workers."""
+# tests/unit-tests/test_gps_dialog.py — GPS/Garmin export dialog + workers.
 
 from pathlib import Path
 from types import SimpleNamespace

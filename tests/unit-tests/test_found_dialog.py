@@ -1,4 +1,4 @@
-"""tests/unit-tests/test_found_dialog.py — found-status updater dialog."""
+# tests/unit-tests/test_found_dialog.py — found-status updater dialog.
 
 from pathlib import Path
 from types import SimpleNamespace

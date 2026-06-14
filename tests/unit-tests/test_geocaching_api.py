@@ -1,4 +1,4 @@
-"""tests/unit-tests/test_geocaching_api.py — network-mocked API tests (no real HTTP)."""
+# tests/unit-tests/test_geocaching_api.py — network-mocked API tests (no real HTTP).
 
 import base64
 import json
@@ -40,7 +40,7 @@ from opensak.api.geocaching import (
 
 @pytest.fixture(autouse=True)
 def reset_token_cache():
-    """Clear the in-memory token cache before and after every test."""
+    # Clear the in-memory token cache before and after every test.
     gc_module._cached_token = None
     yield
     gc_module._cached_token = None
@@ -48,14 +48,14 @@ def reset_token_cache():
 
 @pytest.fixture
 def token_file(tmp_path):
-    """Redirect get_token_file() to a path inside tmp_path."""
+    # Redirect get_token_file() to a path inside tmp_path.
     token_path = tmp_path / "gc_token.json"
     with patch("opensak.api.geocaching.get_token_file", return_value=token_path):
         yield token_path
 
 
 def _mock_urlopen(payload: dict):
-    """Return a context-manager mock that yields a response with JSON payload."""
+    # Return a context-manager mock that yields a response with JSON payload.
     body = json.dumps(payload).encode("utf-8")
     resp = MagicMock()
     resp.read.return_value = body
@@ -208,7 +208,7 @@ _SAMPLE_CACHE_PAYLOAD = {
 
 @pytest.fixture
 def logged_in_client(token_file):
-    """Provide a valid token and a non-empty GC_CLIENT_ID."""
+    # Provide a valid token and a non-empty GC_CLIENT_ID.
     _save_token({"access_token": "valid_token", "expires_at": time.time() + 3600})
     with patch.object(gc_module, "GC_CLIENT_ID", "test_client_id"):
         yield

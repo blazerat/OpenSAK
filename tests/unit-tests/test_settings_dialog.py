@@ -1,4 +1,4 @@
-"""tests/unit-tests/test_settings_dialog.py — settings dialog (temp-backed AppSettings)."""
+# tests/unit-tests/test_settings_dialog.py — settings dialog (temp-backed AppSettings).
 
 import pytest
 from unittest.mock import MagicMock
@@ -21,9 +21,8 @@ _VALID = "N55 47.250 E012 25.000"
 
 @pytest.fixture
 def settings(tmp_path, monkeypatch):
-    # Redirect the real QSettings("OpenSAK Project", "OpenSAK") (used directly by
-    # the dialog and by AppSettings) to a temp INI — no class patching, which
-    # would corrupt PySide's type system.
+    # Redirect the real QSettings("OpenSAK Project", "OpenSAK") to a temp INI —
+    # no class patching, which would corrupt PySide's type system.
     QSettings.setDefaultFormat(QSettings.Format.IniFormat)
     QSettings.setPath(QSettings.Format.IniFormat, QSettings.Scope.UserScope, str(tmp_path))
     s = AppSettings()

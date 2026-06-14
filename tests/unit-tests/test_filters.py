@@ -1,4 +1,4 @@
-"""tests/unit-tests/test_filters.py — filter engine tests."""
+# tests/unit-tests/test_filters.py — filter engine tests.
 
 import json
 import pytest
@@ -28,7 +28,7 @@ from opensak.filters.engine import (
 
 @pytest.fixture(scope="module", autouse=True)
 def seed_data(tmp_db):
-    """Insert a set of test caches covering all filter scenarios."""
+    # Insert a set of test caches covering all filter scenarios.
     caches = [
         Cache(
             gc_code="GC00001", name="Easy Traditional",
@@ -305,7 +305,7 @@ def test_container_filter(tmp_db):
 # ── FilterSet AND / OR logic ──────────────────────────────────────────────────
 
 def test_filterset_and(tmp_db):
-    """AND: must match ALL filters."""
+    # AND: must match ALL filters.
     with get_session() as s:
         fs = FilterSet(mode="AND")
         fs.add(CacheTypeFilter(["Traditional Cache"]))
@@ -317,7 +317,7 @@ def test_filterset_and(tmp_db):
 
 
 def test_filterset_or(tmp_db):
-    """OR: must match AT LEAST ONE filter."""
+    # OR: must match AT LEAST ONE filter.
     with get_session() as s:
         fs = FilterSet(mode="OR")
         fs.add(CacheTypeFilter(["Multi-cache"]))
@@ -330,7 +330,7 @@ def test_filterset_or(tmp_db):
 
 
 def test_filterset_nested(tmp_db):
-    """Nested FilterSets: (Traditional OR Multi) AND available."""
+    # Nested FilterSets: (Traditional OR Multi) AND available.
     with get_session() as s:
         inner = FilterSet(mode="OR")
         inner.add(CacheTypeFilter(["Traditional Cache"]))
@@ -351,7 +351,7 @@ def test_filterset_nested(tmp_db):
 
 
 def test_empty_filterset_returns_all(tmp_db):
-    """An empty FilterSet should return all caches."""
+    # An empty FilterSet should return all caches.
     with get_session() as s:
         all_results = apply_filters(s)
         filtered = apply_filters(s, FilterSet())
@@ -390,7 +390,7 @@ def test_invalid_sort_field():
 # ── Serialisation / deserialisation ──────────────────────────────────────────
 
 def test_filter_serialisation_roundtrip():
-    """Every filter should serialise and deserialise correctly."""
+    # Every filter should serialise and deserialise correctly.
     filters = [
         CacheTypeFilter(["Traditional Cache", "Multi-cache"]),
         ContainerFilter(["Small", "Micro"]),
@@ -525,7 +525,7 @@ class TestWhereClauseFilterClass:
         assert f.sql == "difficulty >= 3"
 
     def test_matches_returns_true_when_no_prerun(self, make_cache):
-        """_matching_ids is None before any apply_filters call — pass everything."""
+        # _matching_ids is None before any apply_filters call — pass everything.
         f = WhereClauseFilter("difficulty >= 3")
         assert f._matching_ids is None
         assert f.matches(make_cache()) is True
@@ -555,7 +555,7 @@ class TestWhereClauseFilterClass:
         assert WhereClauseFilter.filter_type == "where_clause"
 
     def test_serialisation_in_global_roundtrip(self):
-        """WhereClauseFilter participates correctly in the global serialisation test."""
+        # WhereClauseFilter participates correctly in the global serialisation test.
         f = WhereClauseFilter("placed_by = 'OwnerA'")
         data = f.to_dict()
         ftype = data["filter_type"]
@@ -619,7 +619,7 @@ class TestIterFilters:
 # ── WhereClauseFilter integration with apply_filters ─────────────────────────
 
 def test_where_clause_valid_sql_filters(tmp_db):
-    """Valid SQL narrows results; only caches whose difficulty >= 4.0 pass."""
+    # Valid SQL narrows results; only caches whose difficulty >= 4.0 pass.
     with get_session() as s:
         fs = FilterSet().add(WhereClauseFilter("difficulty >= 4.0"))
         results = apply_filters(s, fs)
@@ -630,7 +630,7 @@ def test_where_clause_valid_sql_filters(tmp_db):
 
 
 def test_where_clause_string_column(tmp_db):
-    """String column filter: country = 'Germany' returns only GC00005."""
+    # String column filter: country = 'Germany' returns only GC00005.
     with get_session() as s:
         fs = FilterSet().add(WhereClauseFilter("country = 'Germany'"))
         results = apply_filters(s, fs)
@@ -640,7 +640,7 @@ def test_where_clause_string_column(tmp_db):
 
 
 def test_where_clause_invalid_sql_returns_empty(tmp_db):
-    """Invalid SQL silently produces zero matches (no exception raised)."""
+    # Invalid SQL silently produces zero matches (no exception raised).
     with get_session() as s:
         fs = FilterSet().add(WhereClauseFilter("this is NOT valid SQL!!!"))
         results = apply_filters(s, fs)
@@ -648,7 +648,7 @@ def test_where_clause_invalid_sql_returns_empty(tmp_db):
 
 
 def test_where_clause_empty_sql_passes_all(tmp_db):
-    """Empty SQL string skips the pre-run; _matching_ids stays None → all pass."""
+    # Empty SQL string skips the pre-run; _matching_ids stays None → all pass.
     with get_session() as s:
         all_results = apply_filters(s)
         filtered = apply_filters(s, FilterSet().add(WhereClauseFilter("")))
@@ -656,7 +656,7 @@ def test_where_clause_empty_sql_passes_all(tmp_db):
 
 
 def test_where_clause_combined_with_type_filter(tmp_db):
-    """WhereClauseFilter AND CacheTypeFilter: both constraints must be satisfied."""
+    # WhereClauseFilter AND CacheTypeFilter: both constraints must be satisfied.
     with get_session() as s:
         fs = FilterSet(mode="AND")
         fs.add(CacheTypeFilter(["Traditional Cache"]))
@@ -671,7 +671,7 @@ def test_where_clause_combined_with_type_filter(tmp_db):
 
 
 def test_where_clause_in_nested_filterset(tmp_db):
-    """_iter_filters reaches WhereClauseFilter nested inside another FilterSet."""
+    # _iter_filters reaches WhereClauseFilter nested inside another FilterSet.
     with get_session() as s:
         inner = FilterSet(mode="AND")
         inner.add(WhereClauseFilter("difficulty >= 4.0"))
@@ -707,7 +707,7 @@ def test_apply_filters_defers_description_blobs(tmp_db):
 
 
 def test_apply_filters_results_unchanged_with_deferral(tmp_db):
-    """Deferring blobs must not change which caches are returned."""
+    # Deferring blobs must not change which caches are returned.
     with get_session() as s:
         all_codes = {c.gc_code for c in apply_filters(s)}
         fs = FilterSet(mode="AND")
@@ -718,7 +718,7 @@ def test_apply_filters_results_unchanged_with_deferral(tmp_db):
 
 
 def test_where_clause_profile_save_load(tmp_path):
-    """FilterProfile containing WhereClauseFilter round-trips the SQL through JSON."""
+    # FilterProfile containing WhereClauseFilter round-trips the SQL through JSON.
     sql = "difficulty >= 3 AND terrain <= 4"
     fs = FilterSet()
     fs.add(WhereClauseFilter(sql))

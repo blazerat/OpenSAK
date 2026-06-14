@@ -1,4 +1,4 @@
-"""tests/unit-tests/test_waypoint_dialog.py — add/edit cache & custom-waypoint dialog."""
+# tests/unit-tests/test_waypoint_dialog.py — add/edit cache & custom-waypoint dialog.
 
 from types import SimpleNamespace
 

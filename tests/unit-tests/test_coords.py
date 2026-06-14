@@ -1,4 +1,4 @@
-"""tests/unit-tests/test_coords.py — format_coords / parse_coords across all formats."""
+# tests/unit-tests/test_coords.py — format_coords / parse_coords across all formats.
 
 import pytest
 from opensak.coords import (
@@ -160,7 +160,7 @@ class TestParseCoordsDMM:
 
 
 class TestParseCoordsDMMDegree:
-    """Geocaching.com copy-paste format: N 34° 58.088' E 034° 03.281'"""
+    # Geocaching.com copy-paste format: N 34° 58.088' E 034° 03.281'
 
     def test_basic(self):
         result = parse_coords("N 34° 58.088' E 034° 03.281'")
@@ -225,7 +225,7 @@ class TestParseCoordsInvalid:
 
 
 class TestParseCoordsRoundtrip:
-    """format_coords → parse_coords should recover the original values."""
+    # format_coords → parse_coords should recover the original values.
 
     @pytest.mark.parametrize("lat,lon", [
         (55.7875, 12.41667),

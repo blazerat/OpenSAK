@@ -1,4 +1,4 @@
-"""tests/unit-tests/test_db_manager.py — DatabaseManager unit tests (QSettings mocked)."""
+# tests/unit-tests/test_db_manager.py — DatabaseManager unit tests (QSettings mocked).
 
 from datetime import datetime
 
@@ -13,7 +13,7 @@ from opensak.db.manager import DatabaseManager, DatabaseInfo
 
 
 def _empty_settings_mock() -> MagicMock:
-    """Return a QSettings mock representing an empty (first-run) configuration."""
+    # Return a QSettings mock representing an empty (first-run) configuration.
     s = MagicMock(spec=QSettings)
     s.beginReadArray.return_value = 0  # no databases stored
     s.value.return_value = None        # no active_database stored
@@ -22,7 +22,7 @@ def _empty_settings_mock() -> MagicMock:
 
 @pytest.fixture
 def manager(tmp_path, qapp):
-    """Isolated DatabaseManager: QSettings mocked, init_db no-op, tmp_path for files."""
+    # Isolated DatabaseManager: QSettings mocked, init_db no-op, tmp_path for files.
     mock_s = _empty_settings_mock()
     with (
         patch("opensak.db.manager.QSettings", return_value=mock_s),

@@ -1,4 +1,4 @@
-"""Cover the console-script entry points; stub the callees to avoid GUI/recursion."""
+# Cover the console-script entry points; stub the callees to avoid GUI/recursion.
 
 import sys
 import types

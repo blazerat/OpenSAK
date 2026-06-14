@@ -1,4 +1,4 @@
-"""Smoke-cover the export package's public API surface."""
+# Smoke-cover the export package's public API surface.
 
 import opensak.export as export
 from opensak.export import export_kml

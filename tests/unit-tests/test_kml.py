@@ -1,4 +1,4 @@
-"""tests/unit-tests/test_kml.py — KML export for Google Maps (no GUI/DB needed)."""
+# tests/unit-tests/test_kml.py — KML export for Google Maps (no GUI/DB needed).
 
 import xml.etree.ElementTree as ET
 from types import SimpleNamespace

@@ -1,4 +1,4 @@
-"""tests/unit-tests/test_db.py — database model, session and CRUD tests."""
+# tests/unit-tests/test_db.py — database model, session and CRUD tests.
 
 from types import SimpleNamespace
 
@@ -23,7 +23,7 @@ from opensak.db.models import Cache, Waypoint, Log, Attribute, Trackable, UserNo
 
 @pytest.fixture
 def sample_cache() -> Cache:
-    """Return a Cache instance (not yet added to any session)."""
+    # Return a Cache instance (not yet added to any session).
     return Cache(
         gc_code="GC12345",
         name="Sample Traditional Cache",
@@ -46,7 +46,7 @@ def sample_cache() -> Cache:
 # ── Config tests ──────────────────────────────────────────────────────────────
 
 def test_config_paths():
-    """Config paths should all be pathlib.Path instances."""
+    # Config paths should all be pathlib.Path instances.
     from opensak.config import get_app_data_dir, get_db_path, get_gpx_import_dir, get_log_path
     assert isinstance(get_app_data_dir(), Path)
     assert isinstance(get_db_path(), Path)
@@ -55,7 +55,7 @@ def test_config_paths():
 
 
 def test_config_directories_created():
-    """App data and import dirs should be created automatically."""
+    # App data and import dirs should be created automatically.
     from opensak.config import get_app_data_dir, get_gpx_import_dir
     assert get_app_data_dir().exists()
     assert get_gpx_import_dir().exists()
@@ -68,7 +68,7 @@ def test_init_db_creates_file(tmp_db):
 
 
 def test_init_db_is_idempotent(tmp_db):
-    """Calling init_db a second time should not raise or corrupt the DB."""
+    # Calling init_db a second time should not raise or corrupt the DB.
     init_db(db_path=tmp_db)  # second call — should be safe
 
 
@@ -97,7 +97,7 @@ def test_cache_repr(tmp_db):
 
 
 def test_gc_code_is_unique(tmp_db):
-    """Inserting a duplicate gc_code should raise an integrity error."""
+    # Inserting a duplicate gc_code should raise an integrity error.
     from sqlalchemy.exc import IntegrityError
     duplicate = Cache(
         gc_code="GC12345",
@@ -188,7 +188,7 @@ def test_add_user_note(tmp_db):
 # ── Cascade delete ────────────────────────────────────────────────────────────
 
 def test_cascade_delete(tmp_db):
-    """Deleting a cache should also delete all its child records."""
+    # Deleting a cache should also delete all its child records.
     with get_session() as s:
         cache = s.query(Cache).filter_by(gc_code="GC12345").one()
         cache_id = cache.id

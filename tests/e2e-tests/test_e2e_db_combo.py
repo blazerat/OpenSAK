@@ -1,4 +1,4 @@
-"""tests/e2e-tests/test_e2e_db_combo.py — database dropdown toolbar scenarios."""
+# tests/e2e-tests/test_e2e_db_combo.py — database dropdown toolbar scenarios.
 
 import pytest
 
@@ -9,7 +9,7 @@ pytest.importorskip("pytestqt")
 
 
 def _make_two_db_manager(db_path_a, db_path_b):
-    """Fake manager with two databases; db_path_a is active."""
+    # Fake manager with two databases; db_path_a is active.
     from opensak.db.manager import DatabaseInfo
 
     class _FakeTwoManager:
@@ -46,7 +46,7 @@ def _make_two_db_manager(db_path_a, db_path_b):
 
 @pytest.fixture
 def combo_window(qtbot, tmp_path, monkeypatch):
-    """MainWindow with a single-database manager."""
+    # MainWindow with a single-database manager.
     import opensak.db.manager as mgr_module
     from opensak.db.database import init_db
     from opensak.lang import load_language
@@ -73,7 +73,7 @@ def combo_window(qtbot, tmp_path, monkeypatch):
 
 @pytest.fixture
 def two_db_combo_window(qtbot, tmp_path, monkeypatch):
-    """MainWindow with a two-database manager."""
+    # MainWindow with a two-database manager.
     import opensak.db.manager as mgr_module
     from opensak.db.database import init_db
     from opensak.lang import load_language
@@ -104,23 +104,23 @@ def two_db_combo_window(qtbot, tmp_path, monkeypatch):
 
 
 def test_db_combo_present(combo_window, qtbot):
-    """The toolbar combo widget is always created."""
+    # The toolbar combo widget is always created.
     assert hasattr(combo_window, "_db_combo")
     assert combo_window._db_combo is not None
 
 
 def test_db_combo_shows_all_databases(combo_window, qtbot):
-    """Combo contains one entry per database registered in the manager."""
+    # Combo contains one entry per database registered in the manager.
     assert combo_window._db_combo.count() == 1
 
 
 def test_db_combo_shows_database_name(combo_window, qtbot):
-    """The combo entry text matches the database name."""
+    # The combo entry text matches the database name.
     assert combo_window._db_combo.itemText(0) == "E2ETest"
 
 
 def test_db_combo_two_databases_shown(two_db_combo_window, qtbot):
-    """Combo shows both databases when manager has two."""
+    # Combo shows both databases when manager has two.
     window, _ = two_db_combo_window
     assert window._db_combo.count() == 2
     names = [window._db_combo.itemText(i) for i in range(window._db_combo.count())]
@@ -132,12 +132,12 @@ def test_db_combo_two_databases_shown(two_db_combo_window, qtbot):
 
 
 def test_db_combo_active_database_is_selected(combo_window, qtbot):
-    """The active database is pre-selected in the combo."""
+    # The active database is pre-selected in the combo.
     assert combo_window._db_combo.currentText() == "E2ETest"
 
 
 def test_db_combo_active_is_first_entry(two_db_combo_window, qtbot):
-    """Alpha (the active DB) is the selected entry on startup."""
+    # Alpha (the active DB) is the selected entry on startup.
     window, _ = two_db_combo_window
     assert window._db_combo.currentText() == "Alpha"
 
@@ -146,7 +146,7 @@ def test_db_combo_active_is_first_entry(two_db_combo_window, qtbot):
 
 
 def test_db_combo_switch_calls_manager(two_db_combo_window, qtbot):
-    """Selecting a different combo entry calls manager.switch_to with that DB."""
+    # Selecting a different combo entry calls manager.switch_to with that DB.
     window, fake_mgr = two_db_combo_window
 
     beta_index = next(
@@ -161,7 +161,7 @@ def test_db_combo_switch_calls_manager(two_db_combo_window, qtbot):
 
 
 def test_db_combo_updates_after_switch(two_db_combo_window, qtbot):
-    """After switching, the combo selection reflects the new active database."""
+    # After switching, the combo selection reflects the new active database.
     window, fake_mgr = two_db_combo_window
 
     beta_index = next(
@@ -175,7 +175,7 @@ def test_db_combo_updates_after_switch(two_db_combo_window, qtbot):
 
 
 def test_db_combo_refreshes_on_database_switched_signal(two_db_combo_window, qtbot):
-    """Calling _on_database_switched (e.g. from the dialog) refreshes the combo."""
+    # Calling _on_database_switched (e.g. from the dialog) refreshes the combo.
     window, fake_mgr = two_db_combo_window
 
     fake_mgr._active = fake_mgr._b

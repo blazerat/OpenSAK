@@ -1,4 +1,4 @@
-"""tests/unit-tests/test_corrected_coords_dialog.py — corrected-coords entry dialog."""
+# tests/unit-tests/test_corrected_coords_dialog.py — corrected-coords entry dialog.
 
 import pytest
 from unittest.mock import MagicMock

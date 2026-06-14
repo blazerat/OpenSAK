@@ -1,4 +1,4 @@
-"""tests/unit-tests/test_icon_provider.py — cache icon/pixmap/pin provider."""
+# tests/unit-tests/test_icon_provider.py — cache icon/pixmap/pin provider.
 
 import pytest
 
@@ -11,7 +11,7 @@ from opensak.gui import icon_provider as ip
 
 @pytest.fixture(autouse=True)
 def _app(qapp):
-    """QPainter/QPixmap need a QApplication."""
+    # QPainter/QPixmap need a QApplication.
     yield
 
 

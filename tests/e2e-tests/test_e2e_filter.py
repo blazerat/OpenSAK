@@ -16,7 +16,7 @@ TOTAL = 4  # caches seeded into the test DB
 
 
 def test_quick_filter_found_returns_zero(seeded_window, qtbot):
-    """Selecting the 'Found' quick-filter hides all caches (none are marked found)."""
+    # Selecting the 'Found' quick-filter hides all caches (none are marked found).
     window = seeded_window
     assert window._cache_table.row_count() == TOTAL
 
@@ -27,7 +27,7 @@ def test_quick_filter_found_returns_zero(seeded_window, qtbot):
 
 
 def test_quick_filter_not_found_returns_all(seeded_window, qtbot):
-    """Selecting 'Not Found' keeps all 4 caches visible."""
+    # Selecting 'Not Found' keeps all 4 caches visible.
     window = seeded_window
 
     window._quick_filter.setCurrentIndex(2)  # Found → 0 rows
@@ -41,7 +41,7 @@ def test_quick_filter_not_found_returns_all(seeded_window, qtbot):
 
 
 def test_quick_filter_reset_to_all_restores_count(seeded_window, qtbot):
-    """Switching back to 'All' (index 0) after a filter restores full count."""
+    # Switching back to 'All' (index 0) after a filter restores full count.
     window = seeded_window
 
     window._quick_filter.setCurrentIndex(2)  # Found → 0
@@ -56,7 +56,7 @@ def test_quick_filter_reset_to_all_restores_count(seeded_window, qtbot):
 
 
 def test_name_search_filters_to_matching_rows(seeded_window, qtbot):
-    """Typing in the name field narrows the table to caches whose name matches."""
+    # Typing in the name field narrows the table to caches whose name matches.
     window = seeded_window
 
     # "Test Traditional" matches GC12345 and GCAAA01 (both share that name)
@@ -67,7 +67,7 @@ def test_name_search_filters_to_matching_rows(seeded_window, qtbot):
 
 
 def test_name_search_clear_restores_all(seeded_window, qtbot):
-    """Clearing the name search field restores the full cache list."""
+    # Clearing the name search field restores the full cache list.
     window = seeded_window
 
     window._search_box.setText("Mystery Cache")
@@ -80,7 +80,7 @@ def test_name_search_clear_restores_all(seeded_window, qtbot):
 
 
 def test_name_search_no_match_returns_zero(seeded_window, qtbot):
-    """A search term that matches nothing yields an empty table."""
+    # A search term that matches nothing yields an empty table.
     window = seeded_window
 
     window._search_box.setText("zzz_no_match_zzz")
@@ -93,7 +93,7 @@ def test_name_search_no_match_returns_zero(seeded_window, qtbot):
 
 
 def test_gc_search_finds_exact_code(seeded_window, qtbot):
-    """Typing a GC code in the GC field returns exactly that one cache."""
+    # Typing a GC code in the GC field returns exactly that one cache.
     window = seeded_window
 
     window._search_gc.setText("GC12345")
@@ -103,7 +103,7 @@ def test_gc_search_finds_exact_code(seeded_window, qtbot):
 
 
 def test_gc_search_prefix_finds_multiple(seeded_window, qtbot):
-    """A partial GC prefix matches all caches whose code starts with it."""
+    # A partial GC prefix matches all caches whose code starts with it.
     window = seeded_window
 
     window._search_gc.setText("GCAAA")
@@ -138,7 +138,7 @@ def test_filter_applied_signal_updates_table(seeded_window, qtbot):
 
 
 def test_clear_filter_removes_advanced_filter(seeded_window, qtbot):
-    """After _clear_filter the full row count is restored and label is gone."""
+    # After _clear_filter the full row count is restored and label is gone.
     from opensak.filters.engine import FilterSet, SortSpec, CacheTypeFilter
 
     window = seeded_window
@@ -179,7 +179,7 @@ def test_where_clause_filter_reduces_row_count(seeded_window, qtbot):
 
 
 def test_where_clause_invalid_sql_hides_all_rows(seeded_window, qtbot):
-    """Invalid SQL produces zero matches — the table empties without crashing."""
+    # Invalid SQL produces zero matches — the table empties without crashing.
     from opensak.filters.engine import FilterSet, SortSpec, WhereClauseFilter
 
     window = seeded_window
@@ -193,7 +193,7 @@ def test_where_clause_invalid_sql_hides_all_rows(seeded_window, qtbot):
 
 
 def test_where_clause_clear_restores_full_count(seeded_window, qtbot):
-    """After applying a WHERE filter, _clear_filter restores all rows."""
+    # After applying a WHERE filter, _clear_filter restores all rows.
     from opensak.filters.engine import FilterSet, SortSpec, WhereClauseFilter
 
     window = seeded_window
@@ -214,7 +214,7 @@ def test_where_clause_clear_restores_full_count(seeded_window, qtbot):
 
 
 def test_where_tab_present(seeded_window, qtbot):
-    """FilterDialog always shows a WHERE tab."""
+    # FilterDialog always shows a WHERE tab.
     from opensak.gui.dialogs.filter_dialog import FilterDialog
 
     dialog = FilterDialog(parent=seeded_window)
@@ -227,7 +227,7 @@ def test_where_tab_present(seeded_window, qtbot):
 
 
 def test_where_tab_builds_where_clause_filter(seeded_window, qtbot):
-    """Entering SQL in the WHERE tab produces a WhereClauseFilter in the FilterSet."""
+    # Entering SQL in the WHERE tab produces a WhereClauseFilter in the FilterSet.
     from opensak.gui.dialogs.filter_dialog import FilterDialog
     from opensak.filters.engine import WhereClauseFilter, _iter_filters
 
@@ -244,7 +244,7 @@ def test_where_tab_builds_where_clause_filter(seeded_window, qtbot):
 
 
 def test_where_tab_empty_sql_adds_no_filter(seeded_window, qtbot):
-    """An empty WHERE text field does not add a WhereClauseFilter to the set."""
+    # An empty WHERE text field does not add a WhereClauseFilter to the set.
     from opensak.gui.dialogs.filter_dialog import FilterDialog
     from opensak.filters.engine import WhereClauseFilter, _iter_filters
 
@@ -260,7 +260,7 @@ def test_where_tab_empty_sql_adds_no_filter(seeded_window, qtbot):
 
 
 def test_where_tab_reset_clears_sql(seeded_window, qtbot):
-    """_reset_all() empties the WHERE SQL field and hides the error label."""
+    # _reset_all() empties the WHERE SQL field and hides the error label.
     from opensak.gui.dialogs.filter_dialog import FilterDialog
 
     dialog = FilterDialog(parent=seeded_window)
@@ -275,7 +275,7 @@ def test_where_tab_reset_clears_sql(seeded_window, qtbot):
 
 
 def test_where_tab_validate_valid_sql_returns_none(seeded_window, qtbot):
-    """_validate_where_sql returns None for syntactically valid SQL."""
+    # _validate_where_sql returns None for syntactically valid SQL.
     from opensak.gui.dialogs.filter_dialog import FilterDialog
 
     dialog = FilterDialog(parent=seeded_window)
@@ -287,7 +287,7 @@ def test_where_tab_validate_valid_sql_returns_none(seeded_window, qtbot):
 
 
 def test_where_tab_validate_invalid_sql_returns_error(seeded_window, qtbot):
-    """_validate_where_sql returns a non-empty error string for bad SQL."""
+    # _validate_where_sql returns a non-empty error string for bad SQL.
     from opensak.gui.dialogs.filter_dialog import FilterDialog
 
     dialog = FilterDialog(parent=seeded_window)

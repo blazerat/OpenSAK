@@ -1,4 +1,4 @@
-"""Cover lang/*.py by importing each language as a real package module."""
+# Cover lang/*.py by importing each language as a real package module.
 
 import importlib
 

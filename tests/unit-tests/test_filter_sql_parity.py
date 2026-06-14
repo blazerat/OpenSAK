@@ -1,20 +1,6 @@
-"""
-tests/unit-tests/test_filter_sql_parity.py — SQL/Python filter parity tests.
+"""tests/unit-tests/test_filter_sql_parity.py — SQL/Python filter parity.
 
-The engine pushes the cheap, index-friendly filters into the SQL WHERE clause
-via BaseFilter.apply_to_query(). This must never change *which* caches are
-returned compared with the pure-Python matches() pass.
-
-Every test here asserts:
-
-    apply_filters(session, fs)  ==  [c for c in all_rows if fs.matches(c)]
-
-over the *same* seeded data, including NULL edge cases (unknown difficulty,
-missing country/owner, etc.) and AND/OR composition — the cases where a careless
-SQL translation would silently diverge from the Python semantics.
-
-The seed data lives in its own module-scoped database so the NULL rows here do
-not leak into test_filters.py (whose assertions would choke on None values).
+apply_filters(session, fs) must equal [c for c in all_rows if fs.matches(c)] over the same seed, including NULL edge cases and AND/OR composition.
 """
 
 import pytest
@@ -80,7 +66,7 @@ def seed_parity_data(tmp_db):
 # ── Parity helper ─────────────────────────────────────────────────────────────
 
 def assert_parity(fs: FilterSet | None):
-    """SQL push-down result must equal the pure-Python matches() result."""
+    # SQL push-down result must equal the pure-Python matches() result.
     with get_session() as s:
         sql_codes = {c.gc_code for c in apply_filters(s, fs)}
         all_rows = s.query(Cache).all()

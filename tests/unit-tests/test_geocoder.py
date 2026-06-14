@@ -1,4 +1,4 @@
-"""tests/unit-tests/test_geocoder.py — reverse geocoder (libs stubbed, no network)."""
+# tests/unit-tests/test_geocoder.py — reverse geocoder (libs stubbed, no network).
 
 from __future__ import annotations
 
@@ -33,7 +33,7 @@ def _mocks(search_results: list[dict], country_name: str | None = ""):
 
 
 def _mocks_map(search_results: list[dict], cc_to_name: dict[str, str]):
-    """Variant for tests that need different country names per result."""
+    # Variant for tests that need different country names per result.
     mock_rg = MagicMock()
     mock_rg.search.return_value = search_results
 

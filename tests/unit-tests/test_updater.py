@@ -1,18 +1,6 @@
-"""
-tests/unit-tests/test_updater.py — Version-check updater (src/opensak/updater.py).
+"""tests/unit-tests/test_updater.py — version-check updater, fully offline.
 
-This module was the source of the CI "Aborted (core dumped)" flake: its
-``UpdateCheckWorker`` ran a real ``urlopen()`` to GitHub, and on CI those
-threads stayed blocked at teardown. These tests pin the behaviour *offline* —
-no test here (nor anywhere else, via the autouse stub in tests/conftest.py) is
-allowed to touch the network.
-
-Covered:
-  * _parse_version          — tag → tuple, malformed → (0,), ordering
-  * fetch_latest_release    — happy path + every error path, all with a fake
-                              urlopen (never a real socket)
-  * UpdateCheckWorker.run   — emits update_available only when strictly newer;
-                              always emits check_done
+Was the CI "core dumped" flake (UpdateCheckWorker ran a real urlopen to GitHub); these pin _parse_version, fetch_latest_release and the worker with a fake urlopen.
 """
 
 import json
@@ -24,16 +12,15 @@ pytest.importorskip("pytestqt")
 from urllib.error import URLError
 
 import opensak.updater as updater
-# Bind the *real* functions at import time. The autouse _no_network_update_check
-# fixture (tests/conftest.py) replaces ``updater.fetch_latest_release`` per test;
-# these local names keep pointing at the genuine implementations under test.
+# Bind the real functions now; the autouse _no_network_update_check fixture swaps
+# updater.fetch_latest_release per test, so these names keep pointing at the real impls.
 from opensak.updater import _parse_version, fetch_latest_release, UpdateCheckWorker
 
 
 # ── Fake HTTP layer (no real socket ever) ─────────────────────────────────────
 
 class _FakeResp:
-    """Minimal context-manager response that json.load() can consume."""
+    # Minimal context-manager response that json.load() can consume.
 
     def __init__(self, payload):
         self._bytes = json.dumps(payload).encode()
@@ -49,7 +36,7 @@ class _FakeResp:
 
 
 def _patch_urlopen(monkeypatch, handler):
-    """Replace urllib.request.urlopen with *handler* (called as handler())."""
+    # Replace urllib.request.urlopen with *handler* (called as handler()).
     monkeypatch.setattr(
         "urllib.request.urlopen", lambda *_a, **_k: handler()
     )

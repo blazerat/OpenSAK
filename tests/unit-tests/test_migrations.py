@@ -1,16 +1,6 @@
-"""
-tests/unit-tests/test_migrations.py — Startup migration gate (PRAGMA user_version).
+"""tests/unit-tests/test_migrations.py — startup migration gate (PRAGMA user_version).
 
-The startup migration block is gated behind PRAGMA user_version so a database
-already at the current schema skips the ~10 idempotent PRAGMA table_info probes
-that would otherwise run on every launch. The migrations themselves are
-unchanged; only the gate (skip-when-current, stamp-after-run) is exercised here.
-
-Tests assert:
-  * init_db stamps user_version to SCHEMA_VERSION
-  * a current database short-circuits — no table_info probes
-  * a stale database (user_version=0) re-runs the probes and is re-stamped
-  * the schema migrations still produced their indexes (gate opened at least once)
+A DB already at SCHEMA_VERSION short-circuits the table_info probes; a stale one (user_version=0) re-runs them and is re-stamped.
 """
 
 import pytest
@@ -24,9 +14,8 @@ from opensak.db.database import (
     SCHEMA_VERSION,
 )
 
-# The original pre-migration schema: only the columns/tables the migrations read
-# or rebuild. Running the migrations against it exercises every add-column /
-# table-rebuild / data-normalisation branch.
+# Pre-migration schema (only what the migrations read/rebuild) so running them
+# exercises every add-column / table-rebuild / normalisation branch.
 _OLD_SCHEMA = [
     "CREATE TABLE caches (id INTEGER PRIMARY KEY AUTOINCREMENT, gc_code TEXT, cache_type TEXT, "
     "container TEXT, difficulty REAL, terrain REAL, hidden_date DATETIME, found_date DATETIME, "
@@ -39,7 +28,7 @@ _OLD_SCHEMA = [
 
 
 def _capture_statements(engine):
-    """Return (list, detach) capturing every SQL statement run on *engine*."""
+    # Return (list, detach) capturing every SQL statement run on *engine*.
     seen: list[str] = []
 
     def _listener(conn, cursor, statement, params, context, executemany):
@@ -56,7 +45,7 @@ def test_user_version_stamped_after_init(tmp_path):
 
 
 def test_migrations_skipped_when_current(tmp_path):
-    """A second migration pass on an up-to-date DB must not probe table_info."""
+    # A second migration pass on an up-to-date DB must not probe table_info.
     init_db(db_path=tmp_path / "skip.db")
     engine = get_engine()
 
@@ -73,7 +62,7 @@ def test_migrations_skipped_when_current(tmp_path):
 
 
 def test_migrations_rerun_when_version_stale(tmp_path):
-    """Resetting user_version=0 must re-open the gate and re-stamp afterwards."""
+    # Resetting user_version=0 must re-open the gate and re-stamp afterwards.
     init_db(db_path=tmp_path / "stale.db")
     engine = get_engine()
 
@@ -93,7 +82,7 @@ def test_migrations_rerun_when_version_stale(tmp_path):
 
 
 def test_indexes_present_after_init(tmp_path):
-    """Sanity: the gated migration block still created the filter/sort indexes."""
+    # Sanity: the gated migration block still created the filter/sort indexes.
     init_db(db_path=tmp_path / "idx.db")
     with get_engine().connect() as c:
         names = {
@@ -106,7 +95,7 @@ def test_indexes_present_after_init(tmp_path):
 
 
 def test_old_schema_runs_every_migration(tmp_path):
-    """A v0 database with the original schema must apply all migrations."""
+    # A v0 database with the original schema must apply all migrations.
     engine = _make_engine(tmp_path / "old.db")
     with engine.connect() as c:
         for ddl in _OLD_SCHEMA:
