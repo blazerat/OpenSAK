@@ -247,26 +247,14 @@ class MainWindow(QMainWindow):
 
         file_menu.addSeparator()
 
-        # ── Export submenu ─────────────────────────────────────────────────────
-        export_menu = file_menu.addMenu(tr("menu_export"))
-
-        act_export_gpx = QAction(tr("action_export_gpx"), self)
-        act_export_gpx.triggered.connect(lambda: self._open_file_export("gpx"))
-        export_menu.addAction(act_export_gpx)
-
-        act_export_loc = QAction(tr("action_export_loc"), self)
-        act_export_loc.triggered.connect(lambda: self._open_file_export("loc"))
-        export_menu.addAction(act_export_loc)
-
-        act_export_ggz = QAction(tr("action_export_ggz"), self)
-        act_export_ggz.triggered.connect(lambda: self._open_file_export("ggz"))
-        export_menu.addAction(act_export_ggz)
-
-        export_menu.addSeparator()
+        # ── Export ──────────────────────────────────────────────────────────────
+        act_export = QAction(tr("action_export"), self)
+        act_export.triggered.connect(self._open_file_export)
+        file_menu.addAction(act_export)
 
         act_kml_export = QAction(tr("action_kml_export"), self)
         act_kml_export.triggered.connect(self._open_kml_export)
-        export_menu.addAction(act_kml_export)
+        file_menu.addAction(act_kml_export)
 
         file_menu.addSeparator()
 
@@ -1564,8 +1552,8 @@ class MainWindow(QMainWindow):
         dlg = GpsExportDialog(self, caches=caches)
         dlg.exec()
 
-    def _open_file_export(self, fmt: str = "gpx") -> None:
-        """Open the file export dialog (GPX / LOC / GGZ)."""
+    def _open_file_export(self) -> None:
+        # Format (GPX / LOC / GGZ) is chosen inside the dialog.
         if self._trip_planner_active():
             self._warn_trip_planner_active()
             return
@@ -1583,13 +1571,6 @@ class MainWindow(QMainWindow):
             return
         from opensak.gui.dialogs.file_export_dialog import FileExportDialog
         dlg = FileExportDialog(caches, parent=self)
-        # Pre-select the requested format
-        if fmt == "loc":
-            dlg._btn_loc.setChecked(True)
-        elif fmt == "ggz":
-            dlg._btn_ggz.setChecked(True)
-        else:
-            dlg._btn_gpx.setChecked(True)
         dlg.exec()
 
     def _open_kml_export(self) -> None:

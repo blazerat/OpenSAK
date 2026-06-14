@@ -624,20 +624,13 @@ class TestToolDialogs:
             "opensak.gui.dialogs.gps_dialog.GpsExportDialog", fake_dialog())
         seeded_window._open_gps_export()
 
-    def test_open_file_export_formats(self, seeded_window, monkeypatch):
-        attrs = {
-            "_btn_loc": SimpleNamespace(setChecked=lambda v: None),
-            "_btn_ggz": SimpleNamespace(setChecked=lambda v: None),
-            "_btn_gpx": SimpleNamespace(setChecked=lambda v: None),
-        }
+    def test_open_file_export(self, seeded_window, monkeypatch):
         monkeypatch.setattr(
-            "opensak.gui.dialogs.file_export_dialog.FileExportDialog",
-            fake_dialog(attrs=attrs))
-        for fmt in ("gpx", "loc", "ggz"):
-            seeded_window._open_file_export(fmt)
+            "opensak.gui.dialogs.file_export_dialog.FileExportDialog", fake_dialog())
+        seeded_window._open_file_export()
 
     def test_open_file_export_no_caches(self, empty_window, mbox_ok):
-        empty_window._open_file_export("gpx")
+        empty_window._open_file_export()
 
     def test_open_kml_export(self, seeded_window, monkeypatch):
         monkeypatch.setattr(
@@ -703,7 +696,7 @@ class TestTripBlocked:
         getattr(blocked, method)()  # warns, returns without constructing dialog
 
     def test_file_export_blocked(self, blocked):
-        blocked._open_file_export("gpx")
+        blocked._open_file_export()
 
 
 class TestHomeAndCwExtra:
