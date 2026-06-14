@@ -55,7 +55,7 @@ cd opensak
 
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
+pip install -e .
 
 opensak  # or python run.py
 ```
@@ -80,7 +80,7 @@ git clone https://github.com/AgreeDK/opensak.git
 cd opensak
 python -m venv .venv
 .venv\Scripts\activate
-pip install -r requirements.txt
+pip install -e .
 opensak  # or python run.py
 ```
 
@@ -112,7 +112,7 @@ git clone https://github.com/AgreeDK/opensak.git
 cd opensak
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
+pip install -e .
 opensak  # or python run.py
 ```
 
@@ -143,7 +143,7 @@ cd ~/opensak
 git pull origin main
 source .venv/bin/activate      # Linux/macOS
 # .venv\Scripts\activate       # Windows
-pip install -r requirements.txt
+pip install -e .
 python run.py
 ```
 

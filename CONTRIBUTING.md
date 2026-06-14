@@ -45,7 +45,7 @@ cd opensak
 python3 -m venv .venv
 source .venv/bin/activate          # Linux / macOS
 # .venv\Scripts\activate           # Windows
-pip install -r requirements.txt
+pip install -e ".[dev]"            # runtime + test deps (single source: pyproject.toml)
 pytest -v tests/                   # run tests
 python run.py                      # start the application
 ```
