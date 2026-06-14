@@ -19,13 +19,15 @@ from PySide6.QtWidgets import (
 
 from opensak.lang import tr
 from opensak.gui.icon import OpenSAKMessageBox as QMessageBox
+from opensak.gui.dialogs import make_progress_cb
 
 
 # ── Background worker ─────────────────────────────────────────────────────────
 
 class _ExportWorker(QThread):
-    finished = Signal(str)   # success message
-    error    = Signal(str)   # error message
+    finished = Signal(str)        # success message
+    error    = Signal(str)        # error message
+    progress = Signal(int, int)   # (done, total)
 
     def __init__(self, caches: list, output_path: Path, fmt: str):
         super().__init__()
@@ -38,15 +40,16 @@ class _ExportWorker(QThread):
             from opensak.gps.garmin import generate_gpx, generate_loc, generate_ggz
 
             self._output_path.parent.mkdir(parents=True, exist_ok=True)
+            cb = make_progress_cb(self.progress.emit)
 
             if self._fmt == "gpx":
-                content = generate_gpx(self._caches, self._output_path.stem)
+                content = generate_gpx(self._caches, self._output_path.stem, progress_cb=cb)
                 self._output_path.write_text(content, encoding="utf-8")
             elif self._fmt == "loc":
-                content = generate_loc(self._caches)
+                content = generate_loc(self._caches, progress_cb=cb)
                 self._output_path.write_text(content, encoding="utf-8")
             elif self._fmt == "ggz":
-                data = generate_ggz(self._caches, self._output_path.stem)
+                data = generate_ggz(self._caches, self._output_path.stem, progress_cb=cb)
                 self._output_path.write_bytes(data)
 
             count = len([c for c in self._caches if c.latitude is not None])
@@ -164,13 +167,29 @@ class FileExportDialog(QDialog):
 
         self._log.clear()
         self._log.setVisible(True)
+        self._reset_progress()
         self._progress.setVisible(True)
         self._btn_export.setEnabled(False)
 
         self._worker = _ExportWorker(self._caches, output_path, fmt)
         self._worker.finished.connect(self._on_success)
         self._worker.error.connect(self._on_error)
+        self._worker.progress.connect(self._on_progress)
         self._worker.start()
+
+    def _reset_progress(self) -> None:
+        """Reset the bar to the indeterminate "running" state."""
+        self._progress.setRange(0, 0)
+        self._progress.setTextVisible(False)
+
+    def _on_progress(self, done: int, total: int) -> None:
+        """Switch to a determinate bar showing count and percentage."""
+        if total <= 0:
+            return
+        self._progress.setRange(0, total)
+        self._progress.setValue(done)
+        self._progress.setFormat("%v / %m  (%p%)")
+        self._progress.setTextVisible(True)
 
     def _on_success(self, msg: str) -> None:
         self._progress.setVisible(False)

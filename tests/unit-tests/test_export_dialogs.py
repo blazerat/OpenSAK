@@ -9,6 +9,7 @@ pytest.importorskip("pytestqt")
 
 from PySide6.QtWidgets import QDialog
 
+from opensak.gui.dialogs import make_progress_cb
 from opensak.gui.dialogs import file_export_dialog as fed
 from opensak.gui.dialogs import kml_export_dialog as ked
 from opensak.gui.dialogs.file_export_dialog import FileExportDialog
@@ -25,6 +26,33 @@ def _cache(gc_code="GC12345", latitude=55.0, longitude=12.0):
         encoded_hints=None, hidden_date=None, logs=[], user_note=None,
         container="Small", found=False, short_description="", waypoints=[],
     )
+
+
+# ── Throttled progress callback ───────────────────────────────────────────────
+
+class TestMakeProgressCb:
+    def test_emits_each_step_for_small_total(self):
+        seen = []
+        cb = make_progress_cb(lambda d, t: seen.append((d, t)))
+        for i in range(1, 5):
+            cb(i, 4)
+        assert seen == [(1, 4), (2, 4), (3, 4), (4, 4)]
+
+    def test_throttles_large_total_but_always_emits_last(self):
+        seen = []
+        cb = make_progress_cb(lambda d, t: seen.append((d, t)))
+        total = 1000
+        for i in range(1, total + 1):
+            cb(i, total)
+        # ~200 updates (every 5th) plus the final one — never one per cache.
+        assert len(seen) < total
+        assert seen[-1] == (total, total)
+
+    def test_zero_total_emits_nothing(self):
+        seen = []
+        cb = make_progress_cb(lambda d, t: seen.append((d, t)))
+        cb(0, 0)
+        assert seen == []
 
 
 # ── KML export worker ─────────────────────────────────────────────────────────
@@ -47,6 +75,14 @@ class TestKmlExportWorker:
         w.error.connect(errs.append)
         w.run()
         assert errs and "kaboom" in errs[0]
+
+    def test_run_emits_progress(self, tmp_path):
+        caches = [_cache(gc_code=f"GC{i}") for i in range(3)]
+        w = KmlWorker(caches, str(tmp_path / "out.kml"), True, True)
+        seen = []
+        w.progress.connect(lambda d, t: seen.append((d, t)))
+        w.run()
+        assert seen and seen[-1] == (3, 3)
 
 
 # ── KML export dialog ─────────────────────────────────────────────────────────
@@ -90,6 +126,7 @@ class TestKmlExportDialog:
             def __init__(self, **kw):
                 self.finished = MagicMock()
                 self.error = MagicMock()
+                self.progress = MagicMock()
 
             def start(self):
                 started.append(True)
@@ -100,6 +137,16 @@ class TestKmlExportDialog:
         assert started == [True]
         assert dlg._export_btn.isEnabled() is False
         assert not dlg._progress.isHidden()
+
+    def test_on_progress_makes_bar_determinate(self, qtbot):
+        dlg = KmlExportDialog([])
+        qtbot.addWidget(dlg)
+        dlg._reset_progress()
+        assert dlg._progress.maximum() == 0
+        dlg._on_progress(2, 5)
+        assert dlg._progress.maximum() == 5
+        assert dlg._progress.value() == 2
+        assert dlg._progress.isTextVisible() is True
 
     def test_on_finished_accepts(self, qtbot, monkeypatch):
         dlg = KmlExportDialog([])
@@ -142,6 +189,15 @@ class TestFileExportWorker:
         w.run()
         assert errs and "gen failed" in errs[0]
 
+    @pytest.mark.parametrize("fmt,suffix", [("gpx", ".gpx"), ("loc", ".loc"), ("ggz", ".ggz")])
+    def test_run_emits_progress(self, tmp_path, fmt, suffix):
+        caches = [_cache(gc_code=f"GC{i}") for i in range(3)]
+        w = FileWorker(caches, tmp_path / f"export{suffix}", fmt)
+        seen = []
+        w.progress.connect(lambda d, t: seen.append((d, t)))
+        w.run()
+        assert seen and seen[-1] == (3, 3)
+
 
 # ── File export dialog ────────────────────────────────────────────────────────
 
@@ -173,6 +229,7 @@ class TestFileExportDialog:
                 captured["path"] = output_path
                 self.finished = MagicMock()
                 self.error = MagicMock()
+                self.progress = MagicMock()
 
             def start(self):
                 captured["started"] = True
@@ -182,6 +239,16 @@ class TestFileExportDialog:
         assert captured["started"] is True
         assert str(captured["path"]).endswith(".gpx")
         assert dlg._btn_export.isEnabled() is False
+
+    def test_on_progress_makes_bar_determinate(self, qtbot):
+        dlg = FileExportDialog([_cache()])
+        qtbot.addWidget(dlg)
+        dlg._reset_progress()
+        assert dlg._progress.maximum() == 0
+        dlg._on_progress(4, 4)
+        assert dlg._progress.maximum() == 4
+        assert dlg._progress.value() == 4
+        assert dlg._progress.isTextVisible() is True
 
     def test_on_success_shows_message(self, qtbot):
         dlg = FileExportDialog([_cache()])

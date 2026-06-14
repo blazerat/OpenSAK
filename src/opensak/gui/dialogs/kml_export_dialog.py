@@ -24,6 +24,7 @@ from PySide6.QtWidgets import (
 
 from ...export.kml import export_kml
 from ...lang import tr
+from . import make_progress_cb
 
 
 # ---------------------------------------------------------------------------
@@ -33,6 +34,7 @@ from ...lang import tr
 class _ExportWorker(QThread):
     finished = Signal(int)
     error    = Signal(str)
+    progress = Signal(int, int)   # (done, total)
 
     def __init__(self, caches, output_path: str, include_waypoints: bool, include_found: bool):
         super().__init__()
@@ -48,6 +50,7 @@ class _ExportWorker(QThread):
                 self._output_path,
                 include_waypoints=self._include_waypoints,
                 include_found=self._include_found,
+                progress_cb=make_progress_cb(self.progress.emit),
             )
             self.finished.emit(count)
         except Exception as exc:  # noqa: BLE001
@@ -143,6 +146,7 @@ class KmlExportDialog(QDialog):
             return
 
         self._export_btn.setEnabled(False)
+        self._reset_progress()
         self._progress.setVisible(True)
 
         self._worker = _ExportWorker(
@@ -153,7 +157,22 @@ class KmlExportDialog(QDialog):
         )
         self._worker.finished.connect(self._on_finished)
         self._worker.error.connect(self._on_error)
+        self._worker.progress.connect(self._on_progress)
         self._worker.start()
+
+    def _reset_progress(self) -> None:
+        """Reset the bar to the indeterminate "running" state."""
+        self._progress.setRange(0, 0)
+        self._progress.setTextVisible(False)
+
+    def _on_progress(self, done: int, total: int) -> None:
+        """Switch to a determinate bar showing count and percentage."""
+        if total <= 0:
+            return
+        self._progress.setRange(0, total)
+        self._progress.setValue(done)
+        self._progress.setFormat("%v / %m  (%p%)")
+        self._progress.setTextVisible(True)
 
     def _on_finished(self, count: int) -> None:
         self._progress.setVisible(False)

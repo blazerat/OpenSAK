@@ -39,9 +39,9 @@ class TestExportWorker:
     def test_run_to_device(self, monkeypatch, tmp_path):
         (tmp_path / "Garmin").mkdir()
         monkeypatch.setattr("opensak.gps.garmin.export_to_device",
-                            lambda c, d, f: "to device")
+                            lambda c, d, f, progress_cb=None: "to device")
         monkeypatch.setattr("opensak.gps.garmin.export_to_file",
-                            lambda c, p: "to file")
+                            lambda c, p, progress_cb=None: "to file")
         w = ExportWorker(["c1", "c2", "c3"], tmp_path, "out", max_caches=2)
         got = []
         w.finished.connect(got.append)
@@ -49,7 +49,8 @@ class TestExportWorker:
         assert got == ["to device"]
 
     def test_run_to_file(self, monkeypatch, tmp_path):
-        monkeypatch.setattr("opensak.gps.garmin.export_to_file", lambda c, p: "to file")
+        monkeypatch.setattr("opensak.gps.garmin.export_to_file",
+                            lambda c, p, progress_cb=None: "to file")
         w = ExportWorker(["c1"], tmp_path, "out", max_caches=0)  # 0 = all
         got = []
         w.finished.connect(got.append)
@@ -58,12 +59,32 @@ class TestExportWorker:
 
     def test_run_error(self, monkeypatch, tmp_path):
         monkeypatch.setattr("opensak.gps.garmin.export_to_file",
-                            lambda c, p: (_ for _ in ()).throw(RuntimeError("disk full")))
+                            lambda c, p, progress_cb=None: (_ for _ in ()).throw(RuntimeError("disk full")))
         w = ExportWorker(["c1"], tmp_path, "out", max_caches=0)
         errs = []
         w.error.connect(errs.append)
         w.run()
         assert errs and "disk full" in errs[0]
+
+    def test_run_emits_progress(self, monkeypatch, tmp_path):
+        # Drive the real generator so progress_cb fires per cache.
+        from types import SimpleNamespace
+
+        def _cache(gc):
+            return SimpleNamespace(
+                id=1, gc_code=gc, name="n", cache_type="Traditional Cache",
+                latitude=55.0, longitude=12.0, difficulty=1.0, terrain=1.0,
+                placed_by="o", available=True, archived=False, country="DK",
+                encoded_hints=None, hidden_date=None, logs=[], user_note=None,
+                container="Small", found=False,
+            )
+
+        caches = [_cache(f"GC{i}") for i in range(3)]
+        w = ExportWorker(caches, tmp_path, "out", max_caches=0)  # file mode
+        seen = []
+        w.progress.connect(lambda d, t: seen.append((d, t)))
+        w.run()
+        assert seen and seen[-1] == (3, 3)
 
 
 # ── GpsExportDialog ─────────────────────────────────────────────────────────────
@@ -149,6 +170,7 @@ class TestDialogInteraction:
             def __init__(self, *a, **k):
                 self.finished = MagicMock()
                 self.error = MagicMock()
+                self.progress = MagicMock()
             def start(self):
                 launched.append(True)
             def isRunning(self):
@@ -207,6 +229,7 @@ class TestDialogInteraction:
             def __init__(self, *a, **k):
                 self.finished = MagicMock()
                 self.error = MagicMock()
+                self.progress = MagicMock()
             def start(self):
                 launched.append(True)
             def isRunning(self):
@@ -224,3 +247,16 @@ class TestDialogInteraction:
         assert dlg._export_btn.isEnabled() is True
         dlg._on_error("boom")
         assert "boom" in dlg._log.toPlainText()
+
+    def test_on_progress_makes_bar_determinate(self, dlg):
+        dlg._reset_progress()
+        assert dlg._progress.maximum() == 0  # indeterminate
+        dlg._on_progress(3, 10)
+        assert dlg._progress.maximum() == 10
+        assert dlg._progress.value() == 3
+        assert dlg._progress.isTextVisible() is True
+
+    def test_on_progress_ignores_zero_total(self, dlg):
+        dlg._reset_progress()
+        dlg._on_progress(0, 0)
+        assert dlg._progress.maximum() == 0  # still indeterminate

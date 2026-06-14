@@ -10,6 +10,7 @@ from pathlib import Path
 
 from PySide6.QtCore import Qt, QThread, Signal
 from opensak.lang import tr
+from opensak.gui.dialogs import make_progress_cb
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel,
     QPushButton, QComboBox, QLineEdit, QTextEdit,
@@ -43,6 +44,7 @@ class ExportWorker(QThread):
     """Kører eksporten i baggrundstråd."""
     finished = Signal(object)
     error    = Signal(str)
+    progress = Signal(int, int)   # (done, total)
 
     def __init__(self, caches, device_path, filename, max_caches):
         super().__init__()
@@ -55,11 +57,12 @@ class ExportWorker(QThread):
         try:
             from opensak.gps.garmin import export_to_device, export_to_file
             caches = self.caches[:self.max_caches] if self.max_caches > 0 else self.caches
+            cb = make_progress_cb(self.progress.emit)
 
             if self.device_path.is_dir() and (self.device_path / "Garmin").exists():
-                result = export_to_device(caches, self.device_path, self.filename)
+                result = export_to_device(caches, self.device_path, self.filename, progress_cb=cb)
             else:
-                result = export_to_file(caches, self.device_path / f"{self.filename}.gpx")
+                result = export_to_file(caches, self.device_path / f"{self.filename}.gpx", progress_cb=cb)
 
             self.finished.emit(result)
         except Exception as e:
@@ -297,6 +300,7 @@ class GpsExportDialog(QDialog):
                 return
 
         self._export_btn.setEnabled(False)
+        self._reset_progress()
         self._progress.setVisible(True)
 
         if do_delete:
@@ -329,7 +333,22 @@ class GpsExportDialog(QDialog):
         self._worker = ExportWorker(self._caches, dest, filename, max_caches)
         self._worker.finished.connect(self._on_finished)
         self._worker.error.connect(self._on_error)
+        self._worker.progress.connect(self._on_progress)
         self._worker.start()
+
+    def _reset_progress(self) -> None:
+        """Sæt fremgangsbjælken tilbage til "kører" (ubestemt) tilstand."""
+        self._progress.setRange(0, 0)
+        self._progress.setTextVisible(False)
+
+    def _on_progress(self, done: int, total: int) -> None:
+        """Skift til bestemt fremgang og vis antal + procent."""
+        if total <= 0:
+            return
+        self._progress.setRange(0, total)
+        self._progress.setValue(done)
+        self._progress.setFormat("%v / %m  (%p%)")
+        self._progress.setTextVisible(True)
 
     def _on_finished(self, result) -> None:
         self._progress.setVisible(False)
