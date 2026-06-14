@@ -1,4 +1,4 @@
-"""tests/unit-tests/test_app.py — application bootstrap (app.py)."""
+# tests/unit-tests/test_app.py — application bootstrap (app.py).
 
 import sys
 from types import SimpleNamespace

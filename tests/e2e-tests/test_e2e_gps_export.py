@@ -1,4 +1,4 @@
-"""tests/e2e-tests/test_e2e_gps_export.py — GPS export dialog scenarios."""
+# tests/e2e-tests/test_e2e_gps_export.py — GPS export dialog scenarios.
 
 import pytest
 
@@ -44,7 +44,7 @@ def _build_caches(tmp_path):
 
 
 def test_gps_dialog_opens_and_shows_cache_count(qtbot, tmp_path, monkeypatch):
-    """GpsExportDialog opens and its header label reflects the number of caches passed in."""
+    # GpsExportDialog opens and its header label reflects the number of caches passed in.
     import opensak.db.manager as mgr_module
     from opensak.db.database import init_db
     from opensak.lang import load_language

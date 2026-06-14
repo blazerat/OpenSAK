@@ -1,4 +1,4 @@
-"""tests/e2e-tests/test_e2e_tools.py — tool dialog scenarios (outputs update live on input)."""
+# tests/e2e-tests/test_e2e_tools.py — tool dialog scenarios (outputs update live on input).
 
 from contextlib import contextmanager
 from unittest.mock import MagicMock, patch
@@ -10,7 +10,7 @@ pytest.importorskip("pytestqt")
 
 @contextmanager
 def _patch_settings(module_path: str):
-    """Patch get_settings() for dialogs that read use_miles on construction."""
+    # Patch get_settings() for dialogs that read use_miles on construction.
     settings = MagicMock()
     settings.use_miles = False
     with patch(f"{module_path}.get_settings", return_value=settings):
@@ -21,7 +21,7 @@ def _patch_settings(module_path: str):
 
 
 def test_coord_converter_prefilled_populates_all_outputs(qtbot):
-    """When constructed with lat/lon all three output rows are non-empty."""
+    # When constructed with lat/lon all three output rows are non-empty.
     from opensak.gui.dialogs.coord_converter_dialog import CoordConverterDialog
 
     dlg = CoordConverterDialog(lat=55.6761, lon=12.5683)
@@ -35,7 +35,7 @@ def test_coord_converter_prefilled_populates_all_outputs(qtbot):
 
 
 def test_coord_converter_live_update_on_typing(qtbot):
-    """Typing a valid coordinate string into the input populates the outputs."""
+    # Typing a valid coordinate string into the input populates the outputs.
     from opensak.gui.dialogs.coord_converter_dialog import CoordConverterDialog
 
     dlg = CoordConverterDialog()
@@ -51,7 +51,7 @@ def test_coord_converter_live_update_on_typing(qtbot):
 
 
 def test_coord_converter_invalid_clears_outputs_and_shows_error(qtbot):
-    """Invalid text empties the output fields and shows an error label."""
+    # Invalid text empties the output fields and shows an error label.
     from opensak.gui.dialogs.coord_converter_dialog import CoordConverterDialog
 
     dlg = CoordConverterDialog(lat=55.0, lon=12.0)
@@ -67,7 +67,7 @@ def test_coord_converter_invalid_clears_outputs_and_shows_error(qtbot):
 
 
 def test_coord_converter_dd_round_trip(qtbot):
-    """The DD output round-trips back to the original coordinates."""
+    # The DD output round-trips back to the original coordinates.
     from opensak.gui.dialogs.coord_converter_dialog import CoordConverterDialog
     from opensak.coords import parse_coords
 
@@ -88,7 +88,7 @@ def test_coord_converter_dd_round_trip(qtbot):
 
 
 def test_checksum_dialog_prefilled_shows_total(qtbot):
-    """ChecksumDialog opened with coords immediately shows a digit-sum total."""
+    # ChecksumDialog opened with coords immediately shows a digit-sum total.
     from opensak.gui.dialogs.checksum_dialog import ChecksumDialog
 
     dlg = ChecksumDialog(lat=55.6761, lon=12.5683)
@@ -100,7 +100,7 @@ def test_checksum_dialog_prefilled_shows_total(qtbot):
 
 
 def test_checksum_dialog_opens_without_coords(qtbot):
-    """ChecksumDialog opens cleanly when no coords are supplied."""
+    # ChecksumDialog opens cleanly when no coords are supplied.
     from opensak.gui.dialogs.checksum_dialog import ChecksumDialog
 
     dlg = ChecksumDialog()
@@ -114,7 +114,7 @@ def test_checksum_dialog_opens_without_coords(qtbot):
 
 
 def test_projection_dialog_computes_result(qtbot):
-    """Entering a start coord plus bearing/distance produces a non-None result."""
+    # Entering a start coord plus bearing/distance produces a non-None result.
     with _patch_settings("opensak.gui.dialogs.projection_dialog"):
         from opensak.gui.dialogs.projection_dialog import ProjectionDialog
 
@@ -133,7 +133,7 @@ def test_projection_dialog_computes_result(qtbot):
 
 
 def test_projection_result_is_east_of_origin(qtbot):
-    """A bearing of 90° (East) must produce a result with a higher longitude."""
+    # A bearing of 90° (East) must produce a result with a higher longitude.
     with _patch_settings("opensak.gui.dialogs.projection_dialog"):
         from opensak.gui.dialogs.projection_dialog import ProjectionDialog
 
@@ -154,7 +154,7 @@ def test_projection_result_is_east_of_origin(qtbot):
 
 
 def test_midpoint_dialog_computes_midpoint(qtbot):
-    """Two valid coordinates produce a midpoint between them."""
+    # Two valid coordinates produce a midpoint between them.
     from opensak.gui.dialogs.midpoint_dialog import MidpointDialog
 
     dlg = MidpointDialog(lat=55.0, lon=12.0)
@@ -172,7 +172,7 @@ def test_midpoint_dialog_computes_midpoint(qtbot):
 
 
 def test_midpoint_dialog_invalid_b_clears_result(qtbot):
-    """Entering invalid text for point B clears the result."""
+    # Entering invalid text for point B clears the result.
     from opensak.gui.dialogs.midpoint_dialog import MidpointDialog
 
     dlg = MidpointDialog(lat=55.0, lon=12.0)
@@ -192,7 +192,7 @@ def test_midpoint_dialog_invalid_b_clears_result(qtbot):
 
 
 def test_distance_bearing_dialog_computes_distance(qtbot):
-    """Two valid points produce a non-empty, non-placeholder distance label."""
+    # Two valid points produce a non-empty, non-placeholder distance label.
     with _patch_settings("opensak.gui.dialogs.distance_bearing_dialog"):
         from opensak.gui.dialogs.distance_bearing_dialog import DistanceBearingDialog
 
@@ -210,7 +210,7 @@ def test_distance_bearing_dialog_computes_distance(qtbot):
 
 
 def test_distance_bearing_same_point_is_zero(qtbot):
-    """Distance from a point to itself is effectively zero."""
+    # Distance from a point to itself is effectively zero.
     with _patch_settings("opensak.gui.dialogs.distance_bearing_dialog"):
         from opensak.gui.dialogs.distance_bearing_dialog import DistanceBearingDialog
 

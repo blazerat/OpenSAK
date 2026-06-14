@@ -52,7 +52,7 @@ def test_no_extra_keys(lang_file):
 
 @pytest.mark.parametrize("lang_file", [ref_file] + lang_files, ids=[REFERENCE_LANG] + lang_ids)
 def test_no_duplicate_keys(lang_file):
-    """Verifies that there are no duplicate keys defined in the STRINGS dictionary."""
+    # Verifies that there are no duplicate keys defined in the STRINGS dictionary.
     content = lang_file.read_text(encoding="utf-8")
     tree = ast.parse(content)
     

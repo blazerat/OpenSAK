@@ -1,4 +1,4 @@
-"""tests/unit-tests/test_theme.py — cross-platform theme management."""
+# tests/unit-tests/test_theme.py — cross-platform theme management.
 
 import pytest
 

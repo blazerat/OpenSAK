@@ -1,8 +1,6 @@
 """tests/unit-tests/test_export_import_roundtrip.py — exported GPX must re-import.
 
-Regression: OpenSAK exports GPX 1.1 with the groundspeak:cache block wrapped in
-<extensions>, but the importer only recognised GPX 1.0 with groundspeak:cache as
-a direct child of <wpt>, so re-importing an exported file imported 0 caches.
+Regression: exports wrap groundspeak:cache in <extensions> (GPX 1.1); the importer once read it only as a direct <wpt> child, so re-import gave 0 caches.
 """
 
 from opensak.db.database import init_db, get_session, reload_caches_full

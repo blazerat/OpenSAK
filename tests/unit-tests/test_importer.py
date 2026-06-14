@@ -1,4 +1,4 @@
-"""tests/unit-tests/test_importer.py — GPX/ZIP importer tests."""
+# tests/unit-tests/test_importer.py — GPX/ZIP importer tests.
 
 import pytest
 from pathlib import Path
@@ -54,7 +54,7 @@ def test_import_gpx_returns_result(tmp_db, gpx_file):
 
 
 def test_import_gpx_cache_fields(tmp_db, gpx_file):
-    """Verify all scalar fields are correctly parsed and stored."""
+    # Verify all scalar fields are correctly parsed and stored.
     with get_session() as s:
         cache = s.query(Cache).filter_by(gc_code="GC12345").one()
         assert cache.name == "Test Traditional"
@@ -76,7 +76,7 @@ def test_import_gpx_cache_fields(tmp_db, gpx_file):
 
 
 def test_import_gpx_logs(tmp_db, gpx_file):
-    """Verify logs are imported with correct fields."""
+    # Verify logs are imported with correct fields.
     with get_session() as s:
         cache = s.query(Cache).filter_by(gc_code="GC12345").one()
         assert len(cache.logs) == 2
@@ -91,7 +91,7 @@ def test_import_gpx_logs(tmp_db, gpx_file):
 
 
 def test_import_gpx_attributes(tmp_db, gpx_file):
-    """Verify attributes are imported correctly."""
+    # Verify attributes are imported correctly.
     with get_session() as s:
         cache = s.query(Cache).filter_by(gc_code="GC12345").one()
         assert len(cache.attributes) == 2
@@ -103,7 +103,7 @@ def test_import_gpx_attributes(tmp_db, gpx_file):
 
 
 def test_import_gpx_second_cache(tmp_db, gpx_file):
-    """Verify the second cache (Unknown) is also imported."""
+    # Verify the second cache (Unknown) is also imported.
     with get_session() as s:
         cache = s.query(Cache).filter_by(gc_code="GC99999").one()
         assert cache.cache_type == "Unknown Cache"
@@ -116,7 +116,7 @@ def test_import_gpx_second_cache(tmp_db, gpx_file):
 # ── Waypoints tests ───────────────────────────────────────────────────────────
 
 def test_import_with_companion_wpts(tmp_db, gpx_file, wpts_file):
-    """Verify companion -wpts.gpx waypoints are linked to the correct cache."""
+    # Verify companion -wpts.gpx waypoints are linked to the correct cache.
     with get_session() as s:
         result = import_gpx(gpx_file, s, wpts_path=wpts_file)
     assert result.waypoints == 1
@@ -134,7 +134,7 @@ def test_import_with_companion_wpts(tmp_db, gpx_file, wpts_file):
 # ── ZIP import tests ──────────────────────────────────────────────────────────
 
 def test_import_zip(tmp_db, zip_file):
-    """Verify that a PQ zip file is imported correctly end-to-end."""
+    # Verify that a PQ zip file is imported correctly end-to-end.
     with get_session() as s:
         for cache in s.query(Cache).all():
             s.delete(cache)
@@ -148,7 +148,7 @@ def test_import_zip(tmp_db, zip_file):
 
 
 def test_import_zip_invalid(tmp_db, tmp_path):
-    """A non-zip file should return an error, not raise an exception."""
+    # A non-zip file should return an error, not raise an exception.
     bad = tmp_path / "bad.zip"
     bad.write_text("this is not a zip file")
     with get_session() as s:
@@ -157,7 +157,7 @@ def test_import_zip_invalid(tmp_db, tmp_path):
 
 
 def test_import_zip_multiple_files(tmp_db, multi_gpx_zip):
-    """Verify that a zip with multiple GPX files imports all records."""
+    # Verify that a zip with multiple GPX files imports all records.
     with get_session() as s:
         for cache in s.query(Cache).all():
             s.delete(cache)
@@ -177,7 +177,7 @@ def test_import_zip_multiple_files(tmp_db, multi_gpx_zip):
 # ── Upsert / duplicate handling ───────────────────────────────────────────────
 
 def test_reimport_updates_not_duplicates(tmp_db, gpx_file):
-    """Importing the same file twice should update, not duplicate."""
+    # Importing the same file twice should update, not duplicate.
     with get_session() as s:
         import_gpx(gpx_file, s)
 
@@ -197,7 +197,7 @@ def test_reimport_updates_not_duplicates(tmp_db, gpx_file):
 # ── Edge cases ────────────────────────────────────────────────────────────────
 
 def test_import_empty_gpx(tmp_db, tmp_path):
-    """A GPX file with no <wpt> elements should import cleanly with 0 results."""
+    # A GPX file with no <wpt> elements should import cleanly with 0 results.
     f = write_gpx(tmp_path, "empty.gpx", EMPTY_GPX)
     with get_session() as s:
         result = import_gpx(f, s)
@@ -206,7 +206,7 @@ def test_import_empty_gpx(tmp_db, tmp_path):
 
 
 def test_import_corrupt_gpx(tmp_db, tmp_path):
-    """A corrupt XML file should return an error gracefully."""
+    # A corrupt XML file should return an error gracefully.
     bad = tmp_path / "corrupt.gpx"
     bad.write_text("<<<not xml at all>>>", encoding="utf-8")
     with get_session() as s:
@@ -215,7 +215,7 @@ def test_import_corrupt_gpx(tmp_db, tmp_path):
 
 
 def test_import_zip_empty(tmp_db, tmp_path):
-    """A zip with no GPX files should return an error."""
+    # A zip with no GPX files should return an error.
     z = make_zip(tmp_path, "empty.zip", {"readme.txt": "no gpx here"})
     result = import_zip(z)
     assert result.total == 0
@@ -223,7 +223,7 @@ def test_import_zip_empty(tmp_db, tmp_path):
 
 
 def test_import_zip_multiple_with_companion_wpts(tmp_db, tmp_path):
-    """Verify companion -wpts.gpx files are linked per GPX in a multi-file zip."""
+    # Verify companion -wpts.gpx files are linked per GPX in a multi-file zip.
     with get_session() as s:
         for cache in s.query(Cache).all():
             s.delete(cache)
@@ -247,7 +247,7 @@ def test_import_zip_multiple_with_companion_wpts(tmp_db, tmp_path):
 
 
 def test_import_gpx_inline_extra_waypoints(tmp_db, tmp_path):
-    """Verify extra waypoints embedded in the main GPX are linked to their cache."""
+    # Verify extra waypoints embedded in the main GPX are linked to their cache.
     with get_session() as s:
         for cache in s.query(Cache).all():
             s.delete(cache)

@@ -1,4 +1,4 @@
-"""tests/unit-tests/test_update_location_dialog.py — reverse-geocode location updater."""
+# tests/unit-tests/test_update_location_dialog.py — reverse-geocode location updater.
 
 from types import SimpleNamespace
 

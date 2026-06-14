@@ -1,4 +1,4 @@
-"""tests/unit-tests/test_column_dialog.py — column chooser dialog + QSettings helpers."""
+# tests/unit-tests/test_column_dialog.py — column chooser dialog + QSettings helpers.
 
 import pytest
 

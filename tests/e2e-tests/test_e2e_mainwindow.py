@@ -1,4 +1,4 @@
-"""tests/e2e-tests/test_e2e_mainwindow.py — MainWindow actions, dialogs, slots."""
+# tests/e2e-tests/test_e2e_mainwindow.py — MainWindow actions, dialogs, slots.
 
 from pathlib import Path
 from types import SimpleNamespace
@@ -35,7 +35,7 @@ class _Sig:
 
 
 def fake_dialog(*, exec_result=0, signals=(), data=None, attrs=None):
-    """Build a non-modal dialog stub class."""
+    # Build a non-modal dialog stub class.
     class _Fake:
         def __init__(self, *a, **k):
             self.args = a
@@ -57,7 +57,7 @@ def fake_dialog(*, exec_result=0, signals=(), data=None, attrs=None):
 
 
 def fake_worker():
-    """Stub UpdateCheckWorker that never spawns a thread (safe for closeEvent)."""
+    # Stub UpdateCheckWorker that never spawns a thread (safe for closeEvent).
     class _W:
         def __init__(self, *a, **k):
             self.update_available = _Sig()
@@ -89,7 +89,7 @@ def _wp_data(gc_code="CW001"):
 
 @pytest.fixture(autouse=True)
 def iso_settings(tmp_path, monkeypatch):
-    """Redirect AppSettings + raw QSettings("OpenSAK...") to throwaway INIs."""
+    # Redirect AppSettings + raw QSettings("OpenSAK...") to throwaway INIs.
     from opensak.gui import settings as smod
     appset = smod.get_settings()
     orig = appset._s
@@ -685,7 +685,7 @@ class TestToolDialogs:
 
 
 class TestTripBlocked:
-    """Every guarded opener short-circuits when the Trip Planner is open."""
+    # Every guarded opener short-circuits when the Trip Planner is open.
 
     @pytest.fixture
     def blocked(self, seeded_window):

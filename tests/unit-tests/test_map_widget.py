@@ -1,4 +1,4 @@
-"""tests/unit-tests/test_map_widget.py — Leaflet map widget (headless mode)."""
+# tests/unit-tests/test_map_widget.py — Leaflet map widget (headless mode).
 
 from types import SimpleNamespace
 
@@ -13,7 +13,7 @@ from opensak.gui.map_widget import MapBridge, MapWidget, TileInterceptor, _cache
 # ── fakes / helpers ───────────────────────────────────────────────────────────
 
 class FakePage:
-    """Records runJavaScript / setHtml; fires JS callbacks as if Leaflet is up."""
+    # Records runJavaScript / setHtml; fires JS callbacks as if Leaflet is up.
 
     def __init__(self):
         self.js = []
@@ -251,7 +251,7 @@ class TestLifecycle:
 
 
 class TestProductionSetup:
-    """Cover the real-WebEngine wiring without spawning Chromium."""
+    # Cover the real-WebEngine wiring without spawning Chromium.
 
     def test_setup_with_fake_webengine(self, qtbot, fake_settings, monkeypatch):
         from PySide6.QtWidgets import QWidget

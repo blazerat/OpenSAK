@@ -1,16 +1,6 @@
-"""
-tests/unit-tests/test_sort_sql.py — SQL-pushed sort parity.
+"""tests/unit-tests/test_sort_sql.py — SQL-pushed sort parity.
 
-The engine (a) adds indexes for the filter/sort columns and (b) pushes ORDER BY
-into SQL for the safe numeric/boolean/date sort fields. Pushing the sort into
-SQL must produce *exactly* the same order the equivalent Python sort produces —
-including stability (ties keep the id-ascending load order) and NULL handling.
-
-These tests assert:
-  * the expected indexes exist after init_db()
-  * apply_filters(sort=field) == the equivalent stable Python sort, for every
-    SQL-pushed field, over adversarial data (NULLs + deliberate ties)
-  * text fields are still sorted (in Python) and remain correct
+apply_filters(sort=field) must match the equivalent stable Python sort — ties and NULLs included — for every SQL-pushed field.
 """
 
 from datetime import datetime

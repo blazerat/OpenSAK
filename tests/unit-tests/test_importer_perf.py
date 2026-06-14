@@ -1,18 +1,6 @@
-"""
-tests/unit-tests/test_importer_perf.py — Importer throughput / fast-path tests.
+"""tests/unit-tests/test_importer_perf.py — importer fast-path tests.
 
-The importer is tuned for speed without changing what it writes:
-  * a single ``{gc_code: id}`` preload replaces the per-cache ``filter_by`` SELECT
-    (a brand-new cache is now detected by a dict miss, not a round-trip)
-  * child deletes use ``synchronize_session=False`` and the extra/companion
-    waypoint helpers delete in one batched ``IN (...)`` instead of one per suffix
-  * SQLite durability is relaxed (``synchronous=NORMAL``) for the import and
-    restored afterwards
-
-These tests pin the behaviour that must NOT change (re-import idempotency,
-in-file duplicate handling, companion-waypoint linking) and assert the two
-mechanisms the speed-up relies on (no per-cache gc_code lookup; the durability
-PRAGMA is set during import and restored after).
+Pin re-import idempotency and the speed-up mechanics: no per-cache gc_code SELECT, and bulk-import PRAGMAs set during import then restored.
 """
 
 import pytest
@@ -49,7 +37,7 @@ def _counts(session) -> dict:
 # ── Re-import idempotency ─────────────────────────────────────────────────────
 
 def test_reimport_is_idempotent(tmp_path, gpx_file):
-    """Importing the same GPX twice must leave the DB byte-for-byte equivalent."""
+    # Importing the same GPX twice must leave the DB byte-for-byte equivalent.
     init_db(db_path=tmp_path / "idem.db")
 
     r1 = import_gpx(gpx_file)
@@ -72,7 +60,7 @@ def test_reimport_is_idempotent(tmp_path, gpx_file):
 
 
 def test_reimport_with_companion_wpts_idempotent(tmp_path):
-    """Companion-waypoint linking must also be idempotent across re-imports."""
+    # Companion-waypoint linking must also be idempotent across re-imports.
     init_db(db_path=tmp_path / "idem_wpts.db")
     gpx = write_gpx(tmp_path, "c.gpx", SAMPLE_GPX)
     wpts = write_gpx(tmp_path, "c-wpts.gpx", SAMPLE_WPTS_GPX)
@@ -90,7 +78,7 @@ def test_reimport_with_companion_wpts_idempotent(tmp_path):
 # ── In-file duplicate handling (preload map stays correct) ────────────────────
 
 def test_duplicate_gc_in_same_file_updates(tmp_path):
-    """Two <wpt> with the same GC code in one file → one row, no UNIQUE error."""
+    # Two <wpt> with the same GC code in one file → one row, no UNIQUE error.
     init_db(db_path=tmp_path / "dup.db")
     # Make both caches share GC12345 (second carries the GC99999 payload).
     dup_gpx = SAMPLE_GPX.replace("GC99999", "GC12345")
@@ -105,7 +93,7 @@ def test_duplicate_gc_in_same_file_updates(tmp_path):
 # ── N+1 elimination: no per-cache gc_code SELECT on a fresh import ────────────
 
 def test_fresh_import_has_no_per_cache_gc_lookup(tmp_path):
-    """A fresh import must not issue 'WHERE caches.gc_code = ?' per cache."""
+    # A fresh import must not issue 'WHERE caches.gc_code = ?' per cache.
     init_db(db_path=tmp_path / "fresh.db")
     f = write_gpx(tmp_path, "fresh.gpx", SAMPLE_GPX)
 
@@ -145,7 +133,7 @@ def test_bulk_import_pragmas_set_and_restore(tmp_path):
 
 
 def test_synchronous_restored_after_import(tmp_path, gpx_file):
-    """After import, normal operations must run at full durability again."""
+    # After import, normal operations must run at full durability again.
     init_db(db_path=tmp_path / "restore.db")
     import_gpx(gpx_file)
     with get_session() as s:
@@ -155,7 +143,7 @@ def test_synchronous_restored_after_import(tmp_path, gpx_file):
 # ── Batch failure isolation (fast path falls back to per-cache) ───────────────
 
 def _cache_block(gc: str, gs_id: int, log_id: str) -> str:
-    """One cache carrying a single Found-it log with the given log_id."""
+    # One cache carrying a single Found-it log with the given log_id.
     return cache_wpt(
         gc, gs_id=gs_id, lat=f"55.{gs_id}", lon=f"12.{gs_id}",
         logs=[{

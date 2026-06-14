@@ -1,4 +1,4 @@
-"""tests/unit-tests/test_import_dialog.py — GPX/PQ import worker + dialog."""
+# tests/unit-tests/test_import_dialog.py — GPX/PQ import worker + dialog.
 
 import contextlib
 from pathlib import Path

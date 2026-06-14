@@ -1,4 +1,4 @@
-"""tests/unit-tests/test_dialogs.py — pure-logic dialog tests (requires pytest-qt)."""
+# tests/unit-tests/test_dialogs.py — pure-logic dialog tests (requires pytest-qt).
 
 import pytest
 from unittest.mock import MagicMock, patch
@@ -21,7 +21,7 @@ from opensak.gui.dialogs.projection_dialog import ProjectionDialog
 
 @pytest.fixture(autouse=True)
 def stub_settings():
-    """Prevent real QSettings access in dialogs that call get_settings()."""
+    # Prevent real QSettings access in dialogs that call get_settings().
     mock = MagicMock()
     mock.use_miles = False
     with (

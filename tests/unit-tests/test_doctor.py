@@ -1,4 +1,4 @@
-"""tests/unit-tests/test_doctor.py — doctor checks (python, deps, config dir, metadata)."""
+# tests/unit-tests/test_doctor.py — doctor checks (python, deps, config dir, metadata).
 
 import importlib
 import importlib.metadata

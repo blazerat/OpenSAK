@@ -110,7 +110,7 @@ A modern, cross-platform geocaching management tool for **Linux**, **Windows** a
 git clone https://github.com/AgreeDK/opensak.git
 cd opensak
 python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
+pip install -e .
 python run.py
 ```
 

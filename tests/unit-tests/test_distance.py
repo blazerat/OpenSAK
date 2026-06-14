@@ -1,16 +1,6 @@
-"""
-tests/unit-tests/test_distance.py — Distance/bearing math + DistanceFilter.
+"""tests/unit-tests/test_distance.py — distance/bearing math + DistanceFilter.
 
-The engine vectorises the great-circle distance/bearing computation (numpy) and
-adds a lat/lon bounding-box pre-narrow to DistanceFilter so distance filtering
-on large databases does not haversine every row in Python.
-
-Tests assert:
-  * the batch (numpy) haversine/bearing match the scalar versions exactly
-  * DistanceFilter with the SQL bounding-box returns the *same* caches as the
-    pure-Python exact filter (the box is a conservative superset; matches()
-    refines), including the antimeridian/pole fall-back cases
-  * the (latitude, longitude) index exists
+Batch (numpy) haversine/bearing must match the scalar versions, and the bbox pre-narrow must return the same caches as the exact Python filter.
 """
 
 import math
@@ -66,7 +56,7 @@ def test_haversine_batch_empty():
 
 @pytest.fixture(scope="module", autouse=True)
 def seed_grid(tmp_db):
-    """A grid of caches around Copenhagen + a couple of far-away ones."""
+    # A grid of caches around Copenhagen + a couple of far-away ones.
     rows = []
     n = 0
     for dlat in range(-10, 11):
@@ -89,7 +79,7 @@ def seed_grid(tmp_db):
 
 
 def _python_only(fs):
-    """Result if the filter ran purely in Python (no SQL pre-narrow)."""
+    # Result if the filter ran purely in Python (no SQL pre-narrow).
     with get_session() as s:
         rows = s.query(Cache).all()
         return {c.gc_code for c in rows if fs.matches(c)}

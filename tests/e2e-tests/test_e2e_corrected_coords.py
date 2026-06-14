@@ -1,4 +1,4 @@
-"""tests/e2e-tests/test_e2e_corrected_coords.py — corrected coordinates scenarios."""
+# tests/e2e-tests/test_e2e_corrected_coords.py — corrected coordinates scenarios.
 
 import pytest
 
@@ -6,7 +6,7 @@ pytest.importorskip("pytestqt")
 
 
 def _auto_accept_dialog(lat: float, lon: float):
-    """Return a CorrectedCoordsDialog subclass that auto-accepts with fixed coords."""
+    # Return a CorrectedCoordsDialog subclass that auto-accepts with fixed coords.
     from opensak.gui.dialogs.corrected_coords_dialog import CorrectedCoordsDialog
 
     class _D(CorrectedCoordsDialog):
@@ -25,7 +25,7 @@ def _auto_accept_dialog(lat: float, lon: float):
 
 
 def test_valid_dmm_input_enables_ok_and_parses(qtbot):
-    """Entering valid DMM coordinates enables OK and stores correct lat/lon."""
+    # Entering valid DMM coordinates enables OK and stores correct lat/lon.
     from opensak.gui.dialogs.corrected_coords_dialog import CorrectedCoordsDialog
 
     dlg = CorrectedCoordsDialog(gc_code="GC12345")
@@ -44,7 +44,7 @@ def test_valid_dmm_input_enables_ok_and_parses(qtbot):
 
 
 def test_valid_dd_input_enables_ok(qtbot):
-    """Decimal-degrees input is also accepted."""
+    # Decimal-degrees input is also accepted.
     from opensak.gui.dialogs.corrected_coords_dialog import CorrectedCoordsDialog
 
     dlg = CorrectedCoordsDialog(gc_code="GC99999")
@@ -62,7 +62,7 @@ def test_valid_dd_input_enables_ok(qtbot):
 
 
 def test_invalid_input_keeps_ok_disabled(qtbot):
-    """Garbage text must leave the OK button disabled."""
+    # Garbage text must leave the OK button disabled.
     from opensak.gui.dialogs.corrected_coords_dialog import CorrectedCoordsDialog
 
     dlg = CorrectedCoordsDialog(gc_code="GC12345")
@@ -79,7 +79,7 @@ def test_invalid_input_keeps_ok_disabled(qtbot):
 
 
 def test_empty_input_keeps_ok_disabled(qtbot):
-    """An empty field must leave OK disabled."""
+    # An empty field must leave OK disabled.
     from opensak.gui.dialogs.corrected_coords_dialog import CorrectedCoordsDialog
 
     dlg = CorrectedCoordsDialog(gc_code="GC12345")
@@ -94,7 +94,7 @@ def test_empty_input_keeps_ok_disabled(qtbot):
 
 
 def test_prefilled_with_existing_coords(qtbot):
-    """Dialog pre-fills when existing corrected coords are passed."""
+    # Dialog pre-fills when existing corrected coords are passed.
     from opensak.gui.dialogs.corrected_coords_dialog import CorrectedCoordsDialog
 
     dlg = CorrectedCoordsDialog(

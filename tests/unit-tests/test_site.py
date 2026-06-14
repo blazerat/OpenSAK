@@ -1,6 +1,4 @@
-"""
-tests/unit-tests/test_site.py — Sanity checks for site deployment files.
-"""
+# tests/unit-tests/test_site.py — sanity checks for site deployment files.
 from pathlib import Path
 
 

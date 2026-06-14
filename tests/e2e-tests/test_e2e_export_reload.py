@@ -1,10 +1,6 @@
 """tests/e2e-tests/test_e2e_export_reload.py — regression for the #207 export crash.
 
-Caches taken from the table model are partial: apply_filters() defers the text
-blobs (encoded_hints / descriptions) and noloads logs/waypoints for speed. Once
-the load session closes they are detached, so exporting them used to raise
-DetachedInstanceError the moment generate_gpx() read cache.encoded_hints. The
-export workers now reload full caches before generating.
+Table-model caches are partial and detached, so exporting them used to raise DetachedInstanceError; the workers now reload full caches before generating.
 """
 
 import pytest
@@ -13,7 +9,7 @@ pytest.importorskip("pytestqt")
 
 
 def _table_caches(window):
-    """The exact (partial, detached) objects the export menu hands to a dialog."""
+    # The exact (partial, detached) objects the export menu hands to a dialog.
     model = window._cache_table._model
     return [
         c

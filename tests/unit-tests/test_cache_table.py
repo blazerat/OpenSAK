@@ -1,4 +1,4 @@
-"""tests/unit-tests/test_cache_table.py — cache list model, delegates, view."""
+# tests/unit-tests/test_cache_table.py — cache list model, delegates, view.
 
 import sys
 from datetime import datetime
@@ -405,7 +405,7 @@ class TestSetData:
 
 class TestDelegates:
     def _paint(self, delegate, model, col, *, selected=False):
-        """Paint column ``col`` of row 0 via a real QModelIndex."""
+        # Paint column ``col`` of row 0 via a real QModelIndex.
         from PySide6.QtWidgets import QStyleOptionViewItem, QStyle
         from PySide6.QtCore import QRect
         idx = model.index(0, ALL_COLUMNS.index(col))

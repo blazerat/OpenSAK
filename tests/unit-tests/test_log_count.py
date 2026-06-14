@@ -1,7 +1,6 @@
 """tests/unit-tests/test_log_count.py — cache.log_count column behaviour (issue #87).
 
-log_count caches len(logs) because the logs relationship is noload'ed for the
-table view, so len(cache.logs) would read 0 there.
+log_count caches len(logs) because logs is noload'ed for the table view, where len(cache.logs) would read 0.
 """
 
 from __future__ import annotations

@@ -1,4 +1,4 @@
-"""tests/unit-tests/test_found_updater.py — found-status sync from a reference DB."""
+# tests/unit-tests/test_found_updater.py — found-status sync from a reference DB.
 
 from datetime import datetime
 
@@ -14,7 +14,7 @@ from opensak.db.found_updater import get_found_gc_codes, update_found_from_refer
 # make_cache comes from conftest.py
 
 def _setup_ref_db(ref_path: Path, gc_codes: list[str], make_cache) -> None:
-    """Initialise a reference DB and populate it with the given GC codes."""
+    # Initialise a reference DB and populate it with the given GC codes.
     init_db(db_path=ref_path)
     with get_session() as s:
         for gc in gc_codes:
@@ -22,7 +22,7 @@ def _setup_ref_db(ref_path: Path, gc_codes: list[str], make_cache) -> None:
 
 
 def _setup_active_db(active_path: Path, entries: list[dict], make_cache) -> None:
-    """Initialise the active (global) DB and populate it."""
+    # Initialise the active (global) DB and populate it.
     init_db(db_path=active_path)
     with get_session() as s:
         for entry in entries:

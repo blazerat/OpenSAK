@@ -1,4 +1,4 @@
-"""tests/unit-tests/test_container_sort.py — Container column sort key (issue #90)."""
+# tests/unit-tests/test_container_sort.py — Container column sort key (issue #90).
 
 from __future__ import annotations
 

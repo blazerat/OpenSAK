@@ -1,6 +1,4 @@
-"""
-tests/unit-tests/test_config.py — config path and language preference tests.
-"""
+# tests/unit-tests/test_config.py — config path and language preference tests.
 
 import json
 import os
@@ -22,7 +20,7 @@ from opensak.config import (
 
 @pytest.fixture(autouse=True)
 def isolate_prefs(tmp_path):
-    """Point the module-level prefs-file cache at a fresh temp path each test."""
+    # Point the module-level prefs-file cache at a fresh temp path each test.
     original = config_module._PREFS_FILE
     config_module._PREFS_FILE = tmp_path / "preferences.json"
     yield config_module._PREFS_FILE

@@ -1,4 +1,4 @@
-"""tests/unit-tests/test_export_dialogs.py — KML and file (GPX/LOC/GGZ) export dialogs."""
+# tests/unit-tests/test_export_dialogs.py — KML and file (GPX/LOC/GGZ) export dialogs.
 
 from types import SimpleNamespace
 

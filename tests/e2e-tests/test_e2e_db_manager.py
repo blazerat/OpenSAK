@@ -1,4 +1,4 @@
-"""tests/e2e-tests/test_e2e_db_manager.py — database manager dialog scenarios."""
+# tests/e2e-tests/test_e2e_db_manager.py — database manager dialog scenarios.
 
 import pytest
 
@@ -11,7 +11,7 @@ from PySide6.QtCore import Qt
 
 
 def _open_db_dialog(window, qtbot):
-    """Open DatabaseManagerDialog via the main window action (non-blocking)."""
+    # Open DatabaseManagerDialog via the main window action (non-blocking).
     from opensak.gui.dialogs.database_dialog import DatabaseManagerDialog
 
     dlg = DatabaseManagerDialog(window)
@@ -25,14 +25,14 @@ def _open_db_dialog(window, qtbot):
 
 
 def test_db_manager_opens_without_crash(seeded_window, qtbot):
-    """DatabaseManagerDialog opens cleanly and is visible."""
+    # DatabaseManagerDialog opens cleanly and is visible.
     dlg = _open_db_dialog(seeded_window, qtbot)
     assert dlg.isVisible()
     dlg.close()
 
 
 def test_db_manager_lists_active_database(seeded_window, qtbot):
-    """The list widget contains exactly one entry — the seeded test database."""
+    # The list widget contains exactly one entry — the seeded test database.
     dlg = _open_db_dialog(seeded_window, qtbot)
 
     assert dlg._list.count() == 1
@@ -43,7 +43,7 @@ def test_db_manager_lists_active_database(seeded_window, qtbot):
 
 
 def test_db_manager_info_panel_shows_name(seeded_window, qtbot):
-    """Selecting the first database entry populates the info panel with its name."""
+    # Selecting the first database entry populates the info panel with its name.
     dlg = _open_db_dialog(seeded_window, qtbot)
 
     dlg._list.setCurrentRow(0)
@@ -55,7 +55,7 @@ def test_db_manager_info_panel_shows_name(seeded_window, qtbot):
 
 
 def test_db_manager_info_panel_shows_path(seeded_window, qtbot):
-    """The info panel path label is non-empty after selection."""
+    # The info panel path label is non-empty after selection.
     dlg = _open_db_dialog(seeded_window, qtbot)
 
     dlg._list.setCurrentRow(0)

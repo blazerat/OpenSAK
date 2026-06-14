@@ -1,4 +1,4 @@
-"""tests/unit-tests/test_gsak_corrected_coords.py — GSAK corrected-coords import (issue #129)."""
+# tests/unit-tests/test_gsak_corrected_coords.py — GSAK corrected-coords import (issue #129).
 
 import textwrap
 from pathlib import Path
@@ -14,7 +14,7 @@ from opensak.importer import import_gpx
 
 @pytest.fixture()
 def fresh_db(tmp_path):
-    """Isolated DB per test — prevents state leaking between tests."""
+    # Isolated DB per test — prevents state leaking between tests.
     db_path = tmp_path / "corrected.db"
     init_db(db_path=db_path)
     return db_path
@@ -29,7 +29,7 @@ def _write_gpx(tmp_path: Path, content: str) -> Path:
 
 
 def _gpx(gsak_extension: str, extra_logs: str = "") -> str:
-    """Wrap a <gsak:wptExtension> block in a minimal GSAK-style GPX file."""
+    # Wrap a <gsak:wptExtension> block in a minimal GSAK-style GPX file.
     return textwrap.dedent(f"""\
         <?xml version="1.0" encoding="utf-8"?>
         <gpx xmlns="http://www.topografix.com/GPX/1/0"
@@ -63,7 +63,7 @@ def _gpx(gsak_extension: str, extra_logs: str = "") -> str:
 # ── Tests ─────────────────────────────────────────────────────────────────────
 
 def test_gsak_corrected_coords_imported(tmp_path, fresh_db):
-    """Corrected LatN/LongE from GSAK wptExtension are stored in UserNote."""
+    # Corrected LatN/LongE from GSAK wptExtension are stored in UserNote.
     gpx = _gpx("""
         <gsak:wptExtension>
           <gsak:LatN>55.1234</gsak:LatN>
@@ -82,7 +82,7 @@ def test_gsak_corrected_coords_imported(tmp_path, fresh_db):
 
 
 def test_gsak_corrected_coords_zero_ignored(tmp_path, fresh_db):
-    """GSAK writes 0.0/0.0 when no corrected coords are set — must be ignored."""
+    # GSAK writes 0.0/0.0 when no corrected coords are set — must be ignored.
     gpx = _gpx("""
         <gsak:wptExtension>
           <gsak:LatN>0.0</gsak:LatN>
@@ -101,7 +101,7 @@ def test_gsak_corrected_coords_zero_ignored(tmp_path, fresh_db):
 
 
 def test_gsak_no_corrected_coords(tmp_path, fresh_db):
-    """Cache without any wptExtension must not be marked as corrected."""
+    # Cache without any wptExtension must not be marked as corrected.
     gpx = _gpx("")  # no gsak extension at all
     result = import_gpx(_write_gpx(tmp_path, gpx), fresh_db)
     assert result.total == 1
@@ -114,7 +114,7 @@ def test_gsak_no_corrected_coords(tmp_path, fresh_db):
 
 
 def test_gsak_corrected_coords_survive_reimport(tmp_path, fresh_db):
-    """Re-importing without corrected coords must NOT overwrite existing ones."""
+    # Re-importing without corrected coords must NOT overwrite existing ones.
     # First import — with corrected coords
     gpx_with = _gpx("""
         <gsak:wptExtension>
@@ -139,7 +139,7 @@ def test_gsak_corrected_coords_survive_reimport(tmp_path, fresh_db):
 
 
 def _gpx_format_b(orig_lat: str, orig_lon: str, wpt_lat: str = "55.1500", wpt_lon: str = "10.5500") -> str:
-    """GPX in GSAK Format B: wpt has corrected coords, LatBeforeCorrect has originals."""
+    # GPX in GSAK Format B: wpt has corrected coords, LatBeforeCorrect has originals.
     return textwrap.dedent(f"""\
         <?xml version="1.0" encoding="utf-8"?>
         <gpx xmlns="http://www.topografix.com/GPX/1/0"
@@ -174,7 +174,7 @@ def _gpx_format_b(orig_lat: str, orig_lon: str, wpt_lat: str = "55.1500", wpt_lo
 
 
 def test_gsak_format_b_corrected_coords_imported(tmp_path, fresh_db):
-    """Format B: wpt lat/lon are corrected coords; LatBeforeCorrect holds originals."""
+    # Format B: wpt lat/lon are corrected coords; LatBeforeCorrect holds originals.
     gpx = _gpx_format_b(orig_lat="55.0000", orig_lon="10.0000",
                          wpt_lat="55.1500", wpt_lon="10.5500")
     result = import_gpx(_write_gpx(tmp_path, gpx), fresh_db)
@@ -213,7 +213,7 @@ def test_gsak_format_b_same_coords_still_corrected(tmp_path, fresh_db):
 
 
 def test_gsak_ftf_and_corrected_coords_together(tmp_path, fresh_db):
-    """FTF flag and corrected coords can coexist in the same wptExtension."""
+    # FTF flag and corrected coords can coexist in the same wptExtension.
     gpx = _gpx(
         gsak_extension="""
             <gsak:wptExtension>
