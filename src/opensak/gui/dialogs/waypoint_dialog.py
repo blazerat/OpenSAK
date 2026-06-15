@@ -61,7 +61,7 @@ class WaypointDialog(QDialog):
         self.setWindowTitle(title)
         self.setMinimumSize(540, 620)
         self._setup_ui()
-        if self._is_edit:
+        if cache is not None:
             self._populate(cache)
         self._apply_mode()
 
@@ -331,7 +331,9 @@ class WaypointDialog(QDialog):
         # Parent cache — custom only
         self._lbl_parent.setVisible(custom)
         # parent_widget is the QWidget wrapping parent_gc + feedback
-        self._parent_gc.parent().setVisible(custom)
+        parent_widget = self._parent_gc.parentWidget()
+        if parent_widget is not None:
+            parent_widget.setVisible(custom)
 
         # Status tab — hidden for custom waypoints
         self._tabs.setTabVisible(2, not custom)

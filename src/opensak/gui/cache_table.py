@@ -8,7 +8,9 @@ import webbrowser
 from typing import Optional
 from datetime import datetime
 
-from PySide6.QtCore import Qt, QAbstractTableModel, QModelIndex, Signal, QPoint
+from PySide6.QtCore import (
+    Qt, QAbstractTableModel, QModelIndex, QPersistentModelIndex, Signal, QPoint
+)
 from PySide6.QtGui import QColor, QFont
 from PySide6.QtWidgets import QTableView, QHeaderView, QAbstractItemView, QMenu, QApplication
 
@@ -427,13 +429,13 @@ class CacheTableModel(QAbstractTableModel):
         self._bearings: dict[int, float] = {}
         self._columns: list[str] = _get_active_columns()
 
-    def flags(self, index: QModelIndex):
+    def flags(self, index: QModelIndex | QPersistentModelIndex):
         base = super().flags(index)
         if index.isValid() and self._columns[index.column()] in ("user_flag", "first_to_find"):
             return base | Qt.ItemFlag.ItemIsEditable
         return base
 
-    def setData(self, index: QModelIndex, value, role=Qt.ItemDataRole.EditRole) -> bool:
+    def setData(self, index: QModelIndex | QPersistentModelIndex, value, role=Qt.ItemDataRole.EditRole) -> bool:
         """Toggle user_flag eller first_to_find når brugeren klikker på kolonnen."""
         if not index.isValid():
             return False
@@ -521,7 +523,7 @@ class CacheTableModel(QAbstractTableModel):
                 return Qt.AlignmentFlag.AlignCenter
         return None
 
-    def data(self, index: QModelIndex, role=Qt.ItemDataRole.DisplayRole):
+    def data(self, index: QModelIndex | QPersistentModelIndex, role=Qt.ItemDataRole.DisplayRole):
         if not index.isValid():
             return None
         cache = self._caches[index.row()]
@@ -551,7 +553,9 @@ class CacheTableModel(QAbstractTableModel):
                 return t.replace("Unknown", "Mystery")
             if col == "corrected":
                 note = cache.user_note
-                if note and note.is_corrected:
+                if (note and note.is_corrected
+                        and note.corrected_lat is not None
+                        and note.corrected_lon is not None):
                     fmt = get_settings().coord_format
                     coords = format_coords(note.corrected_lat, note.corrected_lon, fmt)
                     return tr("col_corrected_tooltip", coords=coords)
@@ -809,15 +813,13 @@ class CacheTableModel(QAbstractTableModel):
             # Numerisk sortering på rå float — ikke formateret tekst
             # Bruger effektive koordinater (corrected hvis sat)
             self._caches.sort(
-                key=lambda c: (self._effective_coords(c)[0]
-                               if self._effective_coords(c)[0] is not None
+                key=lambda c: (v if (v := self._effective_coords(c)[0]) is not None
                                else -999.0),
                 reverse=reverse,
             )
         elif col == "longitude":
             self._caches.sort(
-                key=lambda c: (self._effective_coords(c)[1]
-                               if self._effective_coords(c)[1] is not None
+                key=lambda c: (v if (v := self._effective_coords(c)[1]) is not None
                                else -999.0),
                 reverse=reverse,
             )
@@ -919,7 +921,8 @@ class CacheTableView(QTableView):
                     self._gc_code_delegate = GcCodeDelegate(self)
                     self.setItemDelegateForColumn(i, self._gc_code_delegate)
                 else:
-                    self.setItemDelegateForColumn(i, None)
+                    # None clears the column delegate (stub types it non-optional)
+                    self.setItemDelegateForColumn(i, None)  # type: ignore[arg-type]
             if "name" in columns:
                 name_idx = columns.index("name")
                 header.setSectionResizeMode(

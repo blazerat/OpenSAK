@@ -27,7 +27,9 @@ from opensak.gui.settings import get_settings
 class _DescWebPage(QWebEnginePage):
     """Custom page der åbner links i systemets browser i stedet for i WebEngine."""
 
-    def acceptNavigationRequest(self, url: QUrl, nav_type, is_main_frame: bool) -> bool:
+    def acceptNavigationRequest(self, url: QUrl | str, nav_type, is_main_frame: bool) -> bool:
+        if isinstance(url, str):
+            url = QUrl(url)
         # Tillad den første load (about:blank eller data: URL med HTML indhold)
         if nav_type == QWebEnginePage.NavigationType.NavigationTypeTyped:
             return True
@@ -74,7 +76,7 @@ class CacheDetailPanel(QWidget):
         self._gc_code_lbl  = self._meta_label("—")
         self._gc_code_lbl.setCursor(Qt.CursorShape.PointingHandCursor)
         self._gc_code_lbl.setToolTip(tr("detail_gc_tooltip"))
-        self._gc_code_lbl.mousePressEvent = self._open_on_geocaching
+        self._gc_code_lbl.mousePressEvent = self._open_on_geocaching  # type: ignore[method-assign]
         self._type_lbl     = self._meta_label("—")
         self._dt_lbl       = self._meta_label("—")
         self._container_lbl = self._meta_label("—")
@@ -82,7 +84,7 @@ class CacheDetailPanel(QWidget):
         self._coords_lbl   = self._meta_label("—")
         self._coords_lbl.setCursor(Qt.CursorShape.PointingHandCursor)
         self._coords_lbl.setToolTip(tr("detail_coords_tooltip"))
-        self._coords_lbl.mousePressEvent = self._open_in_maps
+        self._coords_lbl.mousePressEvent = self._open_in_maps  # type: ignore[method-assign]
 
         for lbl, caption in [
             (self._gc_code_lbl,   tr("col_gc_code")),
@@ -141,7 +143,7 @@ class CacheDetailPanel(QWidget):
         )
         self._corrected_lbl.setCursor(Qt.CursorShape.PointingHandCursor)
         self._corrected_lbl.setToolTip(tr("detail_corrected_tooltip"))
-        self._corrected_lbl.mousePressEvent = self._open_corrected_in_maps
+        self._corrected_lbl.mousePressEvent = self._open_corrected_in_maps  # type: ignore[method-assign]
         corrected_col.addWidget(cap_corrected)
         corrected_col.addWidget(self._corrected_lbl)
         corrected_layout.addLayout(corrected_col)
@@ -195,6 +197,7 @@ class CacheDetailPanel(QWidget):
         # Under test (OPENSAK_DISABLE_WEBENGINE) bruges en QTextBrowser i stedet,
         # så ingen Chromium startes — setHtml()-API'et er identisk.
         from opensak.gui._headless import webengine_disabled
+        self._desc_view: QWebEngineView | QTextBrowser
         if webengine_disabled():
             self._desc_view = QTextBrowser()
             self._desc_page = None
@@ -367,9 +370,9 @@ class CacheDetailPanel(QWidget):
             )
 
     def clear(self) -> None:
-        self._current_gc_code = None
-        self._current_lat = None
-        self._current_lon = None
+        self._current_gc_code: str | None = None
+        self._current_lat: float | None = None
+        self._current_lon: float | None = None
         self._corrected_lat = None
         self._corrected_lon = None
         self._coords_lbl.setStyleSheet("")
@@ -389,7 +392,7 @@ class CacheDetailPanel(QWidget):
         self._hint_decoded = False
         self._decode_btn.setText(tr("detail_decode_btn"))
         self._log_search.setText("")
-        self._cached_logs = []
+        self._cached_logs: list = []
         self._conv_btn.setEnabled(False)
         self._corrected_frame.setVisible(False)
         self._add_corrected_btn.setVisible(False)
@@ -547,10 +550,10 @@ class CacheDetailPanel(QWidget):
         """Slet QWebEnginePage før Qt rydder defaultProfile op.
         Kaldes via QApplication.aboutToQuit signalet — skal køre BEFORE
         QWebEngineProfile destrueres for at undgå 'Expect troubles' advarsel."""
-        if self._desc_page is None:
+        if self._desc_page is None or not isinstance(self._desc_view, QWebEngineView):
             return  # headless/test mode — QTextBrowser, intet at rydde op
         try:
-            self._desc_view.setPage(None)
+            self._desc_view.setPage(None)  # type: ignore[arg-type]
             self._desc_page.deleteLater()
         except RuntimeError:
             # Widget er allerede slettet af Qt — intet at gøre

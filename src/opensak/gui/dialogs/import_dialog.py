@@ -6,6 +6,7 @@ Files are imported sequentially in a background thread.
 """
 
 from __future__ import annotations
+from collections.abc import Callable
 from pathlib import Path
 
 from PySide6.QtCore import Qt, QThread, Signal
@@ -58,7 +59,7 @@ class ImportWorker(QThread):
                 self.file_started.emit(i, path.name)
                 try:
                     import_type: ImportType = get_import_type(path)
-                    importers = {
+                    importers: dict[ImportType, Callable] = {
                         ImportType.GPX: import_gpx,
                         ImportType.ZIP: import_zip,
                     }

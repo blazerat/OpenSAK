@@ -103,11 +103,9 @@ def _system_is_dark() -> bool:
     if os_name == "Windows":
         try:
             import winreg
-            key = winreg.OpenKey(
-                winreg.HKEY_CURRENT_USER,
-                r"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize",
-            )
-            value, _ = winreg.QueryValueEx(key, "AppsUseLightTheme")
+            sub = r"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize"
+            key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, sub)  # type: ignore[attr-defined]
+            value, _ = winreg.QueryValueEx(key, "AppsUseLightTheme")  # type: ignore[attr-defined]
             return value == 0
         except Exception:
             return False

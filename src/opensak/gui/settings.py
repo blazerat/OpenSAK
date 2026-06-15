@@ -191,7 +191,10 @@ class AppSettings:
             return None
         try:
             from opensak.coords import parse_coords
-            lat, lon = parse_coords(raw)
+            coord = parse_coords(raw)
+            if coord is None:
+                return None
+            lat, lon = coord
             return HomePoint("★ Home", lat, lon)
         except Exception:
             return None
@@ -303,6 +306,24 @@ class AppSettings:
     @bottom_splitter_state.setter
     def bottom_splitter_state(self, value) -> None:
         self._s.setValue("window/bottom_splitter_state", value)
+
+    @property
+    def splitter_ratio_top(self) -> float:
+        """Top panes andel af den lodrette splitter (issue #62)."""
+        return float(self._s.value("window/splitter_ratio_top", 0.49))
+
+    @splitter_ratio_top.setter
+    def splitter_ratio_top(self, value: float) -> None:
+        self._s.setValue("window/splitter_ratio_top", value)
+
+    @property
+    def bottom_splitter_ratio_left(self) -> float:
+        """Venstre panes andel af den nederste splitter (issue #62)."""
+        return float(self._s.value("window/bottom_splitter_ratio_left", 0.51))
+
+    @bottom_splitter_ratio_left.setter
+    def bottom_splitter_ratio_left(self, value: float) -> None:
+        self._s.setValue("window/bottom_splitter_ratio_left", value)
 
     # ── Search thresholds ──────────────────────────────────────────────────────
 

@@ -423,7 +423,7 @@ class MapWidget(QWidget):
             app.aboutToQuit.connect(self._cleanup_webengine)
 
     def _on_load_finished(self, ok: bool) -> None:
-        if not ok:
+        if not ok or self._page is None:
             return
         # loadFinished fyres flere gange — tjek Leaflet er klar
         self._page.runJavaScript(
@@ -655,9 +655,11 @@ class MapWidget(QWidget):
         if self._cleaned or self._page is None:
             return  # already cleaned, or headless/test mode — nothing to release
         self._cleaned = True
+        # _view/_page/_profile sættes altid samtidig i webengine-tilstand
+        assert self._view is not None and self._profile is not None
         try:
             self._ready = False
-            self._view.setPage(None)
+            self._view.setPage(None)  # type: ignore[arg-type]
             self._page.deleteLater()
             self._profile.deleteLater()
         except RuntimeError:

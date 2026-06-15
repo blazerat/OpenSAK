@@ -1,7 +1,7 @@
 name: Quality
 
-# Reusable static-analysis gate. Currently mypy on the typed-first modules
-# (see [tool.mypy] in pyproject.toml); scope expands over time.
+# Reusable static-analysis gate: mypy over the whole repo
+# (package, entry point, scripts and tests — see [tool.mypy] in pyproject.toml).
 on:
   workflow_call:
 
@@ -20,3 +20,7 @@ jobs:
           pip install -e ".[dev]"
       - name: Run mypy
         run: mypy
+      # Checked separately: it shares the module name "conftest" with the unit
+      # suite's conftest, so mypy can't load both in one run (see pyproject).
+      - name: Run mypy on the e2e conftest
+        run: mypy tests/e2e-tests/conftest.py

@@ -8,6 +8,7 @@ To faner:
 
 from __future__ import annotations
 from pathlib import Path
+from typing import TYPE_CHECKING
 import math
 
 from PySide6.QtCore import Qt
@@ -128,8 +129,19 @@ def _position_along_route(
 
 # ── Fælles preview-mixin ──────────────────────────────────────────────────────
 
-class _PreviewMixin:
+# Mixin'en kombineres altid med en QDialog; for type-checkeren arver den
+# QWidget (så self kan bruges som dialog-parent), men ikke ved runtime hvor
+# det ville give metaklasse-konflikt med QDialog.
+if TYPE_CHECKING:
+    _PreviewMixinBase = QWidget
+else:
+    _PreviewMixinBase = object
+
+
+class _PreviewMixin(_PreviewMixinBase):
     """Delt preview-tabel og eksport-logik for begge faner."""
+
+    _selected_caches: list
 
     def _build_preview_widget(self) -> QWidget:
         w = QWidget()
@@ -285,7 +297,8 @@ class _PreviewMixin:
         app = QApplication.instance()
         win = TripMapPreviewDialog(self._selected_caches)
         # Gem på app-objektet så GC ikke sletter det
-        app._trip_map_win = win
+        if app is not None:
+            app._trip_map_win = win  # type: ignore[attr-defined]
         win.show()
         win.raise_()
         win.activateWindow()
@@ -320,7 +333,8 @@ class _PreviewMixin:
         # Brug samme mappe som den aktive database som default
         try:
             from opensak.db.manager import get_db_manager
-            default_dir = get_db_manager().active_path.parent
+            active_path = get_db_manager().active_path
+            default_dir = active_path.parent if active_path else Path.home()
         except Exception:
             default_dir = Path.home()
 
@@ -628,7 +642,10 @@ class TripPlannerDialog(_PreviewMixin, QDialog):
             return
         try:
             from opensak.coords import parse_coords, format_coords
-            lat, lon = parse_coords(text)
+            coord = parse_coords(text)
+            if coord is None:
+                raise ValueError
+            lat, lon = coord
             fmt = get_settings().coord_format
             self._pt_hint.setText(f"✓  {format_coords(lat, lon, fmt)}")
             self._pt_hint.setStyleSheet(
@@ -654,7 +671,10 @@ class TripPlannerDialog(_PreviewMixin, QDialog):
             return
         try:
             from opensak.coords import parse_coords
-            lat, lon = parse_coords(coord_text)
+            coord = parse_coords(coord_text)
+            if coord is None:
+                raise ValueError
+            lat, lon = coord
         except Exception:
             QMessageBox.warning(self, tr("warning"), tr("settings_hp_coord_invalid"))
             return

@@ -3,6 +3,7 @@ src/opensak/gui/dialogs/settings_dialog.py — Settings dialog.
 """
 
 from __future__ import annotations
+from typing import cast
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QFormLayout,
@@ -363,7 +364,7 @@ class SettingsDialog(QDialog):
             loc_ref_group = QGroupBox(tr("settings_group_nominatim"))
             loc_ref_layout = QVBoxLayout(loc_ref_group)
 
-            self._nominatim_cb = QCheckBox(tr("settings_nominatim_cb"))
+            self._nominatim_cb: QCheckBox | None = QCheckBox(tr("settings_nominatim_cb"))
             loc_ref_layout.addWidget(self._nominatim_cb)
 
             nominatim_hint = QLabel(tr("settings_nominatim_hint"))
@@ -685,7 +686,10 @@ class SettingsDialog(QDialog):
             return
         try:
             from opensak.coords import parse_coords
-            lat, lon = parse_coords(text)
+            coord = parse_coords(text)
+            if coord is None:
+                raise ValueError
+            lat, lon = coord
             fmt = get_settings().coord_format
             self._home_loc_hint.setText(f"✓  {format_coords(lat, lon, fmt)}")
             self._home_loc_hint.setStyleSheet(
@@ -731,7 +735,10 @@ class SettingsDialog(QDialog):
             return
         try:
             from opensak.coords import parse_coords
-            lat, lon = parse_coords(text)
+            coord = parse_coords(text)
+            if coord is None:
+                raise ValueError
+            lat, lon = coord
             fmt = get_settings().coord_format
             self._coord_hint.setText(f"✓  {format_coords(lat, lon, fmt)}")
             self._coord_hint.setStyleSheet(
@@ -755,7 +762,10 @@ class SettingsDialog(QDialog):
             return
         try:
             from opensak.coords import parse_coords
-            lat, lon = parse_coords(coord_text)
+            coord = parse_coords(coord_text)
+            if coord is None:
+                raise ValueError
+            lat, lon = coord
         except Exception:
             QMessageBox.warning(self, tr("warning"), tr("settings_hp_coord_invalid"))
             return
@@ -810,7 +820,7 @@ class SettingsDialog(QDialog):
             self._nominatim_cb.setChecked(s.nominatim_enabled)
         from PySide6.QtCore import QSettings
         qs = QSettings("OpenSAK Project", "OpenSAK")
-        self._update_check_cb.setChecked(qs.value("updates/check_enabled", True, type=bool))
+        self._update_check_cb.setChecked(cast(bool, qs.value("updates/check_enabled", True, type=bool)))
         # Opdater GC-status
         self._refresh_gc_status_on_open()
 
@@ -845,7 +855,9 @@ class SettingsDialog(QDialog):
             # Anvend nyt tema øjeblikkeligt — ingen genstart nødvendig
             from PySide6.QtWidgets import QApplication
             from opensak.gui.theme import apply_theme
-            apply_theme(QApplication.instance(), new_theme)
+            app = QApplication.instance()
+            if app is not None:
+                apply_theme(cast(QApplication, app), new_theme)
         if self._nominatim_cb is not None:
             s.nominatim_enabled = self._nominatim_cb.isChecked()
         s.sync()

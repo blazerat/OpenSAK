@@ -282,7 +282,7 @@ class UpdateLocationDialog(QDialog):
         # Online lookup checkbox — always visible when flag is on;
         # initial state comes from the Advanced Settings default.
         if flags.update_location:
-            self._cb_online = QCheckBox(tr("update_loc_online_cb"))
+            self._cb_online: QCheckBox | None = QCheckBox(tr("update_loc_online_cb"))
             self._cb_online.setChecked(get_settings().nominatim_enabled)
             self._cb_online.setToolTip(tr("update_loc_online_tooltip"))
             self._cb_online.stateChanged.connect(self._on_online_toggled)

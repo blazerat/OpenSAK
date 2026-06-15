@@ -9,6 +9,7 @@ REFERENCE_LANG = "en"  # reference language file
 
 def load_strings(file_path: pathlib.Path):
     spec = importlib.util.spec_from_file_location("lang_module", file_path)
+    assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     strings = getattr(module, "STRINGS", None)

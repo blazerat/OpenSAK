@@ -20,7 +20,7 @@ from opensak.filters.engine import (
 )
 
 
-def print_results(label: str, caches: list, distance_from: tuple = None) -> None:
+def print_results(label: str, caches: list, distance_from: tuple | None = None) -> None:
     print(f"\n{'─' * 55}")
     print(f"  {label}  ({len(caches)} results)")
     print(f"{'─' * 55}")

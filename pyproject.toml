@@ -38,10 +38,13 @@ markers = [
     "gui: tests that require a display and pytest-qt",
 ]
 
-# Whole package is type-checked except gui/, which is tracked separately.
+# The whole repo is type-checked: package, entry point, scripts and tests.
 [tool.mypy]
-files = ["src/opensak"]
-exclude = ["src/opensak/gui/"]
+files = ["src/opensak", "run.py", "scripts", "tests"]
+# The hyphenated test dirs can't be packages, so the two suite-level
+# conftest.py files both map to module "conftest". Exclude the e2e one here to
+# break the clash; it is type-checked on its own in the quality workflow.
+exclude = ["tests/e2e-tests/conftest.py"]
 mypy_path = "src"
 explicit_package_bases = true
 namespace_packages = true

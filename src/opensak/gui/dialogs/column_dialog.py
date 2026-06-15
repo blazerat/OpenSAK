@@ -4,6 +4,7 @@ src/opensak/gui/dialogs/column_dialog.py — Vælg synlige kolonner i cacheliste
 
 from __future__ import annotations
 import json
+from typing import cast
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel,
@@ -92,7 +93,7 @@ def get_column_widths() -> dict[str, int]:
     raw = s.value("columns/widths", None)
     if raw:
         try:
-            return json.loads(raw)
+            return json.loads(cast(str, raw))
         except Exception:
             pass
     return {}

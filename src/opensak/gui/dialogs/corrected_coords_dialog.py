@@ -188,7 +188,10 @@ class CorrectedCoordsDialog(QDialog):
             return
 
         try:
-            lat, lon = parse_coords(text)
+            coord = parse_coords(text)
+            if coord is None:
+                raise ValueError
+            lat, lon = coord
             self._lat = lat
             self._lon = lon
             self._error_lbl.setText("")

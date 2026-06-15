@@ -3,6 +3,7 @@ src/opensak/gui/mainwindow.py — Main application window.
 """
 
 from __future__ import annotations
+from typing import TYPE_CHECKING, cast
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QAction, QKeySequence, QDragEnterEvent, QDropEvent
 from PySide6.QtWidgets import (
@@ -27,6 +28,9 @@ from opensak.gui.settings import get_settings
 from opensak.lang import tr
 from opensak.utils.types import GcCode
 from opensak.updater import UpdateCheckWorker, RELEASES_PAGE
+
+if TYPE_CHECKING:
+    from opensak.gui.dialogs.trip_dialog import TripPlannerDialog
 
 
 class InfoBar(QFrame):
@@ -152,6 +156,7 @@ class MainWindow(QMainWindow):
         self._current_filterset = FilterSet()
         self._current_sort = SortSpec("name", ascending=True)
         self._active_filter_name = ""
+        self._trip_planner_win: TripPlannerDialog | None = None
         self._db_count: int = 0
         self._search_timer = QTimer(self)
         self._search_timer.setSingleShot(True)
@@ -714,7 +719,7 @@ class MainWindow(QMainWindow):
         """
         s = get_settings()
         total_v = self._splitter.height()
-        ratio_v = getattr(s, "splitter_ratio_top", 0.49)
+        ratio_v = s.splitter_ratio_top
         if total_v > 10:
             top = int(total_v * ratio_v)
             self._splitter.setSizes([top, total_v - top])
@@ -722,7 +727,7 @@ class MainWindow(QMainWindow):
             self._splitter.setSizes([380, 400])
 
         total_h = self._bottom_splitter.width()
-        ratio_h = getattr(s, "bottom_splitter_ratio_left", 0.51)
+        ratio_h = s.bottom_splitter_ratio_left
         if total_h > 10:
             left = int(total_h * ratio_h)
             self._bottom_splitter.setSizes([left, total_h - left])
@@ -1394,8 +1399,8 @@ class MainWindow(QMainWindow):
             return
         s = QSettings("OpenSAK Project", "OpenSAK")
         key = f"sort/{str(manager.active.path)}"
-        field = s.value(f"{key}/field", "name")
-        ascending = s.value(f"{key}/ascending", True, type=bool)
+        field = cast(str, s.value(f"{key}/field", "name"))
+        ascending = cast(bool, s.value(f"{key}/ascending", True, type=bool))
         self._current_sort = SortSpec(field, ascending=ascending)
         # Genanvend sort-indikatoren i tabellen hvis den allerede er loaded
         if hasattr(self, "_cache_table"):
