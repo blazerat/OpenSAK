@@ -12,6 +12,11 @@ on:
 
 env:
   PYTHON_VERSION: "3.11"
+  # Opt into Homebrew's upcoming trust enforcement (default in 5.2/6.0) so the
+  # macOS jobs silently ignore the runners' pre-installed untrusted taps
+  # (aws/tap, azure/bicep) instead of printing a migration notice. create-dmg
+  # lives in the always-trusted core tap, so the build is unaffected.
+  HOMEBREW_REQUIRE_TAP_TRUST: "1"
 
 jobs:
 
