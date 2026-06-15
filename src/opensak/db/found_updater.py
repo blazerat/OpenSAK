@@ -10,6 +10,7 @@ Workflow:
 
 from __future__ import annotations
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from pathlib import Path
 
 from sqlalchemy import create_engine, text
@@ -36,7 +37,7 @@ class UpdateResult:
         )
 
 
-def get_found_gc_codes(reference_db_path: Path) -> dict[GcCode, "datetime | None"]:
+def get_found_gc_codes(reference_db_path: Path) -> dict[GcCode, datetime | None]:
     """
     Hent alle GC koder fra reference databasen med den tilhørende fund-dato.
 
@@ -46,8 +47,6 @@ def get_found_gc_codes(reference_db_path: Path) -> dict[GcCode, "datetime | None
     Returnerer et dict {gc_code: found_date} — found_date kan være None
     hvis ingen "Found it"-log findes for cachen.
     """
-    from datetime import datetime, timezone
-
     url = f"sqlite:///{reference_db_path}"
     engine = create_engine(url, connect_args={"check_same_thread": False, "timeout": 30})
 
@@ -69,7 +68,7 @@ def get_found_gc_codes(reference_db_path: Path) -> dict[GcCode, "datetime | None
             if not id_to_gc:
                 return {}
 
-            found_dates: dict[str, "datetime | None"] = {gc: None for gc in id_to_gc.values()}
+            found_dates: dict[str, datetime | None] = {gc: None for gc in id_to_gc.values()}
 
             if has_logs:
                 # Hent ældste "Found it"-log per cache.
