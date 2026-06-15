@@ -2,10 +2,10 @@
 
 OpenSAK assigns a **country**, **state/region** and **county** to every cache by
 reverse geocoding its coordinates against a polygon-accurate boundary dataset
-held on the user's machine. The dataset is **local-first**: boundary data is
-fetched once from a remote source and cached on disk, after which lookups need
-no network and have no rate limits. A full database resolves on a background
-thread in seconds.
+held on the user's machine. The dataset is **local-first**: a baseline ships with
+the app, the rest is fetched once from GitHub and cached on disk, after which
+lookups need no network and have no rate limits. A full database resolves on a
+background thread in seconds.
 
 This document describes the design of that subsystem — the *boundary engine*.
 
@@ -17,6 +17,7 @@ This document describes the design of that subsystem — the *boundary engine*.
 - [2. Concept](#2-concept)
 - [3. Benefits](#3-benefits)
 - [4. Design decisions](#4-design-decisions)
+  - [Improvements over the GSAK lineage](#improvements-over-the-gsak-lineage)
 - [5. Boundary data model](#5-boundary-data-model)
   - [5.1 Polygon files](#51-polygon-files)
   - [5.2 The bounding-box database](#52-the-bounding-box-database)
@@ -90,8 +91,9 @@ This keeps the expensive geometry off the hot path. Because a county record
 names its parent state and country, a single county hit fills all three fields
 at once.
 
-The design follows the proven structure GSAK has used for years (its
-`bb.db3` + polygon-file system), re-expressed in clean, modern data.
+The two-stage structure follows the proven design GSAK has used for years (its
+`bb.db3` index + polygon-file system); OpenSAK re-expresses it in clean, modern
+data — see [Improvements over the GSAK lineage](#improvements-over-the-gsak-lineage).
 
 ---
 
@@ -107,12 +109,15 @@ The design follows the proven structure GSAK has used for years (its
   against which boundary dataset version.
 - **Both coordinate bases.** Posted coordinates by default (checker
   compatibility); corrected coordinates on demand for physical planning.
-- **Controlled footprint.** A small baseline ships with the app; detailed
-  county data is fetched and cached only when a region actually needs it.
+- **Controlled footprint.** A small baseline ships with the app; detailed county
+  data is fetched and cached only when a region actually needs it.
+- **Standard format.** Boundaries are stored as **GeoJSON**, so they validate in
+  any GIS tool and can be drawn directly by the Leaflet map for a future
+  "show this boundary" overlay.
 - **Live-updatable data.** Boundaries refresh independently of app releases via
   per-file version numbers.
-- **Tool parity.** Built on the same boundary lineage the wider community
-  already uses, so results line up with established tools.
+- **No project-run server.** The app install plus GitHub Releases cover
+  everything; there is no backend to host, pay for, or keep alive.
 - **Extensible.** The same engine serves any boundary *layer* — custom polygons
   (Delorme, Ordnance Survey, challenge regions) need only data, not code.
 
@@ -122,9 +127,9 @@ The design follows the proven structure GSAK has used for years (its
 
 | # | Decision | Choice | Rationale |
 |---|----------|--------|-----------|
-| D1 | **Boundary data source** | Community polygon files of GSAK lineage, **normalised** to UTF-8 with consistent naming, from which OpenSAK regenerates its own R-Tree database. The native text format is kept (no conversion). | Community parity for support; crowd-sourced coverage; fixes the mixed encodings/diacritics (`Türkiye`, broken `©`) in the source files; direct compatibility with the files maintainers already produce. |
+| D1 | **Boundary data source & format** | Community polygon files of GSAK lineage, **normalised to UTF-8 and converted to GeoJSON** (one `FeatureCollection` per country); OpenSAK regenerates its own R-Tree index from them. The native text is the *ingest* format only. | Community parity for support; crowd-sourced coverage; fixes mixed encodings/diacritics (`Türkiye`, broken `©`); GeoJSON gives unambiguous holes/multipolygons, validation, and direct reuse by the Leaflet map. |
 | D2 | **Result storage** | `Cache.country/state/county` hold the single result set; **provenance metadata** (source, coordinate basis, timestamp, dataset version) sits alongside. | Re-runnable and auditable without doubling every column. |
-| D3 | **Distribution** | Ship a small **baseline** dataset (country + state); fetch **county packs per country, on demand**, and cache them locally with a checkable version number. | Controls install/DB footprint; updates boundaries without an app release; avoids shipping 26k+ county polygons up front. |
+| D3 | **Distribution (no own server)** | Ship a small **baseline** (country + state) in the install; fetch **county packs per country, on demand, from GitHub Releases** and cache them locally with a checkable version number. An optional "download all" pre-fetches everything for full offline use. | Controls install/DB footprint; updates without an app release; GitHub Releases is free, CDN-backed and durable, so no backend is needed. |
 | D4 | **Granularity** | A **layered** engine — country/state/county today, extensible to custom layers — each layer being its own R-Tree + metadata table. | One query path for every layer; adding a custom layer is data, not code. |
 
 Recorded alternatives:
@@ -133,28 +138,51 @@ Recorded alternatives:
   county coverage is hard and results diverge from established tools, generating
   support load. These sources are used to **refresh** individual polygons under
   D1, not as the wholesale base.
-- *Convert polygons to GeoJSON* — the native text format is simpler (a header
-  plus `lat,lon` rows), already carries a precomputed bounding box, and matches
-  what upstream maintainers ship and edit. Conversion is left as an optional
-  interop step, not a requirement.
-- *Separate `corrected_*` columns* — instead, D2's `location_basis` records
-  which coordinates produced the stored value.
-- *Bundle every polygon* — simplest, but bloats the install; rejected for D3.
+- *Keep the native text format end-to-end* — smaller and zero-conversion, but
+  leaves holes/multipolygons as an implicit convention and gives the map nothing
+  to draw. The pipeline already normalises encoding, so converting to GeoJSON at
+  the same time is nearly free.
+- *Bundle every polygon in the install* — works fully offline from day one, but
+  the global county set is plausibly hundreds of MB and ~99% of it goes unused by
+  any given user; rejected for D3 (the "download all" option covers people who
+  genuinely want everything).
+- *Separate `corrected_*` columns* — instead, D2's `location_basis` records which
+  coordinates produced the stored value.
+
+### Improvements over the GSAK lineage
+
+The data and two-stage method come from GSAK; these are the deliberate changes:
+
+- **UTF-8 everywhere** instead of ANSI — fixes `Türkiye`, `Czechia` and the
+  broken `©` seen in the source files.
+- **GeoJSON** instead of the bespoke text format — standard, validatable,
+  unambiguous geometry, and drawable by the existing Leaflet map.
+- **Independently updatable data** via versioned packs — GSAK's own maintainer
+  noted its `bb.db3` can only be refreshed by shipping a new GSAK release.
+- **Clean schema** — drops the legacy `_old` tables and the mixed
+  full-name/3-letter-code conventions found in `bb.db3`.
+- **Per-cache provenance** (source, coordinate basis, timestamp, dataset
+  version) — GSAK tracked none of this, so it could never explain *which*
+  coordinates a stored value came from.
+- **64-bit runtime** — none of the 32-bit constraints that slow legacy GSAK.
+
+What is intentionally kept: the **two-stage R-Tree + point-in-polygon** method,
+**one R-Tree per layer**, and **polygon data stored separately** from the index
+(so it can be fetched lazily).
 
 ---
 
 ## 5. Boundary data model
 
-Two artefacts, mirroring the GSAK lineage in cleaned form.
+Two artefacts, mirroring the GSAK lineage in cleaned, standard form.
 
 ### 5.1 Polygon files
 
-One self-describing text file per region (or per grouped set, for counties).
-A header of `#` comment lines carries the display name, the **source and
-licence**, and a **precomputed bounding box**; the body is one `lat,lon` pair
-per line. A file may hold several polygons (islands); each polygon's first and
-last coordinate match (closed ring), and holes (enclaves) are wound in the
-opposite direction.
+**Ingest (build time).** Upstream files arrive in the native GSAK text format: a
+header of `#` comment lines carrying the display name, the **source and
+licence**, and a **precomputed bounding box**, followed by one `lat,lon` pair per
+line. A file may hold several polygons (islands); each polygon's first and last
+coordinate match (closed ring), and holes are wound in the opposite direction.
 
 ```text
 # GsakName=Denmark
@@ -163,44 +191,55 @@ opposite direction.
 # Bounding Box: 57.9524297,54.4516667,12.9058301,7.7153255
 54.8370717,9.4829269
 54.8316638,9.4629539
-54.8333102,9.4601121
 ...
 ```
 
-Key consequences captured by the format:
+**Stored & distributed.** The pipeline normalises these to UTF-8 and converts
+them to **GeoJSON**, grouped **one `FeatureCollection` per country**. This is the
+format OpenSAK ships, caches and reads.
+
+```jsonc
+// counties/prt.geojson — one FeatureCollection per country
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "layer": "county",
+        "name": "Lisboa",
+        "parent": "PT",
+        "version": 7,
+        "source": "osm",
+        "licence": "ODbL"
+      },
+      "bbox": [-9.5, 38.6, -9.0, 38.9],   // standard GeoJSON bbox member
+      "geometry": { "type": "MultiPolygon", "coordinates": [ /* ... */ ] }
+    }
+    // ... every county/parish in Portugal
+  ]
+}
+```
+
+Key points the format captures:
 
 - The **licence travels with the data.** OSM-derived polygons are **ODbL**
-  (attribution + share-alike), *not* public domain; other files may carry other
-  terms. The engine preserves the header and surfaces the aggregate attributions
-  (see [§13](#13-risks)).
-- The bounding box is **already computed**, so building the index ([§5.2](#52-the-bounding-box-database))
-  is a trivial read, not a geometry pass.
-- Files are **normalised to UTF-8** on ingest (the source files are mixed
-  encodings — note the broken `©` above), fixing diacritics and renames.
-
-County granularity is grouped: a country's county polygons live together (e.g.
-all of Portugal's ~3,900, all of Brazil's ~5,500) and each county record points
-to its polygon **within** that group — which makes "per-country" the natural
-download unit ([§5.3](#53-on-disk-layout-and-caching)).
+  (attribution + share-alike), *not* public domain; the property is preserved and
+  surfaced as aggregate attribution (see [§13](#13-risks)).
+- The bounding box is **already known** from the source header, so building the
+  index ([§5.2](#52-the-bounding-box-database)) is a read, not a geometry pass.
+- Counties are **grouped per country** (Portugal ~3,900 features, Brazil ~5,500),
+  which makes "per-country" the natural download unit ([§5.3](#53-on-disk-layout-and-caching)).
 
 ### 5.2 The bounding-box database
 
-A SQLite file (`boundaries.db`) generated **once** from the polygon-file
-headers. It is the spatial index plus metadata, and contains **no information
-not derivable from the polygons**, so it inherits their terms.
+A SQLite file (`boundaries.db`) generated **once** from the GeoJSON `bbox`
+members. It is the spatial index plus metadata, and contains **no information not
+derivable from the polygons**, so it inherits their terms.
 
 GSAK's shipped `bb.db3` uses **one R-Tree per layer** with a companion metadata
-table, joined by id — for example:
-
-```sql
--- one spatial index per layer (country / state / county)
-CREATE VIRTUAL TABLE rtree_county USING rtree(bbid, MinLat, MaxLat, MinLon, MaxLon);
-
--- companion metadata; bbid == rowid of this table
-CREATE TABLE bb_county (Country, State, File, MaxLat, MinLat, MaxLon, MinLon, Cname);
-```
-
-OpenSAK keeps that proven shape, cleaned and consistently named:
+table, joined by id. OpenSAK keeps that proven shape, cleaned and consistently
+named:
 
 ```sql
 -- Stage 1: one R-Tree per layer (SQLite built-in module)
@@ -212,8 +251,9 @@ CREATE VIRTUAL TABLE rtree_county  USING rtree(id, min_lat, max_lat, min_lon, ma
 CREATE TABLE region_county (
     id            INTEGER PRIMARY KEY,
     name          TEXT NOT NULL,   -- UTF-8, normalised ('Türkiye')
-    parent        TEXT,            -- 'US/TX' — links county -> state -> country
-    polygon_file  TEXT NOT NULL,   -- file (and index within it, for grouped counties)
+    parent        TEXT,            -- 'PT', 'US/TX' — links county -> state -> country
+    pack          TEXT NOT NULL,   -- GeoJSON FeatureCollection holding this region
+    feature_index INTEGER NOT NULL,-- which feature within the pack
     poly_version  INTEGER NOT NULL,
     is_bundled    INTEGER NOT NULL -- 1 = baseline install, 0 = on-demand pack
 );
@@ -229,13 +269,13 @@ append.
 
 > **Why SQLite's own R-Tree** rather than an external index package: it is a
 > compile-time-standard SQLite module (no extra native dependency to ship on
-> Windows/macOS/Linux), it persists to disk for free, and it keeps the index
-> next to the metadata. Point-in-polygon (Stage 2) is the only piece needing a
+> Windows/macOS/Linux), it persists to disk for free, and it keeps the index next
+> to the metadata. Point-in-polygon (Stage 2) is the only piece needing a
 > geometry library — see [§8](#8-dependencies).
 
 For scale: a real `bb.db3` holds ~384 countries, ~2,330 state polygons and
-~26,170 county polygons in roughly 7 MB — bounding boxes only. The polygon files
-themselves are far larger and are why counties are fetched on demand.
+~26,170 county polygons in roughly 7 MB — bounding boxes only. The polygon
+geometry is far larger and is why counties are fetched on demand.
 
 ### 5.3 On-disk layout and caching
 
@@ -248,17 +288,18 @@ Under the platform app-data directory (resolved by `config.get_app_data_dir()`):
     ├── boundaries.db          # generated R-Trees + metadata (baseline)
     ├── manifest.json          # dataset version + per-pack versions
     ├── countries/             # baseline — bundled with the install
-    │   └── *.txt
+    │   └── world.geojson
     ├── states/                # baseline — bundled with the install
-    │   └── *.txt
+    │   └── *.geojson
     └── counties/              # fetched per country on demand, then cached
-        ├── prt.txt
-        └── usa-tx.txt
+        ├── prt.geojson
+        └── usa-tx.geojson
 ```
 
-The `counties/` directory **is the cache**: a county pack is downloaded once,
-written here, and every later lookup reads it locally. Nothing is re-fetched
-unless a version bump says the data changed ([§6.3](#63-distribution-and-updates)).
+The `counties/` directory **is the cache**: a country's pack is downloaded once
+from GitHub Releases, written here, and every later lookup reads it locally.
+Nothing is re-fetched unless a version bump says the data changed
+([§6.3](#63-distribution-and-updates)).
 
 ---
 
@@ -278,13 +319,13 @@ flowchart TD
     subgraph ENGINE["geo.boundaries.TerritoryResolver"]
         S1["Stage 1: per-layer R-Tree query\n(boundaries.db)"]
         S2["Stage 2: point-in-polygon\n(only on overlaps)"]
-        POLY["Polygon cache\n(lazy-loaded files)"]
+        POLY["Polygon cache\n(lazy-loaded GeoJSON)"]
     end
 
     subgraph STORE["geo.store + geo.packs"]
         BB[("boundaries.db\nrtree_country/state/county")]
-        GJ[["polygon files\n(local cache)"]]
-        DL["on-demand pack fetch\n+ version check (D3)"]
+        GJ[["GeoJSON packs\n(local cache)"]]
+        DL["on-demand pack fetch\nGitHub Releases + version check"]
     end
 
     DB[("Cache DB\ncountry/state/county + metadata")]
@@ -322,7 +363,7 @@ flowchart TD
         ▼                    ▼
      DONE          ┌────────────────────────┐
    (no geometry)   │ Stage 2  point-in-poly  │  only on 2–3 candidates
-                   │ load polygon, ray-cast  │
+                   │ load GeoJSON, ray-cast  │
                    │ (holes respected)       │
                    └───────────┬─────────────┘
                                ▼
@@ -340,37 +381,45 @@ artefacts:
 
 ```mermaid
 flowchart LR
-    A["raw polygon files\n(mixed encodings)"] --> B["normalise\nUTF-8 names, fix diacritics,\nconsistent keys"]
+    A["raw polygon files\n(native text, mixed encodings)"] --> B["normalise\nUTF-8, fix diacritics,\nconsistent keys"]
     OSM["OSM / Natural Earth / GADM\n(refresh stale polygons)"] --> B
-    B --> C["validate geometry\n(closed rings, winding, holes)"]
-    C --> D["read precomputed bbox\nfrom each header"]
+    B --> X["convert to GeoJSON\n(1 FeatureCollection / country)"]
+    X --> C["validate geometry\n(rings, winding, holes)"]
+    C --> D["read bbox per feature"]
     D --> E["generate boundaries.db\n(per-layer R-Trees + metadata)"]
     C --> F["group counties per country\n+ assemble baseline"]
     E --> G["manifest.json\n(versions)"]
     F --> G
+    G --> H["publish to GitHub Releases"]
 ```
 
-Building `boundaries.db` is mostly reading the `# Bounding Box` line already
-present in each file — a quick, one-off process repeated whenever the dataset
-changes.
+Building `boundaries.db` is mostly reading each feature's `bbox` — a quick,
+one-off process repeated whenever the dataset changes, then published as release
+assets.
 
 ### 6.3 Distribution and updates
+
+There is **no project-run server**. Distribution uses only what an open-source
+project already has:
 
 - **Baseline** (`countries/`, `states/`, `boundaries.db`) ships as package data
   in the install, so country/state resolution works with no network from first
   launch.
-- **County packs** are fetched per country the first time a lookup needs one:
-  when a county box is hit but its polygon file is not yet in the local cache,
-  `geo.packs` downloads that country's pack from a versioned host (release
-  assets / `opensak.com`), writes it under `counties/`, and serves it locally
-  thereafter.
+- **County packs** live as **GitHub Releases assets** in a data repository (e.g.
+  `OpenSAK/boundary-data`), each a per-country GeoJSON `FeatureCollection`. The
+  first time a lookup needs a country's counties, `geo.packs` downloads that pack
+  over its stable release URL (GitHub serves these via a CDN), writes it under
+  `counties/`, and serves it locally thereafter.
+- **"Download all"** is an optional one-click action that pre-fetches every pack,
+  for users who want full offline coverage before heading into the field.
 - **Versions.** `boundaries.db` carries per-file versions; `manifest.json`
   carries a dataset version. On launch (or on user request) OpenSAK compares
-  against the remote manifest and offers to refresh changed packs — so boundary
-  data, including `boundaries.db` itself, updates independently of app releases.
+  against the manifest published with the latest release and offers to refresh
+  changed packs — so boundary data, including `boundaries.db` itself, updates
+  independently of app releases.
 
-So the **only** time the network is involved is the first fetch of a region's
-data (or a deliberate refresh); steady-state operation is fully local.
+So the network is involved **only** on the first fetch of a region's data, a
+"download all", or a deliberate refresh; steady-state operation is fully local.
 
 ---
 
@@ -410,8 +459,9 @@ whether it predates a boundary refresh.
 | Need | Choice | Notes |
 |------|--------|-------|
 | R-Tree (Stage 1) | **SQLite built-in `rtree`** | No new dependency; standard in CPython's bundled SQLite. |
-| Point-in-polygon (Stage 2) | **`shapely`** | C-backed (GEOS), correct with holes/multipolygons, cross-platform wheels. A pure-Python ray-casting fallback stays available for a zero-native-dependency build, at some speed/robustness cost. |
-| Polygon parsing | stdlib | Plain `lat,lon` text; no GIS reader needed. |
+| Point-in-polygon (Stage 2) | **`shapely`** | C-backed (GEOS), correct with holes/multipolygons, reads GeoJSON geometry directly, cross-platform wheels. A pure-Python ray-casting fallback stays available for a zero-native-dependency build, at some speed/robustness cost. |
+| GeoJSON parsing | stdlib `json` | Packs are plain `FeatureCollection`s; no GIS reader needed at runtime. |
+| Native-text parsing | stdlib (pipeline only) | Reading upstream files happens at build time, not in the app. |
 | Country code → name | `pycountry` | Normalising ISO codes to display names in the pipeline. |
 
 ---
@@ -425,13 +475,14 @@ and not packaged.
 src/opensak/geo/
 ├── __init__.py
 ├── boundaries.py     # TerritoryResolver: two-stage lookup, returns GeoLocation
-├── store.py          # open boundaries.db, resolve polygon paths, lazy polygon cache
-└── packs.py          # on-demand county-pack fetch + manifest/version check
+├── store.py          # open boundaries.db, load GeoJSON packs, lazy polygon cache
+└── packs.py          # on-demand pack fetch from GitHub Releases + version check
 
 tools/boundaries/     # build-time only, excluded from packaging
-├── normalise.py      # raw polygons -> clean UTF-8
-├── build_bbdb.py     # polygon headers -> boundaries.db (R-Trees + metadata)
-└── pack.py           # group counties, assemble baseline, emit manifest.json
+├── normalise.py      # raw text polygons -> clean UTF-8
+├── to_geojson.py     # -> GeoJSON, one FeatureCollection per country
+├── build_bbdb.py     # GeoJSON bbox -> boundaries.db (R-Trees + metadata)
+└── publish.py        # assemble baseline + packs, emit manifest.json, push release
 ```
 
 `TerritoryResolver` returns a `GeoLocation(country, state, county)` value.
@@ -459,7 +510,7 @@ The feature follows the project's UI conventions:
 |-------|------|-------|
 | Stage 1 (R-Tree) | ~`O(log n)` per point | Batched; tens of thousands of points in well under a second. |
 | Stage 2 (polygon) | only on bbox overlaps | Typically 2–3 candidate polygons; skipped entirely for interior points. |
-| Polygon I/O | lazy + cached | Each region's file loads once and is reused across the batch — a Pocket Query clusters geographically, so cache hit rates are high. |
+| Polygon I/O | lazy + cached | Each country's GeoJSON loads once and is reused across the batch — a Pocket Query clusters geographically, so cache hit rates are high. |
 
 The work stays on the `QThread` with progress signals; a 10k+ batch completes in
 seconds once the relevant packs are cached.
@@ -471,14 +522,15 @@ seconds once the relevant packs are cached.
 - **Borders.** Stage 2 resolves overlapping boxes exactly. The residual risk is
   an *approximate polygon* itself — mitigated by D1's refresh pipeline and the
   user-override path on the roadmap.
-- **Pack not yet cached.** Box hit but the county pack is absent locally → fetch
-  and cache on demand (D3); if no network is available, return the coarser layer
-  already cached (e.g. state without county) and flag it, never a wrong guess.
+- **Pack not yet cached.** Box hit but the country's pack is absent locally →
+  fetch and cache on demand (D3); if no network is available, return the coarser
+  layer already cached (e.g. state without county) and flag it, never a wrong
+  guess.
 - **No box hit.** A point over open water or an unmapped area leaves the field
   empty rather than snapping to the nearest land.
 - **Diacritics / renames.** Fixed at normalisation time (D1): UTF-8, `Türkiye`,
-  `Czechia`, etc. `location_dataset` records the dataset version used, so
-  renames stay explainable after the fact.
+  `Czechia`, etc. `location_dataset` records the dataset version used, so renames
+  stay explainable after the fact.
 - **Posted vs corrected.** `location_basis` records the choice per cache;
   re-running with the other basis updates both the value and the metadata.
 
@@ -490,6 +542,8 @@ seconds once the relevant packs are cached.
   import. Builds on the planned custom-fields system.
 - **Macro hook.** A macro can recompute territories and stash the previous value
   in a custom field, respecting locks.
+- **Boundary overlay on the map.** Because packs are GeoJSON, the Leaflet map can
+  draw the resolved county/state outline directly.
 - **Custom layers.** D4's layered engine already accepts new layers — Delorme,
   Ordnance Survey, challenge regions — by adding an `rtree_<layer>` + metadata
   table and the polygon packs.
@@ -504,7 +558,8 @@ seconds once the relevant packs are cached.
 | County polygon footprint | D3 per-country packs, fetched and cached on demand; ship only baseline. |
 | Stale / approximate polygons | D1 refresh pipeline + `location_dataset` provenance + future overrides. |
 | Disagreement with other tools | Expected when a tool applies different boundaries or a different coordinate basis. The posted/corrected toggle and `location_basis` make disagreements explainable, not silent. |
-| Boundary-data licensing | The licence travels in each polygon header — OSM-derived data is **ODbL** (attribution + share-alike), not public domain. The engine preserves headers and ships the aggregate attributions; `boundaries.db` is a derived index (bounding boxes only) under the same terms. |
+| Distribution without a server | Data ships in the install (baseline) and as **GitHub Releases assets** (packs) — CDN-backed, free, durable; no backend to run. |
+| Boundary-data licensing | The licence travels in each polygon's `licence` property — OSM-derived data is **ODbL** (attribution + share-alike), not public domain. The app ships the aggregate attributions; `boundaries.db` is a derived index (bounding boxes only) under the same terms. |
 
 ---
 
@@ -516,11 +571,14 @@ seconds once the relevant packs are cached.
 - **R-Tree** — a tree index for rectangles; answers "which boxes contain or
   overlap this point/box?" quickly. SQLite ships one.
 - **Bounding box** — the smallest axis-aligned rectangle enclosing a region; the
-  Stage-1 approximation, precomputed in each polygon file's header.
+  Stage-1 approximation, carried in each GeoJSON feature's `bbox` member.
+- **GeoJSON** — the standard JSON format for geographic features; a
+  `FeatureCollection` holds many regions, each with geometry, a `bbox`, and
+  properties (name, parent, licence).
 - **Posted vs corrected coordinates** — published listing coordinates vs the
   user's solved/real coordinates (stored on `UserNote`).
 - **Layer** — a category of boundary (country / state / county / custom), each
   its own R-Tree + metadata table.
 - **Local-first** — data is fetched from a remote source once, cached on disk,
-  and served locally thereafter; the network is touched only on first fetch or a
-  deliberate refresh.
+  and served locally thereafter; the network is touched only on first fetch, a
+  "download all", or a deliberate refresh.
