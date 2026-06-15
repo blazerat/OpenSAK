@@ -17,6 +17,9 @@ from opensak.config import (
     set_language,
 )
 
+# Forces os.name="posix" + Path(str), which can't instantiate PosixPath on Windows.
+posix_only = pytest.mark.skipif(os.name == "nt", reason="POSIX-only path branch")
+
 
 @pytest.fixture(autouse=True)
 def isolate_prefs(tmp_path):
@@ -87,6 +90,7 @@ class TestSetLanguage:
 # ── get_app_data_dir (per-OS branches) ────────────────────────────────────────
 
 class TestAppDataDir:
+    @posix_only
     def test_posix_with_xdg(self, tmp_path, monkeypatch):
         monkeypatch.setattr(os, "name", "posix")
         monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path))
@@ -94,6 +98,7 @@ class TestAppDataDir:
         assert d == tmp_path / "opensak"
         assert d.exists()
 
+    @posix_only
     def test_posix_without_xdg(self, tmp_path, monkeypatch):
         monkeypatch.setattr(os, "name", "posix")
         monkeypatch.delenv("XDG_DATA_HOME", raising=False)
@@ -111,6 +116,7 @@ class TestAppDataDir:
 
 # ── derived paths ─────────────────────────────────────────────────────────────
 
+@posix_only
 class TestDerivedPaths:
     @pytest.fixture(autouse=True)
     def _xdg(self, tmp_path, monkeypatch):

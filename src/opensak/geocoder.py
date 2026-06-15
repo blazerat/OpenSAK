@@ -39,10 +39,8 @@ def fast_batch_geocode(coords: list[tuple[float, float]]) -> list[GeoLocation]:
     out: list[GeoLocation] = []
     for r in results:
         cc = r.get("cc", "")
-        try:
-            country = pycountry.countries.get(alpha_2=cc).name if cc else None
-        except AttributeError:
-            country = cc or None
+        country_obj = pycountry.countries.get(alpha_2=cc) if cc else None
+        country = country_obj.name if country_obj else (cc or None)
 
         state  = r.get("admin1") or None
         county = r.get("admin2") or None
@@ -86,10 +84,14 @@ def nominatim_reverse(lat: float, lon: float, *, timeout: int = 10) -> GeoLocati
 
     import pycountry
     cc = address.get("country_code", "").upper()
-    try:
-        country = pycountry.countries.get(alpha_2=cc).name if cc else None
-    except AttributeError:
+    country_obj = pycountry.countries.get(alpha_2=cc) if cc else None
+    country: str | None
+    if country_obj:
+        country = country_obj.name
+    elif cc:
         country = address.get("country") or None
+    else:
+        country = None
 
     state = address.get("state") or None
 
