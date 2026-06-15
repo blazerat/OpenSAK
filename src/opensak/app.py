@@ -4,7 +4,11 @@ app.py — Application entry point for OpenSAK.
 
 import sys
 from pathlib import Path
+from typing import TYPE_CHECKING
 from opensak.gui.icon import get_app_icon
+
+if TYPE_CHECKING:
+    from PySide6.QtWidgets import QSplashScreen
 
 def _migrate_legacy_db() -> None:
     """

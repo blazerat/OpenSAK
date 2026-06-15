@@ -650,7 +650,7 @@ def _upsert_cache(
         existing = session.query(Cache).filter_by(gc_code=gc_code).first()
     created = existing is None
 
-    if created:
+    if existing is None:
         cache = Cache(gc_code=gc_code)
         session.add(cache)
     else:

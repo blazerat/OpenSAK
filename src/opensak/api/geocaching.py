@@ -123,6 +123,13 @@ def _is_token_valid(token_data: dict) -> bool:
 
 # ── OAuth PKCE flow ───────────────────────────────────────────────────────────
 
+class _CallbackServer(http.server.HTTPServer):
+    """HTTPServer der bærer OAuth-resultatet fra callback-handleren."""
+
+    auth_code: Optional[str] = None
+    auth_error: Optional[str] = None
+
+
 class _CallbackHandler(http.server.BaseHTTPRequestHandler):
     """Minimal HTTP handler der fanger OAuth callback fra browseren."""
 
@@ -198,10 +205,8 @@ def start_oauth_flow() -> Optional[dict]:
     auth_url = GC_AUTH_URL + "?" + urllib.parse.urlencode(params)
 
     # Start lokal callback-server
-    server = http.server.HTTPServer(("localhost", GC_REDIRECT_PORT), _CallbackHandler)
-    server.auth_code  = None
-    server.auth_error = None
-    server.timeout    = 120  # Timeout efter 2 minutter
+    server = _CallbackServer(("localhost", GC_REDIRECT_PORT), _CallbackHandler)
+    server.timeout = 120  # Timeout efter 2 minutter
 
     thread = threading.Thread(target=lambda: server.handle_request(), daemon=True)
     thread.start()

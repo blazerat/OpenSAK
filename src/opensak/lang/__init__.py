@@ -51,6 +51,7 @@ def load_language(lang_code: str) -> None:
     # Indlæs sprogfilen som et Python-modul og hent STRINGS dict
     import importlib.util
     spec = importlib.util.spec_from_file_location(f"opensak.lang.{lang_code}", lang_file)
+    assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
 

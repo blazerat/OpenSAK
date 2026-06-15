@@ -22,7 +22,7 @@ def _project_metadata() -> dict:
     try:
         meta = importlib.metadata.metadata("opensak")
         return {
-            "requires-python": meta.get("Requires-Python", ""),
+            "requires-python": meta["Requires-Python"] or "",
             "dependencies": [
                 r for r in importlib.metadata.requires("opensak") or []
                 if "extra ==" not in r

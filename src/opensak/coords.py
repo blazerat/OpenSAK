@@ -91,8 +91,7 @@ def format_lat(lat: float, fmt: CoordFormat) -> str:
         return f"{h}{deg:02d}° {m:02d}' {s:05.2f}\""
     # default: DMM (geocaching standard)
     deg = int(a)
-    m = (a - deg) * 60
-    return f"{h}{deg:02d} {m:06.3f}"
+    return f"{h}{deg:02d} {(a - deg) * 60:06.3f}"
 
 
 def format_lon(lon: float, fmt: CoordFormat) -> str:
@@ -112,8 +111,7 @@ def format_lon(lon: float, fmt: CoordFormat) -> str:
         return f"{h}{deg:03d}° {m:02d}' {s:05.2f}\""
     # default: DMM (geocaching standard)
     deg = int(a)
-    m = (a - deg) * 60
-    return f"{h}{deg:03d} {m:06.3f}"
+    return f"{h}{deg:03d} {(a - deg) * 60:06.3f}"
 
 
 # ── Parsing ───────────────────────────────────────────────────────────────────

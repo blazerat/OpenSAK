@@ -730,7 +730,7 @@ class ExportResult:
             return (
                 f"✓ {self.cache_count} caches eksporteret\n"
                 f"  Enhed: {self.device}\n"
-                f"  Fil: {self.file_path.name}"
+                f"  Fil: {self.file_path.name if self.file_path else ''}"
             )
         return f"✗ Fejl: {self.error}"
 

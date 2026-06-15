@@ -38,9 +38,10 @@ markers = [
     "gui: tests that require a display and pytest-qt",
 ]
 
-# Typed-first: only the modules below are checked; scope expands over time.
+# Whole package is type-checked except gui/, which is tracked separately.
 [tool.mypy]
-files = ["src/opensak/db", "src/opensak/filters", "src/opensak/geocoder.py"]
+files = ["src/opensak"]
+exclude = ["src/opensak/gui/"]
 mypy_path = "src"
 explicit_package_bases = true
 namespace_packages = true
