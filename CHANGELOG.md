@@ -6,6 +6,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+---
+
+## [1.13.12] — 2026-06-15
+
 ### Added
 
 - **Export progress shows how far it has reached** (closes #207) — the GPS, file (GPX/LOC/GGZ)
