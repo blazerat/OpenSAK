@@ -70,8 +70,8 @@ class DatabaseManager:
 
     def _default_db_path(self) -> Path:
         """Returner stien til standard databasen."""
-        from opensak.config import get_app_data_dir
-        return get_app_data_dir() / "Default.db"
+        from opensak.settings_store import get_db_dir
+        return get_db_dir() / "Default.db"
 
     @staticmethod
     def _migrate_path(path: Path) -> Path:
@@ -188,11 +188,11 @@ class DatabaseManager:
             raise ValueError(tr("db_err_name_exists", name=name))
 
         if path is None:
-            from opensak.config import get_app_data_dir
+            from opensak.settings_store import get_db_dir
             safe_name = "".join(
                 c if c.isalnum() or c in "-_ " else "_" for c in name
             ).strip()
-            path = get_app_data_dir() / f"{safe_name}.db"
+            path = get_db_dir() / f"{safe_name}.db"
 
         path = Path(path)
 
@@ -276,11 +276,11 @@ class DatabaseManager:
             raise ValueError(tr("db_err_name_exists", name=new_name))
 
         if new_path is None:
-            from opensak.config import get_app_data_dir
+            from opensak.settings_store import get_db_dir
             safe_name = "".join(
                 c if c.isalnum() or c in "-_ " else "_" for c in new_name
             ).strip()
-            new_path = get_app_data_dir() / f"{safe_name}.db"
+            new_path = get_db_dir() / f"{safe_name}.db"
 
         shutil.copy2(db_info.path, new_path)
         info = DatabaseInfo(new_name, new_path)

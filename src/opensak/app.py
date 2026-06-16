@@ -206,11 +206,25 @@ def main() -> None:
     # Indlæs sprog FØR noget UI oprettes
     splash_msg("Indlæser sprog...")
     # Kør én-gangs migration fra QSettings → opensak.json (issue #209)
-    from opensak.settings_store import get_store, migrate_from_qsettings
-    migrate_from_qsettings(get_store())
+    from opensak.settings_store import get_store, migrate_from_qsettings, is_first_run, mark_wizard_completed
+    did_migrate = migrate_from_qsettings(get_store())
+    # Eksisterende installation (migreret fra QSettings) → wizard er ikke nødvendig
+    if did_migrate:
+        mark_wizard_completed()
     from opensak.config import get_language
     from opensak.lang import load_language
     load_language(get_language())
+
+    # Vis velkomst-wizard ved første opstart (issue #210)
+    if is_first_run():
+        splash.hide()
+        from opensak.gui.dialogs.welcome_wizard import WelcomeWizard
+        wizard = WelcomeWizard()
+        wizard.exec()
+        # Genindlæs sprog hvis det blev ændret i wizard
+        load_language(get_language())
+        splash.show()
+        app.processEvents()
 
     # Migrer gammel database hvis nødvendigt
     splash_msg("Kontrollerer database...")

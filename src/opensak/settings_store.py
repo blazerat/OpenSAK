@@ -365,6 +365,37 @@ def migrate_from_qsettings(store: SettingsStore) -> bool:
         return False
 
 
+def get_db_dir() -> Path:
+    """
+    Returner den mappe hvor nye databaser oprettes som standard.
+
+    Læses fra opensak.json ("databases.dir").
+    Falder tilbage til install_dir hvis ikke sat.
+    """
+    store = get_store()
+    d = store.get("databases.dir")
+    if d:
+        p = Path(d)
+        p.mkdir(parents=True, exist_ok=True)
+        return p
+    return get_install_dir()
+
+
+def is_first_run() -> bool:
+    """
+    Returner True hvis wizarden aldrig er gennemført.
+
+    Tjekker om _wizard_completed er sat i opensak.json.
+    Bruges af app.py til at beslutte om wizard skal vises.
+    """
+    return not get_store().get("_wizard_completed", False)
+
+
+def mark_wizard_completed() -> None:
+    """Markér at wizard er gennemført (bruges ved migration fra ældre installation)."""
+    get_store().set("_wizard_completed", True)
+
+
 # ── Modul-niveau singleton ────────────────────────────────────────────────────
 
 _store: SettingsStore | None = None

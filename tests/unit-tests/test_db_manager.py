@@ -227,7 +227,7 @@ class TestCopyDatabase:
         with patch("opensak.db.database.init_db"):
             manager.new_database("Src2", src)
         src_info = manager.databases[-1]
-        with patch("opensak.config.get_app_data_dir", return_value=tmp_path):
+        with patch("opensak.settings_store.get_db_dir", return_value=tmp_path):
             copy = manager.copy_database(src_info, "DstDefault")
         assert copy.path.parent == tmp_path
 
