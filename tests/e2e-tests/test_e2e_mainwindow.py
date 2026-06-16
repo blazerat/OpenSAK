@@ -7,8 +7,6 @@ import pytest
 
 pytest.importorskip("pytestqt")
 
-from PySide6.QtCore import QSettings
-
 import opensak.gui.icon as icon_mod
 from opensak.gui.mainwindow import MainWindow
 
@@ -16,8 +14,6 @@ from opensak.gui.mainwindow import MainWindow
 _REAL_INITIAL_LOAD = MainWindow._initial_load
 _REAL_CHECK_SETUP = MainWindow._check_setup_complete
 _REAL_CHECK_UPDATE_BG = MainWindow._check_update_background
-
-_RealQSettings = QSettings
 
 
 # ── fakes ─────────────────────────────────────────────────────────────────────
@@ -89,23 +85,18 @@ def _wp_data(gc_code="CW001"):
 
 @pytest.fixture(autouse=True)
 def iso_settings(tmp_path, monkeypatch):
-    # Redirect AppSettings + raw QSettings("OpenSAK...") to throwaway INIs.
-    from opensak.gui import settings as smod
-    appset = smod.get_settings()
-    orig = appset._s
-    appset._s = _RealQSettings(str(tmp_path / "appset.ini"),
-                               _RealQSettings.Format.IniFormat)
+    # Redirect SettingsStore to a fresh in-memory store per test.
+    from opensak import settings_store as ss
+    fresh = ss.SettingsStore()
+    fresh._data = {}
+    fresh._path = tmp_path / "opensak.json"
+    monkeypatch.setattr(ss, "_store", fresh)
 
-    raw_ini = str(tmp_path / "raw.ini")
+    # Reset AppSettings singleton so it picks up the new store
+    import opensak.gui.settings as smod
+    monkeypatch.setattr(smod, "_settings", None)
 
-    def factory(*a, **k):
-        if len(a) >= 2 and isinstance(a[0], str) and "OpenSAK" in a[0]:
-            return _RealQSettings(raw_ini, _RealQSettings.Format.IniFormat)
-        return _RealQSettings(*a, **k)
-
-    monkeypatch.setattr("PySide6.QtCore.QSettings", factory)
-    yield SimpleNamespace(appset=appset, raw_ini=raw_ini)
-    appset._s = orig
+    yield SimpleNamespace(store=fresh)
 
 
 @pytest.fixture

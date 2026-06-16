@@ -205,6 +205,9 @@ def main() -> None:
 
     # Indlæs sprog FØR noget UI oprettes
     splash_msg("Indlæser sprog...")
+    # Kør én-gangs migration fra QSettings → opensak.json (issue #209)
+    from opensak.settings_store import get_store, migrate_from_qsettings
+    migrate_from_qsettings(get_store())
     from opensak.config import get_language
     from opensak.lang import load_language
     load_language(get_language())

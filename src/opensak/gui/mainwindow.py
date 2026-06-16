@@ -1122,13 +1122,8 @@ class MainWindow(QMainWindow):
                     point = real if real else p
                 else:
                     point = p
-                # Gem direkte til QSettings uden at bruge setters
-                # (for at undgå evt. caching-problemer)
-                db_key_prefix = s._db_key("")
-                s._s.setValue(f"{db_key_prefix}active_home_name", point.name)
-                s._s.setValue(f"{db_key_prefix}home_lat", point.lat)
-                s._s.setValue(f"{db_key_prefix}home_lon", point.lon)
-                s._s.sync()
+                # Gem via settings API
+                s.set_active_home(point)
                 # Pan kort til ny lokation — INGEN HTML reload
                 self._map_widget.pan_to_location(point.lat, point.lon, point.name)
                 # Opdater distances i cache-listen
@@ -1374,39 +1369,40 @@ class MainWindow(QMainWindow):
         self._save_sort_for_active_db()
 
     def _save_sort_for_active_db(self) -> None:
-        """Gem aktuel sortering og aktivt filter-profil per database i QSettings."""
+        """Gem aktuel sortering og aktivt filter-profil per database i opensak.json."""
         from opensak.db.manager import get_db_manager
-        from PySide6.QtCore import QSettings
+        from opensak.settings_store import get_store
         manager = get_db_manager()
         if not manager.active:
             print("DEBUG save: ingen aktiv database")
             return
-        s = QSettings("OpenSAK Project", "OpenSAK")
-        key = f"sort/{str(manager.active.path)}"
-        s.setValue(f"{key}/field", self._current_sort.field)
-        s.setValue(f"{key}/ascending", self._current_sort.ascending)
-        s.setValue(f"{key}/filter_profile", self._active_filter_name)
-        s.sync()
+        key = f"sort.{str(manager.active.path)}"
+        get_store().set_many({
+            f"{key}.field":          self._current_sort.field,
+            f"{key}.ascending":      self._current_sort.ascending,
+            f"{key}.filter_profile": self._active_filter_name,
+        })
 
     def _load_sort_for_active_db(self) -> None:
-        """Indlaes gemt sortering og filter-profil for den aktive database fra QSettings."""
+        """Indlaes gemt sortering og filter-profil for den aktive database fra opensak.json."""
         from opensak.db.manager import get_db_manager
-        from PySide6.QtCore import QSettings
+        from opensak.settings_store import get_store
         from opensak.filters.engine import FilterProfile
         manager = get_db_manager()
         if not manager.active:
             print("DEBUG load: ingen aktiv database")
             return
-        s = QSettings("OpenSAK Project", "OpenSAK")
-        key = f"sort/{str(manager.active.path)}"
-        field = cast(str, s.value(f"{key}/field", "name"))
-        ascending = cast(bool, s.value(f"{key}/ascending", True, type=bool))
+        s = get_store()
+        key = f"sort.{str(manager.active.path)}"
+        field = str(s.get(f"{key}.field", "name"))
+        asc_raw = s.get(f"{key}.ascending", True)
+        ascending = asc_raw if isinstance(asc_raw, bool) else str(asc_raw).lower() in ("true", "1", "yes")
         self._current_sort = SortSpec(field, ascending=ascending)
         # Genanvend sort-indikatoren i tabellen hvis den allerede er loaded
         if hasattr(self, "_cache_table"):
             self._cache_table.apply_sort(field, ascending)
         # Genindlæs gemt filter-profil for denne database
-        profile_name = s.value(f"{key}/filter_profile", "")
+        profile_name = str(s.get(f"{key}.filter_profile", ""))
         if profile_name:
             paths = FilterProfile.list_profiles()
             for path in paths:
@@ -1749,9 +1745,8 @@ class MainWindow(QMainWindow):
     def _check_update_background(self) -> None:
         """Kald ved opstart — tjekker lydløst i baggrunden."""
         from opensak import __version__
-        from PySide6.QtCore import QSettings
-        s = QSettings("OpenSAK Project", "OpenSAK")
-        if not s.value("updates/check_enabled", True, type=bool):
+        from opensak.gui.settings import get_settings
+        if not get_settings().updates_check_enabled:
             return
         self._update_worker = UpdateCheckWorker(__version__, parent=self)
         self._update_worker.update_available.connect(self._on_update_available)
@@ -1787,10 +1782,8 @@ class MainWindow(QMainWindow):
 
         # Ved automatisk tjek: ignorer versioner brugeren har valgt at springe over
         if not manual:
-            from PySide6.QtCore import QSettings
-            s = QSettings("OpenSAK Project", "OpenSAK")
-            skipped = s.value("updates/skipped_version", "", type=str)
-            if skipped == latest_tag:
+            from opensak.gui.settings import get_settings
+            if get_settings().updates_skipped_version == latest_tag:
                 return
 
         from opensak import __version__
@@ -1815,7 +1808,6 @@ class MainWindow(QMainWindow):
             import webbrowser
             webbrowser.open(url)
         elif clicked == btn_skip:
-            from PySide6.QtCore import QSettings
-            s = QSettings("OpenSAK Project", "OpenSAK")
-            s.setValue("updates/skipped_version", latest_tag)
+            from opensak.gui.settings import get_settings
+            get_settings().updates_skipped_version = latest_tag
 

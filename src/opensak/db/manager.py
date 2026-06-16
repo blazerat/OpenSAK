@@ -2,7 +2,8 @@
 src/opensak/db/manager.py — Database manager.
 
 Håndterer flere lokale SQLite databaser.
-Gemmer liste over kendte databaser i QSettings.
+Fra 1.14.0 (issue #209): gemmer liste over kendte databaser i opensak.json
+via settings_store i stedet for QSettings.
 """
 
 from __future__ import annotations
@@ -14,9 +15,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-from PySide6.QtCore import QSettings
-
 from opensak.lang import tr
+from opensak.settings_store import get_store
 
 
 class DatabaseInfo:
@@ -58,11 +58,10 @@ class DatabaseManager:
     Håndterer liste over kendte databaser og aktiv database.
 
     Databaser gemmes som separate .db filer i app data mappen.
-    Listen over kendte databaser gemmes i QSettings.
+    Listen over kendte databaser gemmes i opensak.json via settings_store.
     """
 
     def __init__(self):
-        self._settings = QSettings("OpenSAK Project", "OpenSAK")
         self._databases: list[DatabaseInfo] = []
         self._active: Optional[DatabaseInfo] = None
         self._load_from_settings()
@@ -104,27 +103,28 @@ class DatabaseManager:
         return new_path
 
     def _load_from_settings(self) -> None:
-        """Indlæs liste over kendte databaser fra QSettings."""
-        count = self._settings.beginReadArray("databases")
-        for i in range(count):
-            self._settings.setArrayIndex(i)
-            name = self._settings.value("name")
-            path = self._settings.value("path")
-            if name and path:
-                migrated = self._migrate_path(Path(path))
-                info = DatabaseInfo(name, migrated)
-                self._databases.append(info)
-        self._settings.endArray()
+        """Indlæs liste over kendte databaser fra opensak.json."""
+        store = get_store()
+        db_list = store.get("databases.list", [])
+        if isinstance(db_list, list):
+            for entry in db_list:
+                if isinstance(entry, dict):
+                    name = entry.get("name")
+                    path = entry.get("path")
+                    if name and path:
+                        migrated = self._migrate_path(Path(path))
+                        info = DatabaseInfo(name, migrated)
+                        self._databases.append(info)
 
         # Aktiv database
-        active_path = self._settings.value("active_database")
+        active_path = store.get("databases.active")
         if active_path:
             migrated_active = self._migrate_path(Path(active_path))
             found = self._find_by_path(migrated_active)
             if found:
                 self._active = found
 
-        # Gem migrerede stier tilbage til QSettings (én gang)
+        # Gem migrerede stier tilbage (én gang)
         self._save_to_settings()
 
         # Hvis ingen databaser kendes, opret Default
@@ -140,18 +140,12 @@ class DatabaseManager:
             self._save_to_settings()
 
     def _save_to_settings(self) -> None:
-        """Gem liste over kendte databaser til QSettings."""
-        self._settings.beginWriteArray("databases")
-        for i, db in enumerate(self._databases):
-            self._settings.setArrayIndex(i)
-            self._settings.setValue("name", db.name)
-            self._settings.setValue("path", str(db.path))
-        self._settings.endArray()
-
-        if self._active:
-            self._settings.setValue("active_database", str(self._active.path))
-
-        self._settings.sync()
+        """Gem liste over kendte databaser til opensak.json."""
+        store = get_store()
+        store.set_many({
+            "databases.list": [db.to_dict() for db in self._databases],
+            "databases.active": str(self._active.path) if self._active else "",
+        })
 
     def _find_by_path(self, path: Path) -> Optional[DatabaseInfo]:
         for db in self._databases:

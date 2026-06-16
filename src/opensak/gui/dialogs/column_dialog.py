@@ -11,8 +11,8 @@ from PySide6.QtWidgets import (
     QListWidget, QListWidgetItem, QPushButton,
     QDialogButtonBox
 )
-from PySide6.QtCore import QSettings
 from opensak.lang import tr
+from opensak.settings_store import get_store
 
 # Alle tilgængelige kolonner: (felt_id, visningsnavn, bredde, standard_synlig)
 # Kolonnestruktur: (felt_id, tr_nøgle, bredde, standard_synlig)
@@ -71,9 +71,8 @@ ALWAYS_VISIBLE = {"gc_code", "name"}
 
 
 def get_visible_columns() -> list[str]:
-    """Returner liste over synlige kolonne-id'er fra QSettings."""
-    s = QSettings("OpenSAK Project", "OpenSAK")
-    saved = s.value("columns/visible")
+    """Returner liste over synlige kolonne-id'er fra opensak.json."""
+    saved = get_store().get("columns.visible")
     if saved:
         return list(saved)
     # Standard: vis de kolonner der er markeret som standard
@@ -81,29 +80,27 @@ def get_visible_columns() -> list[str]:
 
 
 def set_visible_columns(col_ids: list[str]) -> None:
-    """Gem liste over synlige kolonne-id'er til QSettings."""
-    s = QSettings("OpenSAK Project", "OpenSAK")
-    s.setValue("columns/visible", col_ids)
-    s.sync()
+    """Gem liste over synlige kolonne-id'er til opensak.json."""
+    get_store().set("columns.visible", col_ids)
 
 
 def get_column_widths() -> dict[str, int]:
-    """Return saved column widths (col_id -> px) from QSettings."""
-    s = QSettings("OpenSAK Project", "OpenSAK")
-    raw = s.value("columns/widths", None)
+    """Return saved column widths (col_id -> px) from opensak.json."""
+    raw = get_store().get("columns.widths")
     if raw:
         try:
-            return json.loads(cast(str, raw))
+            if isinstance(raw, str):
+                return json.loads(raw)
+            if isinstance(raw, dict):
+                return {k: int(v) for k, v in raw.items()}
         except Exception:
             pass
     return {}
 
 
 def set_column_widths(widths: dict[str, int]) -> None:
-    """Persist column widths (col_id -> px) to QSettings."""
-    s = QSettings("OpenSAK Project", "OpenSAK")
-    s.setValue("columns/widths", json.dumps(widths))
-    s.sync()
+    """Persist column widths (col_id -> px) to opensak.json."""
+    get_store().set("columns.widths", widths)
 
 
 class ColumnChooserDialog(QDialog):

@@ -1,4 +1,4 @@
-# tests/unit-tests/test_column_dialog.py — column chooser dialog + QSettings helpers.
+# tests/unit-tests/test_column_dialog.py — column chooser dialog + store helpers.
 
 import pytest
 
@@ -18,25 +18,15 @@ from opensak.gui.dialogs.column_dialog import (
 )
 
 
-class _FakeSettings:
-    def __init__(self, store):
-        self._store = store
-
-    def value(self, key, default=None):
-        return self._store.get(key, default)
-
-    def setValue(self, key, val):
-        self._store[key] = val
-
-    def sync(self):
-        pass
-
-
 @pytest.fixture
-def store(monkeypatch):
-    data: dict = {}
-    monkeypatch.setattr(cd, "QSettings", lambda *a, **k: _FakeSettings(data))
-    return data
+def store(tmp_path, monkeypatch):
+    """Isolated SettingsStore — fresh in-memory dict per test."""
+    from opensak import settings_store as ss
+    fresh = ss.SettingsStore()
+    fresh._data = {}
+    fresh._path = tmp_path / "opensak.json"
+    monkeypatch.setattr(ss, "_store", fresh)
+    return fresh
 
 
 # ── module-level helpers ──────────────────────────────────────────────────────
@@ -64,7 +54,7 @@ class TestColumnHelpers:
         assert get_column_widths() == {"gc_code": 80}
 
     def test_widths_bad_json_returns_empty(self, store):
-        store["columns/widths"] = "{ not json"
+        store.set("columns.widths", "{ not json")
         assert get_column_widths() == {}
 
 

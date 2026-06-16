@@ -818,9 +818,7 @@ class SettingsDialog(QDialog):
         self._search_debounce_ms.setValue(s.search_debounce_ms)
         if self._nominatim_cb is not None:
             self._nominatim_cb.setChecked(s.nominatim_enabled)
-        from PySide6.QtCore import QSettings
-        qs = QSettings("OpenSAK Project", "OpenSAK")
-        self._update_check_cb.setChecked(cast(bool, qs.value("updates/check_enabled", True, type=bool)))
+        self._update_check_cb.setChecked(s.updates_check_enabled)
         # Opdater GC-status
         self._refresh_gc_status_on_open()
 
@@ -860,10 +858,8 @@ class SettingsDialog(QDialog):
                 apply_theme(cast(QApplication, app), new_theme)
         if self._nominatim_cb is not None:
             s.nominatim_enabled = self._nominatim_cb.isChecked()
+        s.updates_check_enabled = self._update_check_cb.isChecked()
         s.sync()
-        from PySide6.QtCore import QSettings
-        qs = QSettings("OpenSAK Project", "OpenSAK")
-        qs.setValue("updates/check_enabled", self._update_check_cb.isChecked())
 
         new_lang = self._lang_combo.currentData()
         if new_lang != current_language():

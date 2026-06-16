@@ -20,6 +20,26 @@ def reset_flags():
     _reload_flags()
 
 
+@pytest.fixture(autouse=True)
+def isolate_settings_store(tmp_path, monkeypatch):
+    """Isolate SettingsStore so every unit test gets a fresh in-memory store.
+
+    This replaces the old pattern of patching AppSettings._s (QSettings).
+    All reads/writes go to an in-memory dict; nothing touches real user config.
+    """
+    from opensak import settings_store as ss
+    fresh = ss.SettingsStore()
+    fresh._data = {}
+    fresh._path = tmp_path / "opensak.json"
+    monkeypatch.setattr(ss, "_store", fresh)
+    # Reset AppSettings singleton so it uses the fresh store
+    import opensak.gui.settings as smod
+    monkeypatch.setattr(smod, "_settings", None)
+    # Reset DatabaseManager singleton
+    import opensak.db.manager as mgr
+    monkeypatch.setattr(mgr, "_manager", None)
+
+
 @pytest.fixture()
 def patch_features_file(tmp_path, monkeypatch):
     # Write a features.json to a temp path and wire it into the flags module.
