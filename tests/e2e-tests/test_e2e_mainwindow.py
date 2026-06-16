@@ -200,7 +200,8 @@ class TestCacheList:
         seeded_window._update_info_bar()
 
     def test_update_info_bar_with_owner(self, seeded_window, iso_settings):
-        iso_settings.appset.gc_username = "TestOwner"
+        from opensak.gui.settings import get_settings
+        get_settings().gc_username = "TestOwner"
         seeded_window._update_info_bar()
 
 
@@ -490,10 +491,9 @@ class TestSort:
     def test_load_sort_with_saved_profile(self, seeded_window, monkeypatch, iso_settings):
         from opensak.db.manager import get_db_manager
         from opensak.filters.engine import FilterSet, SortSpec
-        key = f"sort/{get_db_manager().active.path}"
-        s = _RealQSettings(iso_settings.raw_ini, _RealQSettings.Format.IniFormat)
-        s.setValue(f"{key}/filter_profile", "MyProfile")
-        s.sync()
+        from opensak.settings_store import get_store
+        key = f"sort.{get_db_manager().active.path}"
+        get_store().set(f"{key}.filter_profile", "MyProfile")
         prof = SimpleNamespace(name="MyProfile", filterset=FilterSet(),
                                sort=SortSpec("name"))
         monkeypatch.setattr("opensak.filters.engine.FilterProfile.list_profiles",
@@ -505,10 +505,9 @@ class TestSort:
 
     def test_load_sort_profile_load_error(self, seeded_window, monkeypatch, iso_settings):
         from opensak.db.manager import get_db_manager
-        key = f"sort/{get_db_manager().active.path}"
-        s = _RealQSettings(iso_settings.raw_ini, _RealQSettings.Format.IniFormat)
-        s.setValue(f"{key}/filter_profile", "Ghost")
-        s.sync()
+        from opensak.settings_store import get_store
+        key = f"sort.{get_db_manager().active.path}"
+        get_store().set(f"{key}.filter_profile", "Ghost")
         monkeypatch.setattr("opensak.filters.engine.FilterProfile.list_profiles",
                             staticmethod(lambda: [Path("/x/p.json")]))
         monkeypatch.setattr(
@@ -692,11 +691,10 @@ class TestTripBlocked:
 
 class TestHomeAndCwExtra:
     def test_on_home_changed_user_and_gc_home(self, seeded_window, iso_settings):
-        from opensak.gui.settings import HomePoint
-        s = iso_settings.appset
+        from opensak.gui.settings import HomePoint, get_settings
+        s = get_settings()
         s.gc_home_location = "N55 40.566 E012 34.098"
         s.home_points = [HomePoint("Work", 56.0, 10.0)]
-        s._s.sync()
         seeded_window._reload_home_combo()
         visited = 0
         for i in range(seeded_window._home_combo.count()):
@@ -787,7 +785,6 @@ class TestAboutUpdates:
         seeded_window._on_update_available("v9.9.9", "http://x", manual=False)
 
     def test_on_update_available_skipped(self, seeded_window, mbox_ok, iso_settings):
-        raw = _RealQSettings(iso_settings.raw_ini, _RealQSettings.Format.IniFormat)
-        raw.setValue("updates/skipped_version", "v1.2.3")
-        raw.sync()
+        from opensak.gui.settings import get_settings
+        get_settings().updates_skipped_version = "v1.2.3"
         seeded_window._on_update_available("v1.2.3", "http://x", manual=False)
