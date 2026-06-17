@@ -78,6 +78,9 @@ STRINGS: dict[str, str] = {
     "action_about":                 "A propos d'&OpenSAK…",
     "action_check_update":          "Vérifier les mises à jour…",
 
+    "action_open_log_file": "Ouvrir le fichier journal",
+    "log_file_not_found": "Fichier journal introuvable : {path}",
+
     # ── Menu Outils de géocaching ─────────────────────────────────────────────
     "menu_gc_tools":                "&Outils géo",
     "action_coord_converter":       "⇄  &Convertisseur de coordonnées…",

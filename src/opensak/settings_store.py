@@ -200,6 +200,11 @@ class SettingsStore:
             # QByteArray og andre bytes-lignende typer
             if isinstance(obj, (bytes, bytearray)):
                 return base64.b64encode(obj).decode()
+            # Native JSON-typer skal IKKE forsøges konverteret til bytes —
+            # bytes(True)/bytes(False) fortolker booleans som heltal (0/1
+            # antal nul-bytes) og ville fejlagtigt korrumpere dem til base64.
+            if obj is None or isinstance(obj, (bool, int, float, str)):
+                return obj
             try:
                 # Fang QByteArray fra PySide6 som har __bytes__
                 b = bytes(obj)
@@ -227,6 +232,36 @@ class SettingsStore:
 
 
 # ── Migration fra QSettings ───────────────────────────────────────────────────
+
+def repair_corrupted_bool_keys(store: SettingsStore) -> None:
+    """
+    Reparér settings-nøgler der blev korrumperet af en tidligere bug i
+    _flush() (booleans blev fejlagtigt base64-kodet til 'AA==' / 'AQ==').
+
+    Idempotent og billig — sikkert at kalde ved hver opstart. Påvirker kun
+    de specifikke boolean-nøgler der var ramt af buggen; rører ikke andre
+    værdier.
+
+    Vigtigst: "updates.check_enabled" skal være True for nye 1.14.x-brugere
+    fra starten, så de aktivt skal vælge at slå auto-update-check fra,
+    ikke omvendt.
+    """
+    base64_to_bool = {"AA==": False, "AQ==": True}
+    bool_keys = [
+        "updates.check_enabled",
+        "display.use_miles",
+        "display.show_archived",
+        "display.show_found",
+        "location.nominatim_enabled",
+    ]
+    fixes: dict[str, Any] = {}
+    for key in bool_keys:
+        val = store.get(key)
+        if isinstance(val, str) and val in base64_to_bool:
+            fixes[key] = base64_to_bool[val]
+    if fixes:
+        store.set_many(fixes)
+
 
 def migrate_from_qsettings(store: SettingsStore) -> bool:
     """

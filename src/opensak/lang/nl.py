@@ -81,6 +81,9 @@ STRINGS: dict[str, str] = {
     "action_about":                 "Over &OpenSAK…",
     "action_check_update":          "Controleren op updates…",
 
+    "action_open_log_file": "Logbestand openen",
+    "log_file_not_found": "Logbestand nog niet gevonden: {path}",
+
     # ── Geocaching Tools menu ─────────────────────────────────────────────────
     "menu_gc_tools":                "&Extra's",
     "action_coord_converter":       "⇄  &Coördinaatconverter…",

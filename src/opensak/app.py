@@ -203,11 +203,23 @@ def main() -> None:
         )
         app.processEvents()
 
+    # Initialiser logging-systemet FØRST (issue #232) — så vi kan logge
+    # alt der sker under resten af opstarten, inkl. migration og wizard.
+    from opensak.logger import setup_logging
+    setup_logging()
+
     # Indlæs sprog FØR noget UI oprettes
     splash_msg("Indlæser sprog...")
     # Kør én-gangs migration fra QSettings → opensak.json (issue #209)
-    from opensak.settings_store import get_store, migrate_from_qsettings, is_first_run, mark_wizard_completed
+    from opensak.settings_store import (
+        get_store, migrate_from_qsettings, is_first_run,
+        mark_wizard_completed, repair_corrupted_bool_keys,
+    )
     did_migrate = migrate_from_qsettings(get_store())
+    # Reparér evt. boolean-værdier korrumperet af en tidligere bug i
+    # _flush() — kører altid, uafhængigt af om migration var nødvendig,
+    # så også brugere af tidligere 1.14.0-beta-builds får det rettet.
+    repair_corrupted_bool_keys(get_store())
     # Eksisterende installation (migreret fra QSettings) → wizard er ikke nødvendig
     if did_migrate:
         mark_wizard_completed()

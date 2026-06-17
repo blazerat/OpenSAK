@@ -403,6 +403,12 @@ class MainWindow(QMainWindow):
         act_check_update.triggered.connect(self._check_update_manual)
         help_menu.addAction(act_check_update)
 
+        help_menu.addSeparator()
+
+        act_open_log = QAction(tr("action_open_log_file"), self)
+        act_open_log.triggered.connect(self._open_log_file)
+        help_menu.addAction(act_open_log)
+
         # ── Vis-dropdown i menulinjen ─────────────────────────────────────────
         menubar.addSeparator()
 
@@ -1741,6 +1747,22 @@ class MainWindow(QMainWindow):
             tr("about_title"),
             tr("about_text", version=__version__),
         )
+
+    def _open_log_file(self) -> None:
+        """Åbn logfilen i systemets standard tekstprogram (issue #232)."""
+        from opensak.config import get_log_path
+        from PySide6.QtGui import QDesktopServices
+        from PySide6.QtCore import QUrl
+
+        log_path = get_log_path()
+        if not log_path.exists():
+            QMessageBox.information(
+                self,
+                tr("action_open_log_file"),
+                tr("log_file_not_found", path=str(log_path)),
+            )
+            return
+        QDesktopServices.openUrl(QUrl.fromLocalFile(str(log_path)))
 
     # ── Opdateringsstjek ───────────────────────────────────────────────────────
 
