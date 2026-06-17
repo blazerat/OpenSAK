@@ -675,6 +675,8 @@ class MainWindow(QMainWindow):
         self._detail_panel.clear()
         self._load_sort_for_active_db()
         self._reload_home_combo()
+        # Genindlæs kolonner for den nye database (issue #199)
+        self._cache_table.reload_columns()
         # Reload kort med aktuel lokation for denne DB
         self._map_widget.reload_map(self._refresh_cache_list)
         self._statusbar.showMessage(

@@ -70,9 +70,29 @@ ALL_COLUMNS = property(lambda self: get_all_columns()) if False else None  # se 
 ALWAYS_VISIBLE = {"gc_code", "name"}
 
 
+def _col_key(suffix: str) -> str:
+    """
+    Returner en settings-nøgle der er unik per aktiv database.
+
+    Format: "columns.<db_name>.<suffix>"
+    Falder tilbage til "columns.default.<suffix>" hvis ingen aktiv database.
+    Issue #199: column views gemmes per database-navn.
+    """
+    try:
+        from opensak.db.manager import get_db_manager
+        manager = get_db_manager()
+        if manager.active:
+            # Brug database-navn (ikke sti) — mere læsbart og portabelt
+            safe = manager.active.name.replace(".", "_").replace(" ", "_")
+            return f"columns.{safe}.{suffix}"
+    except Exception:
+        pass
+    return f"columns.default.{suffix}"
+
+
 def get_visible_columns() -> list[str]:
-    """Returner liste over synlige kolonne-id'er fra opensak.json."""
-    saved = get_store().get("columns.visible")
+    """Returner liste over synlige kolonne-id'er for den aktive database."""
+    saved = get_store().get(_col_key("visible"))
     if saved:
         return list(saved)
     # Standard: vis de kolonner der er markeret som standard
@@ -80,13 +100,13 @@ def get_visible_columns() -> list[str]:
 
 
 def set_visible_columns(col_ids: list[str]) -> None:
-    """Gem liste over synlige kolonne-id'er til opensak.json."""
-    get_store().set("columns.visible", col_ids)
+    """Gem liste over synlige kolonne-id'er for den aktive database."""
+    get_store().set(_col_key("visible"), col_ids)
 
 
 def get_column_widths() -> dict[str, int]:
-    """Return saved column widths (col_id -> px) from opensak.json."""
-    raw = get_store().get("columns.widths")
+    """Return saved column widths (col_id -> px) for the active database."""
+    raw = get_store().get(_col_key("widths"))
     if raw:
         try:
             if isinstance(raw, str):
@@ -99,8 +119,8 @@ def get_column_widths() -> dict[str, int]:
 
 
 def set_column_widths(widths: dict[str, int]) -> None:
-    """Persist column widths (col_id -> px) to opensak.json."""
-    get_store().set("columns.widths", widths)
+    """Persist column widths (col_id -> px) for the active database."""
+    get_store().set(_col_key("widths"), widths)
 
 
 class ColumnChooserDialog(QDialog):

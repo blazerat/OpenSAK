@@ -870,7 +870,9 @@ class CacheTableView(QTableView):
         self._applying_widths = False
         self._apply_column_widths()
         self.horizontalHeader().setSortIndicatorShown(True)
+        self.horizontalHeader().setSectionsMovable(True)
         self.horizontalHeader().sectionResized.connect(self._on_column_resized)
+        self.horizontalHeader().sectionMoved.connect(self._on_column_moved)
         self.selectionModel().currentRowChanged.connect(self._on_row_changed)
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self._show_context_menu)
@@ -928,6 +930,13 @@ class CacheTableView(QTableView):
                 header.setSectionResizeMode(
                     name_idx, QHeaderView.ResizeMode.Interactive
                 )
+            # Genskab visuel kolonne-rækkefølge fra opensak.json (issue #199).
+            # `columns` er allerede i gemt rækkefølge — sørg for at header-sektionerne
+            # følger samme rækkefølge visuelt (logisk indeks 0..n-1 i den orden).
+            for visual_pos, _col_id in enumerate(columns):
+                current_visual = header.visualIndex(visual_pos)
+                if current_visual != visual_pos:
+                    header.moveSection(current_visual, visual_pos)
         finally:
             self._applying_widths = False
 
@@ -941,6 +950,28 @@ class CacheTableView(QTableView):
         widths = get_column_widths()
         widths[col_id] = new_size
         set_column_widths(widths)
+
+    def _on_column_moved(self, _logical_index: int, old_visual: int, new_visual: int) -> None:
+        """Gem ny kolonne-rækkefølge når brugeren trækker en kolonne (issue #199)."""
+        if self._applying_widths:
+            return
+        from opensak.gui.dialogs.column_dialog import set_visible_columns
+        header = self.horizontalHeader()
+        columns = self._model._columns
+        # Byg ny rækkefølge af col_id'er baseret på aktuel visuel position
+        new_order = [
+            columns[header.logicalIndex(visual_pos)]
+            for visual_pos in range(len(columns))
+        ]
+        set_visible_columns(new_order)
+        # Genindlæs model med ny logisk rækkefølge, og nulstil header til
+        # identitets-rækkefølge (0..n-1) så fremtidige resizes/sorts matcher.
+        self._applying_widths = True
+        try:
+            self._model.reload_columns()
+            self._apply_column_widths()
+        finally:
+            self._applying_widths = False
 
     def reload_columns(self) -> None:
         """Opdatér kolonner fra indstillinger."""
