@@ -8,6 +8,30 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [1.14.0-beta.5] — 2026-06-17
+
+> **Beta release** — continuing the 1.14.0 testing period.
+
+### Changed
+
+- **GC Code colors now match GSAK** (issue #270) — found caches now show on
+  a yellow background (previously green), and your own caches show on a
+  green background (previously yellow), matching the colors long-time GSAK
+  users already know. Disabled caches now use black text on the red
+  background instead of orange-on-red, which was nearly unreadable.
+- **The count panel in the info bar now uses the same colors as the GC Code
+  column** — black text on a colored background instead of colored numbers
+  on a plain background.
+
+### Added
+
+- **Clicking a colored count in the info bar filters the cache list** to
+  that status — click "Found" to see only found caches, "My caches" for
+  your own, "Inactive" for archived/disabled caches, or "All" to clear the
+  filter. Mirrors GSAK's clickable status counts.
+
+---
+
 ## [1.14.0-beta.4] — 2026-06-17
 
 > **Beta release** — continuing the 1.14.0 testing period.
