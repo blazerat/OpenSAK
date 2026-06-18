@@ -1,0 +1,221 @@
+# Removing Old OpenSAK Versions (Windows / Linux / macOS)
+
+OpenSAK does **not** come with an installer or uninstaller — it's distributed as a
+portable `.exe` (Windows), an AppImage (Linux), or a `.dmg` (macOS). That means
+"installing" a new version is just running a new file, and the old one doesn't
+get removed automatically. This guide explains what OpenSAK actually creates on
+your computer and how to clean it up safely, if you want to.
+
+> **You usually don't need to do this.** Downloading a newer release and running
+> it will not conflict with an older copy — they're just separate files. This
+> guide is for people who specifically want to free up space, do a clean
+> reinstall, or fully remove OpenSAK from their machine.
+
+---
+
+## ⚠️ Before you delete anything
+
+Your **database file(s)** (`.db`, plus matching `-shm` / `-wal` files) contain
+all your caches, logs, waypoints, and notes. There is no undo once they're
+deleted. If in doubt:
+
+1. Find your database folder (see below).
+2. Copy the `.db` files somewhere safe (a USB stick, another folder, cloud
+   storage) before deleting anything.
+
+If you're running **1.14.0-beta or later**, the easiest way to see your exact
+paths is inside the app itself: **Settings → Advanced** shows your current
+*Install folder* and *Database folder* directly — no guessing needed.
+
+---
+
+## What OpenSAK creates on your computer
+
+There are two completely separate things:
+
+1. **The program itself** — the `.exe`, the AppImage, or the `.app` you
+   downloaded/dragged into place. Deleting this removes the program but
+   leaves your data untouched.
+2. **Your data** — settings, database(s), and log file, created the first
+   time you run OpenSAK. This is what you'd want to back up or remove
+   separately.
+
+Where your data lives depends on which version you're running, because this
+changed in version 1.14.0:
+
+| | Versions **before** 1.14.0 | Versions **1.14.0-beta and later** |
+|---|---|---|
+| Settings | Windows Registry / Qt `.ini`/`.conf` file under an **"OpenSAK Project"** key or folder | A plain `opensak.json` file, located via a small `bootstrap.json` pointer file |
+| Language only | `preferences.json` | merged into `opensak.json` |
+| Database(s) | Same folder as settings | A folder you chose in the welcome wizard (can be the same folder, or a different one) |
+| Logs | `opensak.log` (same folder) | `opensak.log` inside the install folder |
+
+If you upgraded from an older version to 1.14.0+, OpenSAK automatically copied
+your old settings into the new `opensak.json` the first time it ran. The old
+registry/`.ini` entries are no longer used after that — they're just leftover
+clutter and are safe to delete if you want a clean system.
+
+---
+
+## Windows
+
+### 1. Remove the program
+
+OpenSAK on Windows is a single portable `.exe`. Just delete the file (and any
+shortcut you may have pinned to the Start Menu, Taskbar, or Desktop — OpenSAK
+doesn't create these automatically, so only remove ones you made yourself).
+
+### 2. Find your data
+
+**If you're on 1.14.0-beta or later**, open OpenSAK → **Settings → Advanced**
+to see the exact Install folder and Database folder paths, then go there in
+File Explorer.
+
+**Default locations**, if you never changed them:
+
+| What | Typical path |
+|---|---|
+| Bootstrap pointer (1.14.0+) | `%APPDATA%\opensak\bootstrap.json` |
+| Install folder / `opensak.json` / log (1.14.0+, default) | `%APPDATA%\opensak\` |
+| Database, settings, logs (pre-1.14.0, default) | `%APPDATA%\opensak\` |
+
+`%APPDATA%` is usually `C:\Users\<your name>\AppData\Roaming`. To get there
+quickly: press **Win + R**, type `%APPDATA%`, press Enter.
+
+### 3. Remove old QSettings (pre-1.14.0 leftovers)
+
+Older versions also stored some settings directly in the Windows Registry
+under an organization name of **"OpenSAK Project"**. To check and remove this:
+
+1. Press **Win + R**, type `regedit`, press Enter.
+2. Press **Ctrl+F**, search for `OpenSAK Project`.
+3. If found (usually under `HKEY_CURRENT_USER\Software\OpenSAK Project`),
+   right-click that key → **Delete**.
+
+This step is optional — it only contains old preference values and is never
+read by 1.14.0+ versions.
+
+### 4. Delete the data folder (optional, only if you want a clean slate)
+
+Once backed up, delete the `%APPDATA%\opensak\` folder (and the registry key
+above, if present) to remove all traces of OpenSAK.
+
+---
+
+## Linux
+
+### 1. Remove the program
+
+Just delete the AppImage file you downloaded (wherever you saved it — often
+`~/Applications`, `~/Downloads`, or `~/.local/bin`).
+
+If you integrated it into your application menu using a tool like
+**AppImageLauncher** or `appimaged`, also remove the generated launcher entry
+and icon it created, typically:
+
+```bash
+ls ~/.local/share/applications/ | grep -i opensak
+ls ~/.local/share/icons/ -R | grep -i opensak
+```
+
+Delete any matching files found.
+
+### 2. Find your data
+
+**If you're on 1.14.0-beta or later**, check **Settings → Advanced** inside
+the app for the exact paths.
+
+**Default locations**, if you never changed them:
+
+| What | Typical path |
+|---|---|
+| Bootstrap pointer (1.14.0+) | `~/.config/opensak/bootstrap.json` |
+| Install folder / `opensak.json` / log (1.14.0+, default) | `~/.local/share/opensak/` |
+| Database, settings, logs (pre-1.14.0, default) | `~/.local/share/opensak/` |
+| Old QSettings file (pre-1.14.0) | `~/.config/OpenSAK Project/` (filename `OpenSAK.conf` or `OpenSAK.ini`) |
+
+These are hidden folders (starting with a dot). In most file managers, press
+**Ctrl+H** to show hidden files, or use a terminal:
+
+```bash
+ls -la ~/.config | grep -i opensak
+ls -la ~/.local/share | grep -i opensak
+```
+
+### 3. Delete the data (optional)
+
+Once you've backed up your `.db` files, you can remove the folders found
+above with:
+
+```bash
+rm -rf ~/.local/share/opensak
+rm -rf ~/.config/opensak
+rm -rf "~/.config/OpenSAK Project"
+```
+
+(Only run commands for folders that actually exist on your system — check
+with `ls` first, as shown above.)
+
+---
+
+## macOS
+
+### 1. Remove the program
+
+If you haven't already, drag **OpenSAK.app** out of `/Applications` and into
+the **Trash**, then empty the Trash. You can also delete the `.dmg` installer
+file you originally downloaded — once the app is copied to `/Applications`,
+the `.dmg` itself isn't needed anymore (eject it first if it's still mounted
+on your Desktop).
+
+### 2. Find your data
+
+**If you're on 1.14.0-beta or later**, check **Settings → Advanced** inside
+the app for the exact paths.
+
+**Default locations**, if you never changed them:
+
+| What | Typical path |
+|---|---|
+| Bootstrap pointer (1.14.0+) | `~/Library/Application Support/opensak/bootstrap.json` |
+| Install folder / `opensak.json` / log (1.14.0+, default) | `~/Library/Application Support/opensak/` |
+| Database, settings, logs (pre-1.14.0, default) | `~/Library/Application Support/opensak/` |
+| Old QSettings preferences (pre-1.14.0) | `~/Library/Preferences/` (a `.plist` file with "opensak" somewhere in its name) |
+
+To get to `~/Library` quickly: in Finder, click **Go** in the menu bar, hold
+**Option**, and **Library** will appear in the list (it's hidden by default).
+Or use **Go → Go to Folder...** and type `~/Library/Application Support`.
+
+If you're not sure of the exact preferences filename, search for it in
+Terminal:
+
+```bash
+find ~/Library/Preferences -iname "*opensak*"
+find ~/Library/Application\ Support -iname "*opensak*"
+```
+
+### 3. Delete the data (optional)
+
+Once backed up, remove what was found above, e.g.:
+
+```bash
+rm -rf ~/Library/Application\ Support/opensak
+rm -f ~/Library/Preferences/<the file found above>
+```
+
+---
+
+## Quick checklist
+
+1. ✅ Back up your `.db` file(s) somewhere safe.
+2. ✅ Delete the old program file (`.exe` / AppImage / `.app`).
+3. ✅ (Optional) Delete the settings/database folder for your OS, listed above.
+4. ✅ (Optional, pre-1.14.0 leftovers only) Remove the old Registry key /
+   `~/.config/OpenSAK Project` folder / macOS `.plist` file.
+5. ✅ Run your new OpenSAK version — it will recreate what it needs, or pick
+   up your existing database if you kept it.
+
+If anything looks different on your system than described here — for
+example, you changed the install or database folder during the welcome
+wizard — check **Settings → Advanced** in the app first; it always shows
+your *actual* current paths.
