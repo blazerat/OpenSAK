@@ -8,6 +8,34 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [1.14.0-beta.6] — 2026-06-18
+
+> **Beta release** — continuing the 1.14.0 testing period.
+
+### Added
+
+- **GSAK personal/user fields are now imported** (closes #269) — GPX files
+  exported from GSAK itself (not standard Geocaching.com Pocket Queries) now
+  have their `UserFlag`, `IsPremium`, `UserSort`, `UserData`/`User2`/`User3`/
+  `User4`, and `FavPoints` fields imported into the matching `Cache` columns
+  (added back in #33, previously left unused). A field is only overwritten
+  when GSAK actually supplies a value, so a later plain Pocket Query
+  re-import won't wipe data carried in from a GSAK-sourced import.
+  `gsak:County` was not added separately, since `county` is already
+  populated from the standard Groundspeak `gs:county` field.
+
+### Fixed
+
+- **GSAK GPX logs were capped at 20 entries** (fixes #266) —
+  `_render_log_html()` had a hardcoded `[:20]` slice that silently dropped
+  any logs beyond the first 20 (and any matching logs beyond 20 when
+  searching), even though the importer itself had no such limit. All logs —
+  and all matching logs when searching — are now shown. An outdated comment
+  referencing "show up to 10 most recent" was also corrected to match the
+  actual behavior.
+
+---
+
 ## [1.14.0-beta.5] — 2026-06-17
 
 > **Beta release** — continuing the 1.14.0 testing period.
