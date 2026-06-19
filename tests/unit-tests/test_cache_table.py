@@ -460,6 +460,44 @@ class TestDelegates:
         model.load([c])
         self._paint(GcCodeDelegate(), model, "gc_code")
 
+    def test_gc_code_delegate_owner_match_irregular_whitespace(self, model, fake_settings):
+        """Issue #272: some GPX exports embed non-breaking spaces or doubled
+        whitespace inside multi-word owner names. The owner match must still
+        succeed once both sides are whitespace-normalized."""
+        fake_settings.gc_username = "Cheminer  Will"      # double space, as typed in Settings
+        c = _cache(gc_code="GCNBSP", found=False, available=True, archived=False)
+        c.owner_name = "Cheminer\xa0Will"                  # non-breaking space, from GPX
+        model.load([c])
+        d = GcCodeDelegate()
+        idx = model.index(0, ALL_COLUMNS.index("gc_code"))
+        assert d._bg_color(idx) == GcCodeDelegate._COLOR_PLACED
+
+    def test_gc_code_delegate_owner_match_gsak_stats_suffix(self, model, fake_settings):
+        """Issue #272 (confirmed root cause, see Owned_Export.gpx): GSAK's
+        statistics macro (e.g. FindStatGen) appends found/hide counts to the
+        owner field on export, e.g. 'Cheminer Will (F=1361 H=54)'. This must
+        still match the plain username configured in Settings."""
+        fake_settings.gc_username = "Cheminer Will"
+        c = _cache(gc_code="GCSTATS", found=False, available=True, archived=False)
+        c.owner_name = "Cheminer Will (F=1361 H=54)"
+        model.load([c])
+        d = GcCodeDelegate()
+        idx = model.index(0, ALL_COLUMNS.index("gc_code"))
+        assert d._bg_color(idx) == GcCodeDelegate._COLOR_PLACED
+
+    def test_gc_code_delegate_uses_owner_not_placed_by(self, model, fake_settings):
+        """Issue #270: an adopted cache (owner differs from the original
+        placer) must still be colored as 'owned' when owner_name matches —
+        even though placed_by does not."""
+        fake_settings.gc_username = "AdoptedOwner"
+        c = _cache(gc_code="GCADOPT", found=False, available=True, archived=False)
+        c.placed_by = "OriginalPlacer"
+        c.owner_name = "AdoptedOwner"
+        model.load([c])
+        d = GcCodeDelegate()
+        idx = model.index(0, ALL_COLUMNS.index("gc_code"))
+        assert d._bg_color(idx) == GcCodeDelegate._COLOR_PLACED
+
     def test_gc_code_bg_none_when_no_cache(self, model):
         d = GcCodeDelegate()
 

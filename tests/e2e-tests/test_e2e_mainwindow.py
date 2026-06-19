@@ -203,6 +203,36 @@ class TestCacheList:
         from opensak.gui.settings import get_settings
         get_settings().gc_username = "TestOwner"
         seeded_window._update_info_bar()
+        expected = sum(
+            1 for c in seeded_window._cache_table.get_all_caches()
+            if (c.owner_name or "").strip().lower() == "testowner"
+        )
+        assert expected > 0
+        assert seeded_window._info_bar._owned_lbl.text() == str(expected)
+
+    def test_owned_count_uses_owner_not_placed_by(self, seeded_window, iso_settings):
+        """Issue #270: GSAK counts the cache 'Owner', not the original
+        'Placed by'. An adopted cache (the two differ) must be counted and
+        be filterable by its current owner."""
+        from opensak.gui.settings import get_settings
+        from opensak.db.database import get_session
+        from opensak.db.models import Cache
+
+        with get_session() as session:
+            cache = session.query(Cache).filter_by(gc_code="GC12345").one()
+            cache.placed_by = "OriginalPlacer"
+            cache.owner_name = "AdoptedOwner"
+            session.commit()
+
+        get_settings().gc_username = "AdoptedOwner"
+        seeded_window._refresh_cache_list()
+        assert seeded_window._info_bar._owned_lbl.text() == "1"
+
+        # Clicking the owned tile must filter by owner — a PlacedByFilter
+        # would find nothing here since placed_by is "OriginalPlacer".
+        seeded_window._filter_by_status("owned")
+        assert seeded_window._cache_table.row_count() == 1
+        assert seeded_window._cache_table.get_all_caches()[0].gc_code == "GC12345"
 
 
 # ── selection slots ───────────────────────────────────────────────────────────

@@ -27,6 +27,7 @@ from opensak.coords import format_coords
 from opensak.gui.settings import get_settings
 from opensak.lang import tr
 from opensak.utils.types import GcCode
+from opensak.utils.utils import normalize_geocacher_name
 from opensak.updater import UpdateCheckWorker, RELEASES_PAGE
 
 if TYPE_CHECKING:
@@ -884,12 +885,15 @@ class MainWindow(QMainWindow):
         all_in_filter = len(caches)
         inactive = sum(1 for c in caches if c.archived or not c.available)
 
-        # Owned: match placed_by against stored GC username
-        gc_user = s.gc_username.strip().lower() if s.gc_username else ""
+        # Owned: match owner_name against stored GC username (issue #270 —
+        # GSAK counts the 'Owner' tag, not 'Placed by'; adopted caches can
+        # have a different placed_by than the current owner). Comparison is
+        # whitespace/case-normalized (issue #272: irregular GPX whitespace).
+        gc_user = normalize_geocacher_name(s.gc_username)
         if gc_user:
             owned = sum(
                 1 for c in caches
-                if c.placed_by and c.placed_by.strip().lower() == gc_user
+                if normalize_geocacher_name(c.owner_name) == gc_user
             )
         else:
             owned = 0
@@ -916,7 +920,7 @@ class MainWindow(QMainWindow):
             self._clear_filter()
             return
 
-        from opensak.filters.engine import FoundFilter, AvailabilityFilter, PlacedByFilter
+        from opensak.filters.engine import FoundFilter, AvailabilityFilter, OwnerFilter
         fs = FilterSet(mode="AND")
 
         if status == "found":
@@ -928,7 +932,7 @@ class MainWindow(QMainWindow):
             if not gc_user:
                 self._statusbar.showMessage(tr("infobar_owned_no_username"), 5000)
                 return
-            fs.add(PlacedByFilter(gc_user))
+            fs.add(OwnerFilter(gc_user))  # issue #270: match 'owner', not 'placed_by'
             label = tr("infobar_filter_owned")
         elif status == "inactive":
             # Samme definition som i _update_info_bar: archived OR ikke tilgængelig

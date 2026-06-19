@@ -20,6 +20,7 @@ from opensak.gui.settings import get_settings
 from opensak.coords import format_coords, format_lat, format_lon, format_lat, format_lon
 from opensak.lang import tr
 from opensak.utils.types import GcCode
+from opensak.utils.utils import normalize_geocacher_name
 from opensak.gui.icon_provider import get_cache_type_icon, get_cache_size_icon
 from opensak.gui.dialogs.column_dialog import get_column_widths, set_column_widths
 import math
@@ -337,6 +338,11 @@ class GcCodeDelegate(QStyledItemDelegate):
     og matcher GSAK's visuelle stil. Sort tekst bruges konsekvent på alle
     statusfarver, inkl. disabled — som tidligere brugte orange tekst på rød
     baggrund og var næsten ulæseligt (issue #270).
+
+    Issue #272: owner_name sammenlignes via normalize_geocacher_name() i
+    stedet for blot strip()/lower(), så caches stadig farves korrekt selv
+    når GPX-filen indeholder dobbelte mellemrum eller non-breaking spaces
+    (\\xa0) i ejernavnet — set i eksporter fra visse tredjeparts-værktøjer.
     """
 
     _COLOR_ARCHIVED = QColor("#f1948a")   # rød   — archived OG disabled
@@ -351,8 +357,8 @@ class GcCodeDelegate(QStyledItemDelegate):
             return None
         if cache.archived or not cache.available:
             return self._COLOR_ARCHIVED
-        gc_username = (get_settings().gc_username or "").strip().lower()
-        if gc_username and (cache.owner_name or "").strip().lower() == gc_username:
+        gc_username = normalize_geocacher_name(get_settings().gc_username)
+        if gc_username and normalize_geocacher_name(cache.owner_name) == gc_username:
             return self._COLOR_PLACED
         if cache.found:
             return self._COLOR_FOUND
