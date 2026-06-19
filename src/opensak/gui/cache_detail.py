@@ -24,6 +24,16 @@ from opensak.coords import format_coords
 from opensak.gui.settings import get_settings
 
 
+# issue #219 — geocaching.com logge bruger markdown-links: [linktekst](https://url)
+# Disse vises i dag som rå tekst; konverter dem til klikbare <a> tags.
+_MD_LINK_RE = re.compile(r'\[([^\[\]]+)\]\((https?://[^\s)]+)\)')
+
+
+def _convert_markdown_links(text: str) -> str:
+    """Konverter markdown-links [tekst](url) i logtekst til klikbare HTML-links."""
+    return _MD_LINK_RE.sub(r'<a href="\2">\1</a>', text)
+
+
 class _DescWebPage(QWebEnginePage):
     """Custom page der åbner links i systemets browser i stedet for i WebEngine."""
 
@@ -247,6 +257,7 @@ class CacheDetailPanel(QWidget):
         log_layout.addLayout(log_search_row)
 
         self._log_browser = QTextBrowser()
+        self._log_browser.setOpenExternalLinks(True)  # issue #219 — links åbnes i systemets browser
         log_layout.addWidget(self._log_browser)
         self._tabs.addTab(log_widget, tr("detail_tab_logs"))
 
@@ -527,9 +538,8 @@ class CacheDetailPanel(QWidget):
         for log in filtered:
             colour = colours.get(log.log_type, "#555555")
             date_str = log.log_date.strftime("%d.%m.%Y") if log.log_date else "?"
+            # issue #218 — ingen trunkering: hele logteksten vises (QTextBrowser scroller selv)
             text = log.text or ""
-            if len(text) > 500:
-                text = text[:500] + "…"
             if filter_text and filter_text in text.lower():
                 idx = text.lower().find(filter_text)
                 text = (
@@ -537,6 +547,8 @@ class CacheDetailPanel(QWidget):
                     + f'<mark>{text[idx:idx+len(filter_text)]}</mark>'
                     + text[idx+len(filter_text):]
                 )
+            # issue #219 — markdown-links [tekst](url) gøres til klikbare <a> tags
+            text = _convert_markdown_links(text)
             html.append(
                 f'<p><b style="color:{colour}">{log.log_type}</b> '
                 f'— {log.finder or "?"} '
