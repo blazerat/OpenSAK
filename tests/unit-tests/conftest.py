@@ -11,6 +11,7 @@ def _reload_flags() -> None:
     # Reload flags module state from the current _FEATURES_FILE.
     flags_module._flags = flags_module._load()
     flags_module.where_filter = flags_module._flags["where-filter"]
+    flags_module.reverse_geocoding = flags_module._flags["reverse-geocoding"]
 
 
 @pytest.fixture(autouse=True)

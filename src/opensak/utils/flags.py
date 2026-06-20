@@ -31,6 +31,7 @@ _RELEASE_DEFAULTS: dict[str, bool] = {
     "where-filter": True,
     "db-combo": True,
     "update-location": False,
+    "reverse-geocoding": False,
 }
 
 
@@ -74,3 +75,4 @@ _flags = _load()
 where_filter: bool = _flags["where-filter"]
 db_combo: bool = _flags["db-combo"]
 update_location: bool = _flags["update-location"]
+reverse_geocoding: bool = _flags["reverse-geocoding"]

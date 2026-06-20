@@ -10,7 +10,12 @@ import opensak.utils.flags as flags_module
 
 class TestLoad:
     def test_absent_file_returns_release_defaults(self, no_features_file):
-        assert flags_module._flags == {"where-filter": True, "db-combo": True, "update-location": False}
+        assert flags_module._flags == {
+            "where-filter": True,
+            "db-combo": True,
+            "update-location": False,
+            "reverse-geocoding": False,
+        }
 
     def test_present_file_overrides_defaults(self, patch_features_file):
         patch_features_file({"where-filter": True})
@@ -21,7 +26,12 @@ class TestLoad:
         f.write_text("{ not valid", encoding="utf-8")
         monkeypatch.setattr(flags_module, "_FEATURES_FILE", f)
         result = flags_module._load()
-        assert result == {"where-filter": True, "db-combo": True, "update-location": False}
+        assert result == {
+            "where-filter": True,
+            "db-combo": True,
+            "update-location": False,
+            "reverse-geocoding": False,
+        }
 
     def test_unknown_keys_in_file_are_ignored(self, patch_features_file):
         patch_features_file({"where-filter": True, "future-flag": True})
@@ -46,6 +56,15 @@ class TestWhereFilter:
     def test_false_when_explicitly_disabled_in_file(self, patch_features_file):
         patch_features_file({"where-filter": False})
         assert flags_module.where_filter is False
+
+
+class TestReverseGeocoding:
+    def test_false_by_default_when_file_absent(self, no_features_file):
+        assert flags_module.reverse_geocoding is False
+
+    def test_true_when_enabled_in_file(self, patch_features_file):
+        patch_features_file({"reverse-geocoding": True})
+        assert flags_module.reverse_geocoding is True
 
 
 # ── _parse_argv() ─────────────────────────────────────────────────────────────
