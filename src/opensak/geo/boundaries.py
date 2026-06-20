@@ -1,0 +1,76 @@
+# src/opensak/geo/boundaries.py — two-stage offline reverse geocoding.
+
+from __future__ import annotations
+
+from typing import Any, NamedTuple
+
+from opensak.geo.store import BoundaryStore
+
+
+class GeoLocation(NamedTuple):
+    country: str | None
+    state: str | None
+    county: str | None
+
+
+class TerritoryResolver:
+    """Resolve (lat, lon) to country/state/county via the two-stage lookup.
+
+    Stage 1 is an R-Tree bbox query; a single box hit returns directly, an
+    overlap falls through to Stage 2 point-in-polygon on the few candidates.
+    """
+
+    def __init__(self, store: BoundaryStore) -> None:
+        self._store = store
+
+    def resolve(self, lat: float, lon: float) -> GeoLocation:
+        return GeoLocation(
+            country=self._resolve_layer("country", lat, lon),
+            state=self._resolve_layer("state", lat, lon),
+            county=self._resolve_layer("county", lat, lon),
+        )
+
+    def _resolve_layer(self, layer: str, lat: float, lon: float) -> str | None:
+        ids = self._store.candidates(layer, lat, lon)
+        if not ids:
+            return None
+        if len(ids) == 1:
+            region = self._store.region(layer, ids[0])
+            return region.name if region else None
+        for region_id in ids:  # overlap: keep the box the polygon actually contains
+            region = self._store.region(layer, region_id)
+            if region is None:
+                continue
+            if _point_in_geometry(lat, lon, self._store.geometry(layer, region)):
+                return region.name
+        return None
+
+
+def _point_in_geometry(lat: float, lon: float, geometry: dict[str, Any]) -> bool:
+    gtype = geometry.get("type")
+    coords: Any = geometry.get("coordinates")
+    if gtype == "Polygon":
+        return _point_in_polygon(lon, lat, coords)
+    if gtype == "MultiPolygon":
+        return any(_point_in_polygon(lon, lat, poly) for poly in coords)
+    return False
+
+
+def _point_in_polygon(x: float, y: float, rings: Any) -> bool:
+    # GeoJSON coords are [lon, lat]; rings[0] is the outer ring, the rest holes.
+    if not rings or not _point_in_ring(x, y, rings[0]):
+        return False
+    return not any(_point_in_ring(x, y, hole) for hole in rings[1:])
+
+
+def _point_in_ring(x: float, y: float, ring: Any) -> bool:
+    inside = False
+    n = len(ring)
+    j = n - 1
+    for i in range(n):
+        xi, yi = ring[i][0], ring[i][1]
+        xj, yj = ring[j][0], ring[j][1]
+        if ((yi > y) != (yj > y)) and (x < (xj - xi) * (y - yi) / (yj - yi) + xi):
+            inside = not inside
+        j = i
+    return inside
