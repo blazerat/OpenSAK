@@ -97,7 +97,8 @@ class BoundaryStore:
         return self._db
 
     def _load_pack(self, layer: str, pack: str) -> dict[str, Any]:
-        cached = self._packs.get(pack)
+        cache_key = (layer, pack)
+        cached = self._packs.get(cache_key)
         if cached is None:
             path = self.data_dir / _LAYER_DIR[self._layer(layer)] / pack
             if not path.is_file() and layer == "county":
@@ -105,7 +106,7 @@ class BoundaryStore:
                 from opensak.geo import packs as _packs
                 _packs.fetch_pack(pack, path.parent)
             cached = json.loads(path.read_text(encoding="utf-8"))
-            self._packs[pack] = cached
+            self._packs[cache_key] = cached
         return cached
 
     def dataset_version(self) -> str:
