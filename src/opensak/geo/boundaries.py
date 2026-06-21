@@ -29,6 +29,9 @@ class TerritoryResolver:
 
     def __init__(self, store: BoundaryStore) -> None:
         self._store = store
+        # Shapely geometry objects cached by (layer, region_id). _shape() is
+        # expensive for complex coastlines — construct once, reuse across rows.
+        self._shape_cache: dict = {}
 
     def resolve(self, lat: float, lon: float) -> GeoLocation:
         return GeoLocation(
@@ -53,14 +56,27 @@ class TerritoryResolver:
             except FileNotFoundError:
                 # pack missing and on-demand fetch failed (no network) — skip candidate
                 continue
-            if _point_in_geometry(lat, lon, geom):
+            if _point_in_geometry(lat, lon, geom, self._shape_cache, (layer, region_id)):
                 return region.name
         return None
 
 
-def _point_in_geometry(lat: float, lon: float, geometry: dict[str, Any]) -> bool:
+def _point_in_geometry(
+    lat: float,
+    lon: float,
+    geometry: dict[str, Any],
+    shape_cache: dict | None = None,
+    cache_key: Any = None,
+) -> bool:
     if _HAS_SHAPELY:
-        return bool(_shape(geometry).contains(_Point(lon, lat)))
+        if shape_cache is not None:
+            shp = shape_cache.get(cache_key)
+            if shp is None:
+                shp = _shape(geometry)
+                shape_cache[cache_key] = shp
+        else:
+            shp = _shape(geometry)
+        return bool(shp.contains(_Point(lon, lat)))
     # pure-Python ray-cast fallback (shapely not installed)
     gtype = geometry.get("type")
     coords: Any = geometry.get("coordinates")
