@@ -183,7 +183,7 @@ STRINGS: dict[str, str] = {
     "filter_where_note_found":      "1 = fundet af mig",
     "filter_where_note_fav":        "Fællesskabets favoritpoint (API)",
     "filter_where_note_logcount":   "Samlet antal logs",
-    "filter_where_note_distance":   "Afstand fra hjempunkt i km",
+    "filter_where_note_distance":   "Afstand fra hjempunkt i {unit}",
     "filter_where_note_userdata":   "Personlige brugerfelter",
     "filter_where_examples_heading": "Eksempler:",
 

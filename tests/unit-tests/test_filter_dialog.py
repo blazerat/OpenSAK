@@ -29,7 +29,7 @@ def isolate(monkeypatch):
     # No real profiles on disk; deterministic home for DistanceFilter.
     monkeypatch.setattr(fd.FilterProfile, "list_profiles", staticmethod(lambda: []))
     monkeypatch.setattr("opensak.gui.settings.get_settings",
-                        lambda: SimpleNamespace(home_lat=55.0, home_lon=12.0))
+                        lambda: SimpleNamespace(home_lat=55.0, home_lon=12.0, use_miles=False))
 
 
 @pytest.fixture

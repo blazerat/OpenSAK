@@ -183,7 +183,7 @@ STRINGS: dict[str, str] = {
     "filter_where_note_found":      "1 = nalezeno mnou",
     "filter_where_note_fav":        "Oblíbené body komunity (API)",
     "filter_where_note_logcount":   "Celkový počet logů",
-    "filter_where_note_distance":   "Vzdálenost od domácího bodu v km",
+    "filter_where_note_distance":   "Vzdálenost od domácího bodu v {unit}",
     "filter_where_note_userdata":   "Osobní uživatelská pole",
     "filter_where_examples_heading": "Příklady:",
 

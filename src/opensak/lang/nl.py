@@ -186,7 +186,7 @@ STRINGS: dict[str, str] = {
     "filter_where_note_found":      "1 = door mij gevonden",
     "filter_where_note_fav":        "Favoriete punten van de community (API)",
     "filter_where_note_logcount":   "Totaal aantal logs",
-    "filter_where_note_distance":   "Afstand van thuispunt in km",
+    "filter_where_note_distance":   "Afstand van thuispunt in {unit}",
     "filter_where_note_userdata":   "Persoonlijke gebruikersvelden",
     "filter_where_examples_heading": "Voorbeelden:",
 
