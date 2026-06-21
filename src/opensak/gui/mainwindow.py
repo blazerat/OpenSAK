@@ -1198,6 +1198,22 @@ class MainWindow(QMainWindow):
                     self._home_combo.setCurrentIndex(i)
                     break
         self._home_combo.blockSignals(False)
+        self._sync_active_home_coords()
+
+    def _sync_active_home_coords(self) -> None:
+        # _reload_home_combo blocks signals, so _on_home_changed never fires
+        # during a reload. This ensures home_lat/home_lon always reflect the
+        # active home point before _update_distances reads them.
+        s = get_settings()
+        name = s.active_home_name
+        for p in s.home_points:
+            if p.name == name:
+                if p.name == "★ Home":
+                    real = s.get_gc_home_point()
+                    s.set_active_home(real if real else p)
+                else:
+                    s.set_active_home(p)
+                return
 
     def _on_home_changed(self, index: int) -> None:
         """Skift aktivt hjemmepunkt — gem per-db og pan kort."""

@@ -746,6 +746,29 @@ class TestTripBlocked:
 
 
 class TestHomeAndCwExtra:
+    def test_reload_home_combo_syncs_home_coords(self, seeded_window):
+        # Regression: _reload_home_combo blocked signals, so home_lat/lon were
+        # never written on startup/db-switch, causing distances from Copenhagen.
+        from opensak.gui.settings import HomePoint, get_settings
+        s = get_settings()
+        p = HomePoint("Idaho", 43.5, -116.2)
+        s.add_or_update_home_point(p)
+        s.active_home_name = p.name  # name only — lat/lon not yet written
+        assert s.home_lat == pytest.approx(55.6761)  # Copenhagen default
+        seeded_window._reload_home_combo()
+        assert s.home_lat == pytest.approx(43.5)
+        assert s.home_lon == pytest.approx(-116.2)
+
+    def test_reload_home_combo_syncs_star_home_coords(self, seeded_window):
+        # ★ Home coordinates come from gc_home_location, not homepoints.list.
+        from opensak.gui.settings import get_settings
+        s = get_settings()
+        s.gc_home_location = "N43 30.000 W116 12.000"
+        s.active_home_name = "★ Home"
+        seeded_window._reload_home_combo()
+        assert s.home_lat == pytest.approx(43.5, abs=0.01)
+        assert s.home_lon == pytest.approx(-116.2, abs=0.01)
+
     def test_on_home_changed_user_and_gc_home(self, seeded_window, iso_settings):
         from opensak.gui.settings import HomePoint, get_settings
         s = get_settings()
