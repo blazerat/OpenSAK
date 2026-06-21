@@ -23,7 +23,7 @@ from opensak.gui.cache_table import (
     _gc_sort_key,
 )
 from opensak.db.models import Cache, UserNote
-from opensak.utils.types import CoordFormat
+from opensak.utils.types import CoordFormat, DateFormat
 
 ALL_COLUMNS = [
     "gc_code", "name", "cache_type", "difficulty", "terrain", "container",
@@ -54,7 +54,8 @@ def _note(lat=56.0, lon=13.0, corrected=True):
 def fake_settings(monkeypatch, qapp):
     s = SimpleNamespace(
         home_lat=55.0, home_lon=12.0, use_miles=False,
-        coord_format=CoordFormat.DMM, gc_username="", map_provider="google",
+        coord_format=CoordFormat.DMM, date_format=DateFormat.DMY,
+        gc_username="", map_provider="google",
     )
     s.get_maps_url = lambda lat, lon: f"https://maps?{lat},{lon}"
     monkeypatch.setattr(ct, "get_settings", lambda: s)
@@ -181,13 +182,24 @@ class TestDisplayValues:
         assert model._display_value(_cache(first_to_find=True), "first_to_find") == "FTF"
         assert model._display_value(_cache(user_flag=True), "user_flag") == "🚩"
 
-    def test_dates(self, model):
+    def test_dates(self, model, fake_settings):
         d = datetime(2024, 3, 1)
+        # DMY (default in fake_settings)
         assert model._display_value(_cache(hidden_date=d), "hidden_date") == "01.03.2024"
         assert model._display_value(_cache(last_log_date=d), "last_log") == "01.03.2024"
         assert model._display_value(_cache(found_date=d), "found_date") == "01.03.2024"
         assert model._display_value(_cache(dnf_date=d), "dnf_date") == "01.03.2024"
         assert model._display_value(_cache(), "hidden_date") == ""
+        # MDY
+        fake_settings.date_format = DateFormat.MDY
+        assert model._display_value(_cache(hidden_date=d), "hidden_date") == "03/01/2024"
+        # YMD
+        fake_settings.date_format = DateFormat.YMD
+        assert model._display_value(_cache(hidden_date=d), "hidden_date") == "2024-03-01"
+        # LOCALE — just verify it's non-empty and contains "2024"
+        fake_settings.date_format = DateFormat.LOCALE
+        result = model._display_value(_cache(hidden_date=d), "hidden_date")
+        assert result and "2024" in result
 
     def test_counts_and_user_fields(self, model):
         assert model._display_value(_cache(log_count=7), "log_count") == "7"
