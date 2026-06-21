@@ -1223,9 +1223,9 @@ def apply_filters(
                 if lat is None or lon is None:
                     return None
                 return _haversine_km(_h, _o, lat, lon) * _k
-            session.connection().connection.dbapi_connection.create_function(
-                "_opensak_dist", 2, _dist_udf
-            )
+            _dbapi = session.connection().connection.dbapi_connection
+            assert _dbapi is not None
+            _dbapi.create_function("_opensak_dist", 2, _dist_udf)
             _dist_udf_ready = True
 
         for _f in _where_filters:
