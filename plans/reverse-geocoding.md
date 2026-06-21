@@ -1,6 +1,6 @@
 # Development Plan — Offline Reverse Geocoding (County / State / Country)
 
-Status: Proposed
+Status: Phase 0 + Phase 1 DONE (merged into beta). Phase 3 DONE (branch `60-phase-3-schema`). Phase 2, 4, 5 pending.
 Relates to: GitHub issue #60 · design in [`architecture/reverse-geocoding.md`](../architecture/reverse-geocoding.md)
 Scope: full implementation of the offline boundary engine — data pipeline, runtime engine, on-demand packs, schema, GUI, packaging/CI.
 
@@ -16,7 +16,7 @@ This plan turns the architecture document into shippable work. It is ordered **b
 
 ## Prerequisites
 
-- [ ] Receive the full polygon-file set from Mike (*Lignumaqua*) — Phase 0 cannot start without the source data. The sample `bb.db3` + `Denmark1.txt` only prove the format.
+- [x] Receive the full polygon-file set from Mike (*Lignumaqua*) — full `bb.db3` + all country/state/county zips are now in the worktree (gitignored). Phase 0 is unblocked and done.
 - [ ] Create the data repository **`AgreeDK/OpenSAK-Data`** (public) with its own `LICENSE` + attribution file (the polygons are ODbL, not public domain).
 
 ## Out of scope (follow-ups)
@@ -27,36 +27,37 @@ This plan turns the architecture document into shippable work. It is ordered **b
 
 ---
 
-## Phase 0 — Data pipeline and the `OpenSAK-Data` repo
+## Phase 0 — Data pipeline and the `OpenSAK-Data` repo ✓ DONE
 
-**Goal:** a reproducible pipeline that turns raw polygon files into the artefacts the app consumes: a baseline, per-country county packs, the bounding-box index, and a version manifest — all published as GitHub Release assets.
+**Goal:** a reproducible pipeline that turns raw polygon files into the artefacts the app consumes.
 
-**Tasks**
-- [ ] `tools/boundaries/normalise.py` — read native GSAK text polygons, re-encode to UTF-8, fix diacritics/renames (`Türkiye`, `Czechia`), consistent keys.
-- [ ] `tools/boundaries/to_geojson.py` — emit GeoJSON, **one `FeatureCollection` per country**, carrying `name`, `parent`, `version`, `source`, `licence`, and a `bbox` per feature. Validate geometry (closed rings, winding, holes).
-- [ ] Geometry **simplification** (Douglas–Peucker) for the baseline layer to hit the ~15–25 MB target.
-- [ ] `tools/boundaries/build_bbdb.py` — generate `boundaries.db`: per-layer R-Trees (`rtree_country/state/county`) + `region_*` metadata + `file_version`, from the feature `bbox` members.
-- [ ] `tools/boundaries/publish.py` — assemble the baseline bundle, the per-country packs, and `manifest.json` (dataset version + per-pack versions); upload as Release assets to `AgreeDK/OpenSAK-Data`.
-- [ ] Keep `tools/` **out of the runtime package** and out of the PyInstaller bundle.
+**What was built:** a single converter `tools/boundaries/gsak_to_opensak.py` (combines normalise + geojson + bbdb steps). Run: `python3 tools/boundaries/gsak_to_opensak.py --bb-path bb.db3`. `bb.db3` lives at **repo root**, not inside `data/`. Writes `data/boundaries.db` + `data/countries/world.geojson` + `data/states/<cc>.geojson` + `data/counties/<cc>/<pack>.geojson`. Output: 383 countries, 1931 states, 20026 counties.
 
-**Acceptance:** running the pipeline on the source data reproducibly produces `boundaries.db`, the baseline GeoJSON, the county packs and `manifest.json`; a first Release of `OpenSAK-Data` exists.
-**Risk:** medium — data quality/coverage and simplification tuning. Size: L.
+**Key fixes inside the converter:**
+- `_split_antimeridian()`: rings with |Δlon|>180° teleportation edges (Russia, Alaska, Fiji…) are split into independently-closed sub-rings → MultiPolygon. Also detects the synthetic implicit-closing-edge when ring[0] recurs mid-ring.
+- Coordinate parser handles all 4 GSAK formats: tab, plain comma, trailing-comma (France/Italy), space-separated (Great Britain).
+
+**Known data gaps (not bugs):** Portugal 0 states, Russia 0 counties — correct per GSAK's source data. 18 state zips + 8 county zips missing from dataset.
+
+**Remaining tasks (deferred to when `OpenSAK-Data` repo exists):**
+- [ ] Geometry simplification (Douglas–Peucker) for the baseline layer.
+- [ ] `manifest.json` generation and publishing as Release assets to `AgreeDK/OpenSAK-Data`.
+- [ ] Keep `tools/` out of the PyInstaller bundle.
+
+**Acceptance:** ✓ pipeline runs reproducibly; `BoundaryStore` + `TerritoryResolver` resolve correctly against real data. `OpenSAK-Data` Release not yet created (blocked on repo creation).
 
 ---
 
-## Phase 1 — Core engine (`src/opensak/geo/`)
+## Phase 1 — Core engine (`src/opensak/geo/`) ✓ DONE
 
-**Goal:** an offline `TerritoryResolver` that, given coordinates, returns `GeoLocation(country, state, county)` via the two-stage lookup — no GUI, no network.
+**Goal:** an offline `TerritoryResolver` that returns `GeoLocation(country, state, county)`.
 
-**Tasks**
-- [ ] Add `shapely` to `[project.dependencies]` in [`pyproject.toml`](../pyproject.toml) (Stage 2 point-in-polygon). Keep a pure-Python ray-cast fallback path behind a flag.
-- [ ] `geo/store.py` — open `boundaries.db`, resolve a region's pack + feature, lazily load and cache GeoJSON geometry.
-- [ ] `geo/boundaries.py` — `TerritoryResolver`: per-layer R-Tree query (Stage 1); on a single box hit return directly; on overlaps run point-in-polygon (Stage 2) over the 2–3 candidates; fill state/country from the county's `parent`.
-- [ ] Ship `boundaries.db` + baseline GeoJSON as package data; seed them into `<app-data>/opensak/boundaries/` on first run (resolved via [`config.get_app_data_dir()`](../src/opensak/config.py)).
-- [ ] Unit tests in `tests/unit-tests/`: known coordinates → expected territory, covering single-hit, overlap/border, hole/enclave, and no-hit (ocean) cases; a perf check that a 10k batch resolves in seconds.
+**What was built:** `src/opensak/geo/store.py` (`BoundaryStore`) + `src/opensak/geo/boundaries.py` (`TerritoryResolver`). Pure-Python ray-cast PIP (shapely deferred). 14 unit tests in `test_geo.py`. mypy-clean. Nothing imports `geo` in production yet — that's Phase 4. `default_data_dir()` = `$OPENSAK_BOUNDARIES_DIR` or `<repo-root>/data` (parents[3]).
 
-**Acceptance:** a batch of known points resolves correctly offline from the baseline alone; border cases pick the right region; no network is touched.
-**Risk:** medium (geometry correctness). Size: L.
+**Remaining tasks:**
+- [ ] Seed `boundaries.db` + baseline GeoJSON into `<app-data>/opensak/boundaries/` on first run (Phase 5 packaging concern).
+
+**Acceptance:** ✓ resolves correctly offline; 14 tests pass; mypy green.
 
 ---
 
@@ -75,17 +76,13 @@ This plan turns the architecture document into shippable work. It is ordered **b
 
 ---
 
-## Phase 3 — Schema and provenance
+## Phase 3 — Schema and provenance ✓ DONE
 
 **Goal:** store where each territory value came from, so results are auditable and re-runnable.
 
-**Tasks**
-- [ ] [`db/models.py`](../src/opensak/db/models.py) — add to `Cache`: `location_source` (`groundspeak`/`computed`), `location_basis` (`posted`/`corrected`), `location_updated` (datetime), `location_dataset` (version string).
-- [ ] [`db/database.py`](../src/opensak/db/database.py) — bump `SCHEMA_VERSION` (currently 11) and add an idempotent `ALTER TABLE caches ADD COLUMN …` block using the existing `PRAGMA table_info` pattern.
-- [ ] Tests: an existing DB upgrades in place; new columns default to NULL ("unknown / imported").
+**What was built:** four nullable columns on `Cache` (`location_source`, `location_basis`, `location_updated`, `location_dataset`). `SCHEMA_VERSION` bumped 11 → 12; migration 12 is idempotent — uses the existing `PRAGMA table_info` pattern, skips each column if already present. 3 tests: default-NULL, writable, migration-on-old-schema (DROP COLUMN + version rewind).
 
-**Acceptance:** old databases open and migrate cleanly; the four provenance columns exist and are writable.
-**Risk:** low. Size: S. (Can land in parallel with Phase 1–2; required by Phase 4.)
+**Acceptance:** ✓ old databases migrate cleanly; the four provenance columns exist and are writable; 1377 unit tests pass.
 
 ---
 
