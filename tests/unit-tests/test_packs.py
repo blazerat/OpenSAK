@@ -30,8 +30,8 @@ class _FakeResp:
     def __enter__(self) -> "_FakeResp":
         return self
 
-    def __exit__(self, *_a: object) -> bool:
-        return False
+    def __exit__(self, *_a: object) -> None:
+        return
 
 
 def _json_resp(obj: object) -> _FakeResp:
@@ -174,7 +174,12 @@ class TestCheckUpdate:
         mf = tmp_path / packs.MANIFEST_FILENAME
         mf.write_text("{}", encoding="utf-8")
         fetched: list[bool] = []
-        monkeypatch.setattr(packs, "fetch_manifest", lambda **_k: fetched.append(True) or _manifest("99"))
+
+        def _mark_fetched(**_k: object) -> dict:
+            fetched.append(True)
+            return _manifest("99")
+
+        monkeypatch.setattr(packs, "fetch_manifest", _mark_fetched)
         newer, _ = packs.check_update(tmp_path, force=False)
         assert newer is False
         assert not fetched  # throttled — fetch never called
@@ -226,7 +231,12 @@ class TestApplyUpdate:
         # bb.geojson is NOT cached locally — should not be downloaded
         calls: list[str] = []
         manifest = {"dataset_version": "2", "packs": {"bb.geojson": {"version": "2"}}}
-        monkeypatch.setattr("urllib.request.urlopen", lambda url, **_k: (calls.append(url), _FakeResp(b"{}"))[1])
+
+        def _fake_open(url: str, **_k: object) -> _FakeResp:
+            calls.append(url)
+            return _FakeResp(b"{}")
+
+        monkeypatch.setattr("urllib.request.urlopen", _fake_open)
         packs.apply_update(tmp_path, manifest)
         assert not any("bb.geojson" in u for u in calls)
 
