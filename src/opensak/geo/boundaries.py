@@ -6,6 +6,13 @@ from typing import Any, NamedTuple
 
 from opensak.geo.store import BoundaryStore
 
+try:
+    from shapely.geometry import Point as _Point
+    from shapely.geometry import shape as _shape
+    _HAS_SHAPELY = True
+except ImportError:  # pragma: no cover
+    _HAS_SHAPELY = False
+
 
 class GeoLocation(NamedTuple):
     country: str | None
@@ -47,6 +54,9 @@ class TerritoryResolver:
 
 
 def _point_in_geometry(lat: float, lon: float, geometry: dict[str, Any]) -> bool:
+    if _HAS_SHAPELY:
+        return bool(_shape(geometry).contains(_Point(lon, lat)))
+    # pure-Python ray-cast fallback (shapely not installed)
     gtype = geometry.get("type")
     coords: Any = geometry.get("coordinates")
     if gtype == "Polygon":
