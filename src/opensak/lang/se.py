@@ -223,7 +223,7 @@ STRINGS: dict[str, str] = {
     "settings_group_user_locations":                "Användarplatser",
     "settings_group_display":       "Visa",
     "settings_use_miles":           "Visa avstånd i miles (i stället för km)",
-    "settings_unit_label":          "Enheter:",
+
 
     "settings_map_label":           "Kart app:",
     "settings_map_google":          "Google Maps",

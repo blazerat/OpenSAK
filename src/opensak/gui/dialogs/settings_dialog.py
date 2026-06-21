@@ -195,7 +195,7 @@ class SettingsDialog(QDialog):
         disp_layout = QVBoxLayout(disp_group)
 
         unit_row = QHBoxLayout()
-        unit_row.addWidget(QLabel(tr("settings_unit_label")))
+        unit_row.addWidget(QLabel(tr("dist_distance_label")))
         self._unit_combo = QComboBox()
         self._unit_combo.addItem(tr("trip_unit_km"), False)
         self._unit_combo.addItem(tr("trip_unit_mi"), True)
