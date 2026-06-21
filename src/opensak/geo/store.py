@@ -100,6 +100,10 @@ class BoundaryStore:
         cached = self._packs.get(pack)
         if cached is None:
             path = self.data_dir / _LAYER_DIR[self._layer(layer)] / pack
+            if not path.is_file() and layer == "county":
+                # On-demand fetch: county packs are not bundled, downloaded lazily.
+                from opensak.geo import packs as _packs
+                _packs.fetch_pack(pack, path.parent)
             cached = json.loads(path.read_text(encoding="utf-8"))
             self._packs[pack] = cached
         return cached

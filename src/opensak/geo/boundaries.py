@@ -48,7 +48,12 @@ class TerritoryResolver:
             region = self._store.region(layer, region_id)
             if region is None:
                 continue
-            if _point_in_geometry(lat, lon, self._store.geometry(layer, region)):
+            try:
+                geom = self._store.geometry(layer, region)
+            except FileNotFoundError:
+                # pack missing and on-demand fetch failed (no network) — skip candidate
+                continue
+            if _point_in_geometry(lat, lon, geom):
                 return region.name
         return None
 
