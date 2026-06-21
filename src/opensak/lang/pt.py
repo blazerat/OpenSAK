@@ -463,6 +463,9 @@ STRINGS: dict[str, str] = {
     "column_dialog_hint":           "Selecione quais as colunas a mostrar na lista de caches.\nO Código GC e o Nome não podem ser ocultados.",
     "column_select_all":            "Selecionar tudo",
     "column_select_default":        "Predefinição",
+    "container_display_label":      "Visualização de tamanho:",
+    "container_display_bar":        "Barra",
+    "container_display_text":       "Texto",
 
     # ── Filter dialog ─────────────────────────────────────────────────────────
     "filter_saved_label":           "Filtro guardado:",

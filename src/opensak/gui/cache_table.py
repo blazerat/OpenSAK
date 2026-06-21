@@ -22,7 +22,7 @@ from opensak.lang import tr
 from opensak.utils.types import DateFormat, GcCode
 from opensak.utils.utils import normalize_geocacher_name
 from opensak.gui.icon_provider import get_cache_type_icon, get_cache_size_icon
-from opensak.gui.dialogs.column_dialog import get_column_widths, set_column_widths
+from opensak.gui.dialogs.column_dialog import get_column_widths, set_column_widths, get_container_display
 import math
 
 
@@ -191,6 +191,29 @@ _NON_PHYSICAL_TYPE_LETTERS = {
 
 # Empty / unknown markers — group 3 (sorts last)
 _EMPTY_CONTAINERS = {"", "not chosen"}
+
+# Text labels for the 'text' and 'both' display modes (issue #291)
+_CONTAINER_TEXT_LABELS: dict[str, str] = {
+    "micro":      "Micro",
+    "small":      "Small",
+    "regular":    "Regular",
+    "large":      "Large",
+    "other":      "Other",
+    "not chosen": "",
+}
+_NON_PHYSICAL_TEXT_LABELS: dict[str, str] = {
+    "virtual cache": "Virtual",
+    "earthcache":    "Earth",
+    "lab cache":     "Lab",
+}
+
+
+def _container_text(container: str | None, cache_type: str | None) -> str:
+    type_key = (cache_type or "").lower()
+    if type_key in _NON_PHYSICAL_TEXT_LABELS:
+        return _NON_PHYSICAL_TEXT_LABELS[type_key]
+    size_key = (container or "").lower()
+    return _CONTAINER_TEXT_LABELS.get(size_key, (container or "").title())
 
 
 def _container_sort_key(container: str | None, cache_type: str | None = None) -> tuple:
@@ -658,6 +681,8 @@ class CacheTableModel(QAbstractTableModel):
                 size=24,
             )
         if col == "container":
+            if get_container_display() == "text":
+                return None
             return get_cache_size_icon(self._size_icon_key(cache), size=20)
         return None
 
@@ -687,7 +712,9 @@ class CacheTableModel(QAbstractTableModel):
         if col == "terrain":
             return f"{cache.terrain:.1f}" if cache.terrain else "?"
         if col == "container":
-            return ""   # ikon vises via DecorationRole
+            if get_container_display() == "text":
+                return _container_text(cache.container, cache.cache_type)
+            return ""   # bar: delegate draws
         if col == "country":
             return cache.country or ""
         if col == "state":
@@ -937,8 +964,11 @@ class CacheTableView(QTableView):
                 self.setColumnWidth(i, width)
                 header.setSectionResizeMode(i, QHeaderView.ResizeMode.Interactive)
                 if col_id == "container":
-                    self._size_bar_delegate = SizeBarDelegate(self)
-                    self.setItemDelegateForColumn(i, self._size_bar_delegate)
+                    if get_container_display() == "text":
+                        self.setItemDelegateForColumn(i, None)  # type: ignore[arg-type]
+                    else:
+                        self._size_bar_delegate = SizeBarDelegate(self)
+                        self.setItemDelegateForColumn(i, self._size_bar_delegate)
                 elif col_id == "gc_code":
                     self._gc_code_delegate = GcCodeDelegate(self)
                     self.setItemDelegateForColumn(i, self._gc_code_delegate)

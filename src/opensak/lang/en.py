@@ -463,6 +463,9 @@ STRINGS: dict[str, str] = {
     "column_dialog_hint":           "Select which columns to show in the cache list.\nGC Code and Name cannot be hidden.",
     "column_select_all":            "Select all",
     "column_select_default":        "Default",
+    "container_display_label":      "Container size display:",
+    "container_display_bar":        "Bar",
+    "container_display_text":       "Text",
 
     # ── Filter dialog ─────────────────────────────────────────────────────────
     "filter_saved_label":           "Saved filter:",

@@ -463,6 +463,9 @@ STRINGS: dict[str, str] = {
     "column_dialog_hint":           "Vyberte, které sloupce zobrazit v seznamu keší.\\nGC kód a Název nelze skrýt.",
     "column_select_all":            "Vybrat vše",
     "column_select_default":        "Výchozí",
+    "container_display_label":      "Zobrazení velikosti:",
+    "container_display_bar":        "Pruh",
+    "container_display_text":       "Text",
 
     # ── Filter dialog ─────────────────────────────────────────────────────────
     "filter_saved_label":           "Uložený filtr:",

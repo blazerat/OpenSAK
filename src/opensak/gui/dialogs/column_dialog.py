@@ -9,7 +9,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel,
     QListWidget, QListWidgetItem, QPushButton,
-    QDialogButtonBox
+    QDialogButtonBox, QComboBox
 )
 from opensak.lang import tr
 from opensak.settings_store import get_store
@@ -123,6 +123,20 @@ def set_column_widths(widths: dict[str, int]) -> None:
     get_store().set(_col_key("widths"), widths)
 
 
+_CONTAINER_DISPLAY_KEY = "columns.container_display"
+
+
+def get_container_display() -> str:
+    """Return the container column display mode: 'bar' or 'text'."""
+    val = get_store().get(_CONTAINER_DISPLAY_KEY, "bar")
+    return val if val in ("bar", "text") else "bar"
+
+
+def set_container_display(mode: str) -> None:
+    """Persist the container column display mode."""
+    get_store().set(_CONTAINER_DISPLAY_KEY, mode)
+
+
 class ColumnChooserDialog(QDialog):
     """Dialog til at vælge hvilke kolonner der vises i cachelisten."""
 
@@ -163,6 +177,19 @@ class ColumnChooserDialog(QDialog):
         select_default.clicked.connect(self._select_default)
         btn_row.addWidget(select_default)
         layout.addLayout(btn_row)
+
+        display_row = QHBoxLayout()
+        display_row.addWidget(QLabel(tr("container_display_label")))
+        self._container_display_combo = QComboBox()
+        for label, value in (
+            (tr("container_display_bar"),  "bar"),
+            (tr("container_display_text"), "text"),
+        ):
+            self._container_display_combo.addItem(label, value)
+        current_mode = get_container_display()
+        self._container_display_combo.setCurrentIndex(0 if current_mode == "bar" else 1)
+        display_row.addWidget(self._container_display_combo)
+        layout.addLayout(display_row)
 
         buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Ok |
@@ -205,4 +232,5 @@ class ColumnChooserDialog(QDialog):
         visible += [fid for fid, *_ in _ALL_COLUMNS_DEF if fid in checked and fid not in old_set]
 
         set_visible_columns(visible)
+        set_container_display(self._container_display_combo.currentData())
         self.accept()
