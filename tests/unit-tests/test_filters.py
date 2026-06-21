@@ -732,6 +732,37 @@ def test_where_clause_profile_save_load(tmp_path):
     assert where_filters[0].sql == sql
 
 
+def test_where_clause_distance_close(tmp_db):
+    # "distance < 1" from Copenhagen should match only the two caches there.
+    home = (55.6761, 12.5683)
+    with get_session() as s:
+        results = apply_filters(
+            s, FilterSet().add(WhereClauseFilter("distance < 1")),
+            distance_from=home,
+        )
+    codes = {c.gc_code for c in results}
+    assert "GC00001" in codes   # ~0 km
+    assert "GC00002" in codes   # ~0.45 km
+    assert "GC00003" not in codes  # ~155 km
+    assert "GC00005" not in codes  # ~353 km
+
+
+def test_where_clause_distance_far(tmp_db):
+    # "distance > 100" from Copenhagen should exclude the two nearby caches.
+    home = (55.6761, 12.5683)
+    with get_session() as s:
+        results = apply_filters(
+            s, FilterSet().add(WhereClauseFilter("distance > 100")),
+            distance_from=home,
+        )
+    codes = {c.gc_code for c in results}
+    assert "GC00001" not in codes
+    assert "GC00002" not in codes
+    assert "GC00003" in codes   # ~155 km
+    assert "GC00004" in codes   # ~218 km
+    assert "GC00005" in codes   # ~353 km
+
+
 # ── Python-side matches for flag/date/points filters ──────────────────────────
 
 def _cache(**kw):

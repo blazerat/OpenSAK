@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import json
 import math
+import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -67,6 +68,10 @@ def haversine_km_batch(lat0: float, lon0: float, lats, lons):
     dlam = lo - l0
     a = np.sin(dphi / 2) ** 2 + math.cos(p0) * np.cos(la) * np.sin(dlam / 2) ** 2
     return R * 2 * np.arctan2(np.sqrt(a), np.sqrt(1 - a))
+
+
+# Matches the word "distance" but not substrings like "my_distance".
+_DISTANCE_RE = re.compile(r"\bdistance\b")
 
 
 # ── Base filter ───────────────────────────────────────────────────────────────
@@ -1193,15 +1198,49 @@ def apply_filters(
     # This must happen before the Python-level filter loop below.
     if filterset:
         from sqlalchemy import text as _sa_text
-        for _f in _iter_filters(filterset):
-            if isinstance(_f, WhereClauseFilter) and _f.sql:
-                try:
-                    _result = session.execute(
-                        _sa_text(f"SELECT id FROM caches WHERE ({_f.sql})")
-                    )
-                    _f._matching_ids = {row[0] for row in _result}
-                except Exception:
-                    _f._matching_ids = set()  # invalid SQL → no matches
+        _where_filters = [
+            _f for _f in _iter_filters(filterset)
+            if isinstance(_f, WhereClauseFilter) and _f.sql
+        ]
+        _dist_udf_ready = False
+        if any(_DISTANCE_RE.search(_f.sql) for _f in _where_filters):
+            # The "distance" column in the caches table is never persisted — it
+            # is always NULL. Register a SQLite UDF so WHERE clauses can use
+            # "distance" as haversine distance from the home point. SQL
+            # references to "distance" are rewritten to the UDF call below.
+            _home_lat, _home_lon, _use_miles = 0.0, 0.0, False
+            try:
+                from opensak.gui.settings import get_settings as _gs
+                _st = _gs()
+                _home_lat, _home_lon = _st.home_lat, _st.home_lon
+                _use_miles = _st.use_miles
+            except Exception:
+                pass
+            if distance_from:
+                _home_lat, _home_lon = distance_from
+            _factor = 0.621371 if _use_miles else 1.0
+            def _dist_udf(lat, lon, _h=_home_lat, _o=_home_lon, _k=_factor):
+                if lat is None or lon is None:
+                    return None
+                return _haversine_km(_h, _o, lat, lon) * _k
+            _dbapi = session.connection().connection.dbapi_connection
+            assert _dbapi is not None
+            _dbapi.create_function("_opensak_dist", 2, _dist_udf)
+            _dist_udf_ready = True
+
+        for _f in _where_filters:
+            try:
+                _sql = (
+                    _DISTANCE_RE.sub("_opensak_dist(latitude, longitude)", _f.sql)
+                    if _dist_udf_ready
+                    else _f.sql
+                )
+                _result = session.execute(
+                    _sa_text(f"SELECT id FROM caches WHERE ({_sql})")
+                )
+                _f._matching_ids = {row[0] for row in _result}
+            except Exception:
+                _f._matching_ids = set()  # invalid SQL → no matches
 
     # Determine which relationships are actually needed by the active filters.
     # Only joinedload what is required — avoids loading thousands of attribute
