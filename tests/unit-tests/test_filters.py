@@ -236,6 +236,43 @@ def test_gc_code_filter(tmp_db):
     assert results[0].gc_code == "GC00001"
 
 
+def test_gc_code_filter_partial_no_prefix_sql(tmp_db):
+    # SQL path: "00001" (no GC prefix) must find GC00001 via substring match.
+    with get_session() as s:
+        results = apply_filters(s, FilterSet().add(GcCodeFilter("00001")))
+    codes = {c.gc_code for c in results}
+    assert "GC00001" in codes
+    assert "GC00002" not in codes
+
+
+def test_gc_code_filter_partial_all_match_sql(tmp_db):
+    # SQL path: "0000" is contained in all six seeded GC codes.
+    with get_session() as s:
+        results = apply_filters(s, FilterSet().add(GcCodeFilter("0000")))
+    assert len(results) == 6
+
+
+def test_gc_code_filter_python_path_with_prefix(tmp_db):
+    # Python path (no SQL call): prefix match when text starts with "GC".
+    f = GcCodeFilter("GC00001")
+    with get_session() as s:
+        all_caches = s.query(Cache).all()
+    matches = [c for c in all_caches if f.matches(c)]
+    assert len(matches) == 1
+    assert matches[0].gc_code == "GC00001"
+
+
+def test_gc_code_filter_python_path_without_prefix(tmp_db):
+    # Python path (no SQL call): substring match when text has no "GC" prefix.
+    f = GcCodeFilter("00001")
+    with get_session() as s:
+        all_caches = s.query(Cache).all()
+    matches = [c for c in all_caches if f.matches(c)]
+    codes = {c.gc_code for c in matches}
+    assert "GC00001" in codes
+    assert "GC00002" not in codes
+
+
 def test_placed_by_filter(tmp_db):
     with get_session() as s:
         results = apply_filters(s, FilterSet().add(PlacedByFilter("ownera")))

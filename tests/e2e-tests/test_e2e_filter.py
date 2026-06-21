@@ -112,6 +112,16 @@ def test_gc_search_prefix_finds_multiple(seeded_window, qtbot):
     assert window._cache_table.row_count() == 2
 
 
+def test_gc_search_partial_without_gc_prefix(seeded_window, qtbot):
+    # "AAA" (no GC prefix) must find GCAAA01 and GCAAA02 via substring match.
+    window = seeded_window
+
+    window._search_gc.setText("AAA")
+    qtbot.waitUntil(lambda: window._cache_table.row_count() == 2, timeout=1_000)
+
+    assert window._cache_table.row_count() == 2
+
+
 # ── FilterDialog (Ctrl+F path) ─────────────────────────────────────────────────
 
 

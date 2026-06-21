@@ -458,19 +458,23 @@ class GcCodeFilter(BaseFilter):
 
     def __init__(self, text: str):
         self.text = text.upper()
+        # When the input already has the "GC" prefix, a prefix match is enough
+        # and lets SQLite use the B-tree index on gc_code.  Without the prefix,
+        # use a substring match so "BEK" finds "GCBEKKA".
+        self._prefix = self.text.startswith("GC")
         self._sql_applied = False
 
     def apply_to_query(self, query):
         from sqlalchemy import func
         self._sql_applied = True
-        # GC codes are always searched from the start (GC12345) — use a prefix
-        # match so SQLite can exploit the existing B-tree index on gc_code.
-        return query.filter(func.upper(Cache.gc_code).like(f"{self.text}%"))
+        pattern = f"{self.text}%" if self._prefix else f"%{self.text}%"
+        return query.filter(func.upper(Cache.gc_code).like(pattern))
 
     def matches(self, cache: Cache) -> bool:
         if self._sql_applied:
             return True
-        return (cache.gc_code or "").upper().startswith(self.text)
+        code = (cache.gc_code or "").upper()
+        return code.startswith(self.text) if self._prefix else self.text in code
 
     def to_dict(self) -> dict:
         return {"filter_type": self.filter_type, "text": self.text}
