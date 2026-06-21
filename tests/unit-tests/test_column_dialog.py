@@ -94,3 +94,33 @@ class TestColumnChooserDialog:
             item = dlg._list.item(i)
             if item.data(Qt.ItemDataRole.UserRole) in ALWAYS_VISIBLE:
                 assert not (item.flags() & Qt.ItemFlag.ItemIsUserCheckable)
+
+    def test_add_col_appends_without_changing_drag_order(self, qtbot, store):
+        # Custom drag order — deliberately not in _ALL_COLUMNS_DEF order
+        set_visible_columns(["name", "gc_code", "found", "difficulty"])
+        dlg = ColumnChooserDialog()
+        qtbot.addWidget(dlg)
+        for i in range(dlg._list.count()):
+            item = dlg._list.item(i)
+            if item.data(Qt.ItemDataRole.UserRole) == "country":
+                item.setCheckState(Qt.CheckState.Checked)
+        dlg._save_and_accept()
+        saved = get_visible_columns()
+        drag_cols = [c for c in saved if c in {"name", "gc_code", "found", "difficulty"}]
+        assert drag_cols == ["name", "gc_code", "found", "difficulty"]
+        assert "country" in saved
+        assert saved.index("difficulty") < saved.index("country")
+
+    def test_remove_col_preserves_order_of_remainder(self, qtbot, store):
+        set_visible_columns(["name", "gc_code", "found", "difficulty", "terrain"])
+        dlg = ColumnChooserDialog()
+        qtbot.addWidget(dlg)
+        for i in range(dlg._list.count()):
+            item = dlg._list.item(i)
+            if item.data(Qt.ItemDataRole.UserRole) == "found":
+                item.setCheckState(Qt.CheckState.Unchecked)
+        dlg._save_and_accept()
+        saved = get_visible_columns()
+        assert "found" not in saved
+        remaining = [c for c in saved if c in {"name", "gc_code", "difficulty", "terrain"}]
+        assert remaining == ["name", "gc_code", "difficulty", "terrain"]

@@ -190,14 +190,19 @@ class ColumnChooserDialog(QDialog):
                 )
 
     def _save_and_accept(self) -> None:
-        visible = []
-        for i in range(self._list.count()):
-            item = self._list.item(i)
-            if item.checkState() == Qt.CheckState.Checked:
-                visible.append(item.data(Qt.ItemDataRole.UserRole))
-        # Sørg for at altid-synlige er med
-        for col_id in ALWAYS_VISIBLE:
-            if col_id not in visible:
-                visible.insert(0, col_id)
+        checked: set[str] = {
+            self._list.item(i).data(Qt.ItemDataRole.UserRole)
+            for i in range(self._list.count())
+            if self._list.item(i).checkState() == Qt.CheckState.Checked
+        } | ALWAYS_VISIBLE
+
+        old_order = get_visible_columns()
+        old_set = set(old_order)
+
+        # Keep existing visible columns in the user's drag order, then append
+        # newly added columns in _ALL_COLUMNS_DEF order (predictable insertion).
+        visible = [c for c in old_order if c in checked]
+        visible += [fid for fid, *_ in _ALL_COLUMNS_DEF if fid in checked and fid not in old_set]
+
         set_visible_columns(visible)
         self.accept()
