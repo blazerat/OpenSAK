@@ -112,6 +112,20 @@ class TestReverseGeocodeWorker:
         w.run()
         assert done[0].errors == 1
 
+    def test_run_updates_multiple_caches(self, db, geo_mocks):
+        # Exercises parallel resolve + bulk write path with more than one row.
+        rows = [_CacheRow("GC1", 55.0, 12.0), _CacheRow("GC2", 56.0, 10.0)]
+        w = ReverseGeocodeWorker(rows)
+        done = []
+        w.all_done.connect(done.append)
+        w.run()
+        assert done[0].updated == 2
+        with get_session() as s:
+            for gc_code in ("GC1", "GC2"):
+                c = s.query(Cache).filter_by(gc_code=gc_code).first()
+                assert c.country == "DK"
+                assert c.state == "ZL"
+
     def test_default_basis_is_posted(self):
         row = _CacheRow("GC1", 55.0, 12.0)
         assert row.basis == "posted"

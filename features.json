@@ -1,4 +1,4 @@
 {
-  "update-location": false,
-  "reverse-geocoding": false
+  "update-location": true,
+  "reverse-geocoding": true
 }

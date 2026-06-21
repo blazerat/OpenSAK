@@ -52,6 +52,10 @@ class ReverseGeocodeWorker(QThread):
     Resolves country / state / county for each row and writes all four
     provenance columns (location_source, location_basis, location_updated,
     location_dataset).  No network, no rate limit.
+
+    Two-phase execution:
+      1. Parallel resolve — ThreadPoolExecutor, one BoundaryStore per thread.
+      2. Bulk write — single IN query loads all caches; one transaction commits all.
     """
 
     row_done  = Signal(str, str)  # (gc_code, log_line)
@@ -67,6 +71,8 @@ class ReverseGeocodeWorker(QThread):
         self._cancel = True
 
     def run(self) -> None:
+        import os
+        from concurrent.futures import ThreadPoolExecutor, as_completed
         from opensak.geo.store import BoundaryStore
         from opensak.geo.boundaries import TerritoryResolver
         from opensak.db.database import get_session
@@ -78,42 +84,74 @@ class ReverseGeocodeWorker(QThread):
             self.cancelled.emit(result)
             return
 
-        store = BoundaryStore()
-        if not store.available():
+        check = BoundaryStore()
+        if not check.available():
             result.errors += 1
             self.row_done.emit("", tr("update_loc_no_boundaries"))
             self.all_done.emit(result)
             return
 
-        resolver = TerritoryResolver(store)
-        dataset = store.dataset_version()
+        dataset = check.dataset_version()
+        check.close()
         now = datetime.now(timezone.utc)
 
+        # Phase 1 — parallel resolve (one BoundaryStore per thread, no shared state)
+        def _resolve_one(row: _CacheRow):
+            if self._cancel:
+                return None
+            store = BoundaryStore()
+            try:
+                loc = TerritoryResolver(store).resolve(row.lat, row.lon)
+                return row, loc
+            finally:
+                store.close()
+
+        workers = min(4, os.cpu_count() or 1)
+        resolved = []
+        cancelled = False
+
+        with ThreadPoolExecutor(max_workers=workers) as executor:
+            futures = {executor.submit(_resolve_one, row): row for row in self._rows}
+            for future in as_completed(futures):
+                if self._cancel:
+                    cancelled = True
+                    break
+                pair = future.result()
+                if pair is None:
+                    continue
+                row, loc = pair
+                self.row_done.emit(row.gc_code, tr(
+                    "update_loc_row",
+                    gc_code=row.gc_code,
+                    country=loc.country or "–",
+                    state=loc.state or "–",
+                    county=loc.county or "–",
+                ))
+                resolved.append((row, loc))
+
+        if cancelled or self._cancel:
+            self.cancelled.emit(result)
+            return
+
+        # Phase 2 — bulk write in one transaction (single IN query, no per-row SELECT)
+        resolved_map = {row.gc_code: (row, loc) for row, loc in resolved}
         try:
             with get_session() as session:
-                for row in self._rows:
-                    if self._cancel:
-                        self.cancelled.emit(result)
-                        return
-                    loc = resolver.resolve(row.lat, row.lon)
-                    cache = session.query(Cache).filter_by(gc_code=row.gc_code).first()
-                    if cache:
-                        cache.country          = loc.country
-                        cache.state            = loc.state
-                        cache.county           = loc.county
-                        cache.location_source  = "boundary"
-                        cache.location_basis   = row.basis
-                        cache.location_updated = now
-                        cache.location_dataset = dataset
-                        result.updated += 1
-                        line = tr(
-                            "update_loc_row",
-                            gc_code=row.gc_code,
-                            country=loc.country or "–",
-                            state=loc.state or "–",
-                            county=loc.county or "–",
-                        )
-                        self.row_done.emit(row.gc_code, line)
+                caches = (
+                    session.query(Cache)
+                    .filter(Cache.gc_code.in_(list(resolved_map)))
+                    .all()
+                )
+                for cache in caches:
+                    row, loc = resolved_map[cache.gc_code]
+                    cache.country          = loc.country
+                    cache.state            = loc.state
+                    cache.county           = loc.county
+                    cache.location_source  = "boundary"
+                    cache.location_basis   = row.basis
+                    cache.location_updated = now
+                    cache.location_dataset = dataset
+                    result.updated += 1
         except Exception as exc:
             result.errors += 1
             self.row_done.emit("", tr("update_loc_row_error", gc_code="batch", msg=str(exc)))
@@ -196,6 +234,7 @@ class UpdateLocationDialog(QDialog):
         self._progress = QProgressBar()
         self._progress.setRange(0, 0)
         self._progress.setVisible(False)
+        self._progress_resolved = 0
         layout.addWidget(self._progress)
 
         # ── Log ───────────────────────────────────────────────────────────────
@@ -274,8 +313,10 @@ class UpdateLocationDialog(QDialog):
 
         self._set_controls_enabled(False)
 
-        self._progress.setRange(0, 0)
+        self._progress.setRange(0, len(rows))
+        self._progress.setValue(0)
         self._progress.setVisible(True)
+        self._progress_resolved = 0
         self._log.clear()
         self._progress_label.setText(tr("update_loc_running", total=len(rows)))
 
@@ -292,8 +333,11 @@ class UpdateLocationDialog(QDialog):
 
     # ── Worker signals ────────────────────────────────────────────────────────
 
-    def _on_row_done(self, _gc_code: str, line: str) -> None:
+    def _on_row_done(self, gc_code: str, line: str) -> None:
         self._log.append(line)
+        if gc_code:  # empty gc_code = error banner, not a resolved row
+            self._progress_resolved += 1
+            self._progress.setValue(self._progress_resolved)
 
     def _on_done(self, result: UpdateLocationResult) -> None:
         self.location_updated.emit()

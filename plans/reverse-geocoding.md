@@ -1,6 +1,6 @@
 # Development Plan — Offline Reverse Geocoding (County / State / Country)
 
-Status: Phase 0 + Phase 1 DONE (merged into beta). Phase 3 DONE (merged into beta). Phase 4 DONE (merged into beta). Phase 5 DONE (merged into beta). Phase 2 DONE (branch `60-phase-2-packs`, unpushed — awaiting OK).
+Status: Phase 0 + Phase 1 DONE (merged into beta). Phase 3 DONE (merged into beta). Phase 4 DONE (merged into beta). Phase 5 DONE (merged into beta). Phase 2 DONE (branch `60-phase-2-packs`, unpushed — awaiting OK). Phase Extra in progress (branch `60-phase-extra-speed`).
 Relates to: GitHub issue #60 · design in [`architecture/reverse-geocoding.md`](../architecture/reverse-geocoding.md)
 Scope: full implementation of the offline boundary engine — data pipeline, runtime engine, on-demand packs, schema, GUI, packaging/CI.
 
@@ -120,14 +120,45 @@ This plan turns the architecture document into shippable work. It is ordered **b
 
 ---
 
+## Phase Extra — Speed (parallel resolve + bulk write)
+
+**Goal:** cut wall-clock time for large batches (Pocket Query of 1000+ caches) without changing the public API or adding dependencies.
+
+**Problem with Phase 4's serial worker:**
+- Three R-Tree queries + an optional polygon check per cache, all sequential.
+- The write loop does `session.query(Cache).filter_by(gc_code=...).first()` per row — N individual SELECT statements before the single commit.
+
+**What is built:**
+
+`ReverseGeocodeWorker.run()` splits into two phases:
+
+1. **Parallel resolve** — a `ThreadPoolExecutor` (up to `min(4, cpu_count)` workers) resolves rows concurrently. Each worker thread gets its own `BoundaryStore` instance (separate read-only SQLite connection to `boundaries.db`, separate GeoJSON pack cache). R-Tree queries release the GIL; with shapely installed the stage-2 polygon check also releases the GIL (C extension). Progress is emitted via `row_done` as each resolve arrives through `as_completed`, so the log fills up live.
+
+2. **Bulk write** — after all resolves complete, a single `session.query(Cache).filter(Cache.gc_code.in_([...]))` loads every target cache in one round-trip; all updates happen inside the existing one-transaction `get_session()` block.
+
+Dialog: progress bar switches from indeterminate to determinate (total = `len(rows)`) and advances per resolved row.
+
+**Why 4 threads, not more / multiprocessing:**
+- The GIL still gates pure-Python fallback polygon math; 4 threads is a good balance between concurrency on the SQLite I/O path and not flooding the read connections.
+- `multiprocessing` would require pickling every `_CacheRow` and shipping results across a process boundary with no throughput advantage for the Python fallback path.
+
+**Cancel:** `self._cancel` is checked at the start of each `_resolve_one` call and again after the executor exits. Breaking out of `as_completed` lets the context manager drain running futures (each < ~5 ms) before the thread returns.
+
+**Tests added:** `test_run_updates_multiple_caches` — two caches resolved in parallel, both written in the bulk pass.
+
+**Acceptance:** all existing and new tests pass; bulk write replaces N per-row SELECTs; parallel resolve runs with one `BoundaryStore` per thread; progress bar is determinate.
+
+---
+
 ## Sequencing
 
 ```
 Phase 0 (data)  ──►  Phase 1 (engine)  ──►  Phase 2 (packs/updates)  ──►  Phase 4 (GUI) ──► Phase 5 (CI)
                                    Phase 3 (schema) ───────────────────────┘
+                                                                     Phase Extra (speed) ──────┘
 ```
 
-Phase 3 is small and can be done early, but Phase 4 depends on it. Phase 1 needs Phase 0's `boundaries.db` + baseline to test against. Phase 5 closes out packaging once the engine and GUI are real.
+Phase 3 is small and can be done early, but Phase 4 depends on it. Phase 1 needs Phase 0's `boundaries.db` + baseline to test against. Phase 5 closes out packaging once the engine and GUI are real. Phase Extra is independent of Phase 2 and can be merged at any time after Phase 4.
 
 ## Risks and open questions
 
