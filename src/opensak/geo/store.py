@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import sqlite3
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -17,12 +18,13 @@ _LAYER_DIR = {"country": "countries", "state": "states", "county": "counties"}
 
 
 def default_data_dir() -> Path:
-    # Dev-only local boundary data at the repo root. Overridable via env, and
-    # later replaced by <app-data>/opensak/boundaries seeded from OpenSAK-Data
-    # (see plans/reverse-geocoding-data-migration.md).
+    # Overridable via env var (dev + CI). In a frozen bundle, data/ is extracted
+    # into sys._MEIPASS by PyInstaller (see opensak.spec).
     override = os.environ.get("OPENSAK_BOUNDARIES_DIR")
     if override:
         return Path(override)
+    if getattr(sys, "frozen", False):
+        return Path(sys._MEIPASS) / "data"  # type: ignore[attr-defined]
     return Path(__file__).resolve().parents[3] / "data"
 
 
