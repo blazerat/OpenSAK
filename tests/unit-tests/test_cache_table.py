@@ -99,6 +99,22 @@ class TestHelpers:
         assert _gc_sort_key("") == ""
         assert _gc_sort_key("ABC").startswith("GC")
 
+    def test_container_text_physical_sizes(self):
+        from opensak.gui.cache_table import _container_text
+        assert _container_text("micro",      "Traditional Cache") == "Micro"
+        assert _container_text("small",      None)                == "Small"
+        assert _container_text("regular",    None)                == "Regular"
+        assert _container_text("large",      None)                == "Large"
+        assert _container_text("other",      None)                == "Other"
+        assert _container_text("not chosen", None)                == ""
+        assert _container_text(None,         None)                == ""
+
+    def test_container_text_non_physical_types(self):
+        from opensak.gui.cache_table import _container_text
+        assert _container_text("other", "Virtual Cache") == "Virtual"
+        assert _container_text("other", "EarthCache")    == "Earth"
+        assert _container_text("other", "Lab Cache")     == "Lab"
+
 
 # ── model basics ────────────────────────────────────────────────────────────────
 
@@ -143,8 +159,26 @@ class TestDisplayValues:
         assert dv(c, "county") == "Cty"
         assert dv(c, "placed_by") == "Owner"
         assert dv(c, "cache_type") == ""   # icon only
-        assert dv(c, "container") == ""    # icon only
+        assert dv(c, "container") == ""    # bar mode: delegate draws
         assert dv(c, "unknown_col") == ""
+
+    def test_container_text_mode_display(self, model, monkeypatch):
+        monkeypatch.setattr(ct, "get_container_display", lambda: "text")
+        assert model._display_value(_cache(container="regular", cache_type="Traditional Cache"), "container") == "Regular"
+        assert model._display_value(_cache(container="other",   cache_type="Virtual Cache"),     "container") == "Virtual"
+        assert model._display_value(_cache(container="micro",   cache_type=None),                "container") == "Micro"
+
+    def test_container_both_mode_returns_empty(self, model, monkeypatch):
+        monkeypatch.setattr(ct, "get_container_display", lambda: "both")
+        assert model._display_value(_cache(container="regular"), "container") == ""
+
+    def test_container_text_mode_suppresses_icon(self, model, monkeypatch):
+        monkeypatch.setattr(ct, "get_container_display", lambda: "text")
+        assert model._decoration_value(_cache(container="micro"), "container") is None
+
+    def test_container_bar_mode_returns_icon(self, model, monkeypatch):
+        monkeypatch.setattr(ct, "get_container_display", lambda: "bar")
+        assert model._decoration_value(_cache(container="micro"), "container") is not None
 
     def test_difficulty_terrain(self, model):
         assert model._display_value(_cache(difficulty=2.5), "difficulty") == "2.5"
@@ -446,6 +480,20 @@ class TestDelegates:
         idx = model.index(0, ALL_COLUMNS.index("container"))
         sh = SizeBarDelegate().sizeHint(QStyleOptionViewItem(), idx)
         assert sh.height() >= 20
+
+    def test_size_bar_delegate_both_mode_physical(self, model):
+        model.load([_cache(container="regular", cache_type="traditional cache")])
+        d = SizeBarDelegate(show_text=True)
+        self._paint(d, model, "container")
+        self._paint(d, model, "container", selected=True)
+
+    def test_size_bar_delegate_both_mode_virtual(self, model):
+        model.load([_cache(container="other", cache_type="virtual cache")])
+        self._paint(SizeBarDelegate(show_text=True), model, "container")
+
+    def test_size_bar_delegate_both_mode_empty(self, model):
+        model.load([_cache(container="not chosen")])
+        self._paint(SizeBarDelegate(show_text=True), model, "container")
 
     def test_gc_code_delegate_colors(self, model, fake_settings):
         d = GcCodeDelegate()

@@ -463,6 +463,10 @@ STRINGS: dict[str, str] = {
     "column_dialog_hint":           "Välj vilka kolumner som ska visas i cachelistan.\nGC Kod och Namn visas alltid.",
     "column_select_all":            "Välj alla",
     "column_select_default":        "Standard",
+    "container_display_label":      "Storleksvisning:",
+    "container_display_bar":        "Endast stapel",
+    "container_display_text":       "Endast text",
+    "container_display_both":       "Stapel + text",
 
     # ── Filter dialog ─────────────────────────────────────────────────────────
     "filter_saved_label":           "Sparat filter:",

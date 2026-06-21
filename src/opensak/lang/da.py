@@ -463,6 +463,10 @@ STRINGS: dict[str, str] = {
     "column_dialog_hint":           "Vælg hvilke kolonner der skal vises i cachelisten.\nGC Kode og Navn kan ikke skjules.",
     "column_select_all":            "Vælg alle",
     "column_select_default":        "Standard",
+    "container_display_label":      "Størrelses-visning:",
+    "container_display_bar":        "Kun bjælke",
+    "container_display_text":       "Kun tekst",
+    "container_display_both":       "Bjælke + tekst",
 
     # ── Filter dialog ─────────────────────────────────────────────────────────
     "filter_saved_label":           "Gemt filter:",

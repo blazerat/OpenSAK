@@ -12,8 +12,10 @@ from opensak.gui.dialogs.column_dialog import (
     ColumnChooserDialog,
     get_all_columns,
     get_column_widths,
+    get_container_display,
     get_visible_columns,
     set_column_widths,
+    set_container_display,
     set_visible_columns,
 )
 
@@ -56,6 +58,21 @@ class TestColumnHelpers:
     def test_widths_bad_json_returns_empty(self, store):
         store.set("columns.widths", "{ not json")
         assert get_column_widths() == {}
+
+    def test_container_display_defaults_to_bar(self, store):
+        assert get_container_display() == "bar"
+
+    def test_container_display_roundtrip(self, store):
+        set_container_display("text")
+        assert get_container_display() == "text"
+        set_container_display("both")
+        assert get_container_display() == "both"
+        set_container_display("bar")
+        assert get_container_display() == "bar"
+
+    def test_container_display_invalid_falls_back_to_bar(self, store):
+        store.set("columns.container_display", "invalid")
+        assert get_container_display() == "bar"
 
 
 # ── ColumnChooserDialog ───────────────────────────────────────────────────────
@@ -110,6 +127,13 @@ class TestColumnChooserDialog:
         assert drag_cols == ["name", "gc_code", "found", "difficulty"]
         assert "country" in saved
         assert saved.index("difficulty") < saved.index("country")
+
+    def test_container_display_combo_saves_on_accept(self, qtbot, store):
+        dlg = ColumnChooserDialog()
+        qtbot.addWidget(dlg)
+        dlg._container_display_combo.setCurrentIndex(1)  # "text"
+        dlg._save_and_accept()
+        assert get_container_display() == "text"
 
     def test_remove_col_preserves_order_of_remainder(self, qtbot, store):
         set_visible_columns(["name", "gc_code", "found", "difficulty", "terrain"])

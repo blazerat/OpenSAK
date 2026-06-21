@@ -22,7 +22,7 @@ from opensak.lang import tr
 from opensak.utils.types import DateFormat, GcCode
 from opensak.utils.utils import normalize_geocacher_name
 from opensak.gui.icon_provider import get_cache_type_icon, get_cache_size_icon
-from opensak.gui.dialogs.column_dialog import get_column_widths, set_column_widths
+from opensak.gui.dialogs.column_dialog import get_column_widths, set_column_widths, get_container_display
 import math
 
 
@@ -192,6 +192,29 @@ _NON_PHYSICAL_TYPE_LETTERS = {
 # Empty / unknown markers — group 3 (sorts last)
 _EMPTY_CONTAINERS = {"", "not chosen"}
 
+# Text labels for the 'text' and 'both' display modes (issue #291)
+_CONTAINER_TEXT_LABELS: dict[str, str] = {
+    "micro":      "Micro",
+    "small":      "Small",
+    "regular":    "Regular",
+    "large":      "Large",
+    "other":      "Other",
+    "not chosen": "",
+}
+_NON_PHYSICAL_TEXT_LABELS: dict[str, str] = {
+    "virtual cache": "Virtual",
+    "earthcache":    "Earth",
+    "lab cache":     "Lab",
+}
+
+
+def _container_text(container: str | None, cache_type: str | None) -> str:
+    type_key = (cache_type or "").lower()
+    if type_key in _NON_PHYSICAL_TEXT_LABELS:
+        return _NON_PHYSICAL_TEXT_LABELS[type_key]
+    size_key = (container or "").lower()
+    return _CONTAINER_TEXT_LABELS.get(size_key, (container or "").title())
+
 
 def _container_sort_key(container: str | None, cache_type: str | None = None) -> tuple:
     """Return sort key tuple for the Container column.
@@ -277,10 +300,14 @@ class SizeBarDelegate(QStyledItemDelegate):
     _EMPTY_COLOR = QColor("#c8d4ea")   # lys grå baggrund
     _LABEL_COLOR = QColor("#4a72b0")   # bogstav-farve (mørkere blå)
 
+    def __init__(self, parent=None, show_text: bool = False) -> None:
+        super().__init__(parent)
+        self._show_text = show_text
+
     def paint(self, painter: QPainter, option, index) -> None:
         from PySide6.QtWidgets import QStyle
         data = index.data(Qt.ItemDataRole.UserRole + 10) or {}
-        size_key  = data.get("size", "").lower()  if isinstance(data, dict) else ""
+        size_key   = data.get("size", "").lower() if isinstance(data, dict) else ""
         cache_type = data.get("type", "").lower() if isinstance(data, dict) else ""
 
         filled = self._SEGMENTS.get(size_key, 0)
@@ -301,11 +328,22 @@ class SizeBarDelegate(QStyledItemDelegate):
 
         rect = option.rect
         margin_x, margin_y = 4, 3
-        total_w = rect.width()  - 2 * margin_x
         total_h = rect.height() - 2 * margin_y
-        x0 = rect.x() + margin_x
         y0 = rect.y() + margin_y
 
+        # "both" mode: reserve right portion for the text label
+        if self._show_text:
+            display_text = (
+                _NON_PHYSICAL_TEXT_LABELS.get(cache_type, "")
+                or _CONTAINER_TEXT_LABELS.get(size_key, "")
+            )
+            text_w = max(35, (rect.width() - 2 * margin_x) // 2) if display_text else 0
+        else:
+            display_text = ""
+            text_w = 0
+
+        total_w = rect.width() - 2 * margin_x - (text_w + 4 if text_w else 0)
+        x0 = rect.x() + margin_x
         seg_w = max(4, (total_w - self._SEG_GAP * (self._SEG_COUNT - 1)) // self._SEG_COUNT)
 
         for i in range(self._SEG_COUNT):
@@ -328,6 +366,19 @@ class SizeBarDelegate(QStyledItemDelegate):
                 painter.setFont(font)
                 painter.drawText(seg_rect, Qt.AlignmentFlag.AlignCenter, label)
                 painter.setPen(Qt.PenStyle.NoPen)
+
+        if text_w > 0 and display_text:
+            text_rect = QRect(rect.x() + margin_x + total_w + 4, y0, text_w, total_h)
+            painter.setPen(self._LABEL_COLOR)
+            font = painter.font()
+            font.setPointSize(7)
+            font.setBold(False)
+            painter.setFont(font)
+            painter.drawText(
+                text_rect,
+                Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft,
+                display_text,
+            )
 
         painter.restore()
 
@@ -658,6 +709,8 @@ class CacheTableModel(QAbstractTableModel):
                 size=24,
             )
         if col == "container":
+            if get_container_display() == "text":
+                return None
             return get_cache_size_icon(self._size_icon_key(cache), size=20)
         return None
 
@@ -687,7 +740,9 @@ class CacheTableModel(QAbstractTableModel):
         if col == "terrain":
             return f"{cache.terrain:.1f}" if cache.terrain else "?"
         if col == "container":
-            return ""   # ikon vises via DecorationRole
+            if get_container_display() == "text":
+                return _container_text(cache.container, cache.cache_type)
+            return ""   # bar/both: delegate draws
         if col == "country":
             return cache.country or ""
         if col == "state":
@@ -937,8 +992,12 @@ class CacheTableView(QTableView):
                 self.setColumnWidth(i, width)
                 header.setSectionResizeMode(i, QHeaderView.ResizeMode.Interactive)
                 if col_id == "container":
-                    self._size_bar_delegate = SizeBarDelegate(self)
-                    self.setItemDelegateForColumn(i, self._size_bar_delegate)
+                    mode = get_container_display()
+                    if mode == "text":
+                        self.setItemDelegateForColumn(i, None)  # type: ignore[arg-type]
+                    else:
+                        self._size_bar_delegate = SizeBarDelegate(self, show_text=(mode == "both"))
+                        self.setItemDelegateForColumn(i, self._size_bar_delegate)
                 elif col_id == "gc_code":
                     self._gc_code_delegate = GcCodeDelegate(self)
                     self.setItemDelegateForColumn(i, self._gc_code_delegate)

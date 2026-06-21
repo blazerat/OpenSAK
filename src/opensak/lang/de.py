@@ -463,6 +463,10 @@ STRINGS: dict[str, str] = {
     "column_dialog_hint":           "Wähle, welche SPalten in der Cacheliste angezeigt werden sollen.\nGC-Code und Name können nicht ausgeblendet werden.",
     "column_select_all":            "Alle auswählen",
     "column_select_default":        "Standard",
+    "container_display_label":      "Größenanzeige:",
+    "container_display_bar":        "Nur Balken",
+    "container_display_text":       "Nur Text",
+    "container_display_both":       "Balken + Text",
 
     # ── Filter dialog ─────────────────────────────────────────────────────────
     "filter_saved_label":           "Gespeicherte Filter:",
