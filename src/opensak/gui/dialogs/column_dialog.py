@@ -127,9 +127,9 @@ _CONTAINER_DISPLAY_KEY = "columns.container_display"
 
 
 def get_container_display() -> str:
-    """Return the container column display mode: 'bar', 'text', or 'both'."""
+    """Return the container column display mode: 'bar' or 'text'."""
     val = get_store().get(_CONTAINER_DISPLAY_KEY, "bar")
-    return val if val in ("bar", "text", "both") else "bar"
+    return val if val in ("bar", "text") else "bar"
 
 
 def set_container_display(mode: str) -> None:
@@ -184,13 +184,10 @@ class ColumnChooserDialog(QDialog):
         for label, value in (
             (tr("container_display_bar"),  "bar"),
             (tr("container_display_text"), "text"),
-            (tr("container_display_both"), "both"),
         ):
             self._container_display_combo.addItem(label, value)
         current_mode = get_container_display()
-        self._container_display_combo.setCurrentIndex(
-            {"bar": 0, "text": 1, "both": 2}.get(current_mode, 0)
-        )
+        self._container_display_combo.setCurrentIndex(0 if current_mode == "bar" else 1)
         display_row.addWidget(self._container_display_combo)
         layout.addLayout(display_row)
 

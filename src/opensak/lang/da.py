@@ -464,9 +464,8 @@ STRINGS: dict[str, str] = {
     "column_select_all":            "Vælg alle",
     "column_select_default":        "Standard",
     "container_display_label":      "Størrelses-visning:",
-    "container_display_bar":        "Kun bjælke",
-    "container_display_text":       "Kun tekst",
-    "container_display_both":       "Bjælke + tekst",
+    "container_display_bar":        "Bjælke",
+    "container_display_text":       "Tekst",
 
     # ── Filter dialog ─────────────────────────────────────────────────────────
     "filter_saved_label":           "Gemt filter:",

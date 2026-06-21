@@ -464,9 +464,8 @@ STRINGS: dict[str, str] = {
     "column_select_all":            "Vybrat vše",
     "column_select_default":        "Výchozí",
     "container_display_label":      "Zobrazení velikosti:",
-    "container_display_bar":        "Pouze pruh",
-    "container_display_text":       "Pouze text",
-    "container_display_both":       "Pruh + text",
+    "container_display_bar":        "Pruh",
+    "container_display_text":       "Text",
 
     # ── Filter dialog ─────────────────────────────────────────────────────────
     "filter_saved_label":           "Uložený filtr:",

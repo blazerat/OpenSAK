@@ -65,8 +65,6 @@ class TestColumnHelpers:
     def test_container_display_roundtrip(self, store):
         set_container_display("text")
         assert get_container_display() == "text"
-        set_container_display("both")
-        assert get_container_display() == "both"
         set_container_display("bar")
         assert get_container_display() == "bar"
 

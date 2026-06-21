@@ -467,9 +467,8 @@ STRINGS: dict[str, str] = {
     "column_select_all":            "Alles selecteren",
     "column_select_default":        "Standaard",
     "container_display_label":      "Grootte weergave:",
-    "container_display_bar":        "Alleen balk",
-    "container_display_text":       "Alleen tekst",
-    "container_display_both":       "Balk + tekst",
+    "container_display_bar":        "Balk",
+    "container_display_text":       "Tekst",
 
     # ── Filter dialog ─────────────────────────────────────────────────────────
     "filter_saved_label":           "Opgeslagen filter:",

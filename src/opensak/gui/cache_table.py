@@ -300,14 +300,10 @@ class SizeBarDelegate(QStyledItemDelegate):
     _EMPTY_COLOR = QColor("#c8d4ea")   # lys grå baggrund
     _LABEL_COLOR = QColor("#4a72b0")   # bogstav-farve (mørkere blå)
 
-    def __init__(self, parent=None, show_text: bool = False) -> None:
-        super().__init__(parent)
-        self._show_text = show_text
-
     def paint(self, painter: QPainter, option, index) -> None:
         from PySide6.QtWidgets import QStyle
         data = index.data(Qt.ItemDataRole.UserRole + 10) or {}
-        size_key   = data.get("size", "").lower() if isinstance(data, dict) else ""
+        size_key  = data.get("size", "").lower()  if isinstance(data, dict) else ""
         cache_type = data.get("type", "").lower() if isinstance(data, dict) else ""
 
         filled = self._SEGMENTS.get(size_key, 0)
@@ -328,22 +324,11 @@ class SizeBarDelegate(QStyledItemDelegate):
 
         rect = option.rect
         margin_x, margin_y = 4, 3
+        total_w = rect.width()  - 2 * margin_x
         total_h = rect.height() - 2 * margin_y
+        x0 = rect.x() + margin_x
         y0 = rect.y() + margin_y
 
-        # "both" mode: reserve right portion for the text label
-        if self._show_text:
-            display_text = (
-                _NON_PHYSICAL_TEXT_LABELS.get(cache_type, "")
-                or _CONTAINER_TEXT_LABELS.get(size_key, "")
-            )
-            text_w = max(35, (rect.width() - 2 * margin_x) // 2) if display_text else 0
-        else:
-            display_text = ""
-            text_w = 0
-
-        total_w = rect.width() - 2 * margin_x - (text_w + 4 if text_w else 0)
-        x0 = rect.x() + margin_x
         seg_w = max(4, (total_w - self._SEG_GAP * (self._SEG_COUNT - 1)) // self._SEG_COUNT)
 
         for i in range(self._SEG_COUNT):
@@ -366,19 +351,6 @@ class SizeBarDelegate(QStyledItemDelegate):
                 painter.setFont(font)
                 painter.drawText(seg_rect, Qt.AlignmentFlag.AlignCenter, label)
                 painter.setPen(Qt.PenStyle.NoPen)
-
-        if text_w > 0 and display_text:
-            text_rect = QRect(rect.x() + margin_x + total_w + 4, y0, text_w, total_h)
-            painter.setPen(self._LABEL_COLOR)
-            font = painter.font()
-            font.setPointSize(7)
-            font.setBold(False)
-            painter.setFont(font)
-            painter.drawText(
-                text_rect,
-                Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft,
-                display_text,
-            )
 
         painter.restore()
 
@@ -742,7 +714,7 @@ class CacheTableModel(QAbstractTableModel):
         if col == "container":
             if get_container_display() == "text":
                 return _container_text(cache.container, cache.cache_type)
-            return ""   # bar/both: delegate draws
+            return ""   # bar: delegate draws
         if col == "country":
             return cache.country or ""
         if col == "state":
@@ -992,11 +964,10 @@ class CacheTableView(QTableView):
                 self.setColumnWidth(i, width)
                 header.setSectionResizeMode(i, QHeaderView.ResizeMode.Interactive)
                 if col_id == "container":
-                    mode = get_container_display()
-                    if mode == "text":
+                    if get_container_display() == "text":
                         self.setItemDelegateForColumn(i, None)  # type: ignore[arg-type]
                     else:
-                        self._size_bar_delegate = SizeBarDelegate(self, show_text=(mode == "both"))
+                        self._size_bar_delegate = SizeBarDelegate(self)
                         self.setItemDelegateForColumn(i, self._size_bar_delegate)
                 elif col_id == "gc_code":
                     self._gc_code_delegate = GcCodeDelegate(self)

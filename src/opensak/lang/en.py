@@ -464,9 +464,8 @@ STRINGS: dict[str, str] = {
     "column_select_all":            "Select all",
     "column_select_default":        "Default",
     "container_display_label":      "Container size display:",
-    "container_display_bar":        "Bar only",
-    "container_display_text":       "Text only",
-    "container_display_both":       "Bar + text",
+    "container_display_bar":        "Bar",
+    "container_display_text":       "Text",
 
     # ── Filter dialog ─────────────────────────────────────────────────────────
     "filter_saved_label":           "Saved filter:",
