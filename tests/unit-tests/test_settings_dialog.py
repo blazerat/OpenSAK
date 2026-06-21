@@ -99,7 +99,7 @@ class TestConstruction:
         d = SettingsDialog()
         qtbot.addWidget(d)
         assert d._gc_username.text() == "preset"
-        assert d._miles_cb.isChecked() is True
+        assert d._unit_combo.currentData() is True
 
 
 # ── coordinate / home-location feedback ───────────────────────────────────────
@@ -300,7 +300,7 @@ class TestGeocaching:
 class TestSave:
     def test_save_persists_and_accepts(self, dlg, settings):
         dlg._gc_username.setText("tester")
-        dlg._miles_cb.setChecked(True)
+        dlg._unit_combo.setCurrentIndex(dlg._unit_combo.findData(True))
         dlg._save()
         assert settings.gc_username == "tester"
         assert settings.use_miles is True

@@ -194,8 +194,14 @@ class SettingsDialog(QDialog):
         disp_group = QGroupBox(tr("settings_group_display"))
         disp_layout = QVBoxLayout(disp_group)
 
-        self._miles_cb = QCheckBox(tr("settings_use_miles"))
-        disp_layout.addWidget(self._miles_cb)
+        unit_row = QHBoxLayout()
+        unit_row.addWidget(QLabel(tr("settings_unit_label")))
+        self._unit_combo = QComboBox()
+        self._unit_combo.addItem(tr("settings_unit_km"), False)
+        self._unit_combo.addItem(tr("settings_unit_mi"), True)
+        unit_row.addWidget(self._unit_combo)
+        unit_row.addStretch()
+        disp_layout.addLayout(unit_row)
 
         map_row = QHBoxLayout()
         map_row.addWidget(QLabel(tr("settings_map_label")))
@@ -835,7 +841,8 @@ class SettingsDialog(QDialog):
         from opensak.settings_store import get_install_dir, get_db_dir
         self._install_dir_row.set_path(get_install_dir())
         self._db_dir_row.set_path(get_db_dir())
-        self._miles_cb.setChecked(s.use_miles)
+        idx = self._unit_combo.findData(s.use_miles)
+        self._unit_combo.setCurrentIndex(idx if idx >= 0 else 0)
         idx = self._map_provider.findData(s.map_provider)
         self._map_provider.setCurrentIndex(idx if idx >= 0 else 0)
         idx = self._coord_format.findData(s.coord_format)
@@ -875,7 +882,7 @@ class SettingsDialog(QDialog):
             from opensak.coords import parse_coords
             if parse_coords(home_text) is not None:  # keep existing if invalid
                 s.gc_home_location = home_text
-        s.use_miles         = self._miles_cb.isChecked()
+        s.use_miles         = bool(self._unit_combo.currentData())
         s.map_provider      = self._map_provider.currentData()
         s.coord_format      = self._coord_format.currentData()
         s.date_format       = self._date_format.currentData()
