@@ -1075,6 +1075,11 @@ class MainWindow(QMainWindow):
             self._map_widget.update_cache(full)
 
     def _on_search_changed(self, text: str) -> None:
+        has_search = bool(self._search_gc.text().strip() or self._search_box.text().strip())
+        if has_search:
+            self._set_clear_filter_active(True)
+        elif not self._active_filter_name:
+            self._set_clear_filter_active(False)
         min_chars, debounce_ms = self._search_thresholds()
         if text == "":
             # Clearing always fires immediately
@@ -1619,6 +1624,10 @@ class MainWindow(QMainWindow):
     def _clear_filter(self) -> None:
         self._current_filterset = FilterSet()
         self._active_filter_name = ""
+        for field in (self._search_gc, self._search_box):
+            field.blockSignals(True)
+            field.clear()
+            field.blockSignals(False)
         self._set_clear_filter_active(False)
         self._filter_lbl.setText("")
         self._populate_filter_profile_combo(select_name=None)
