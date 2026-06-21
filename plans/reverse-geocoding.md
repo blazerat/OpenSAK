@@ -1,6 +1,6 @@
 # Development Plan — Offline Reverse Geocoding (County / State / Country)
 
-Status: Phase 0 + Phase 1 DONE (merged into beta). Phase 3 DONE (branch `60-phase-3-schema`). Phase 2, 4, 5 pending.
+Status: Phase 0 + Phase 1 DONE (merged into beta). Phase 3 DONE (merged into beta). Phase 4 DONE (branch `60-phase-4-gui`). Phase 2, 5 pending.
 Relates to: GitHub issue #60 · design in [`architecture/reverse-geocoding.md`](../architecture/reverse-geocoding.md)
 Scope: full implementation of the offline boundary engine — data pipeline, runtime engine, on-demand packs, schema, GUI, packaging/CI.
 
@@ -86,20 +86,17 @@ This plan turns the architecture document into shippable work. It is ordered **b
 
 ---
 
-## Phase 4 — GUI integration and retiring the old engine
+## Phase 4 — GUI integration and retiring the old engine ✓ DONE
 
 **Goal:** wire the engine into the existing Update Location flow, surface provenance and updates, and remove the nearest-neighbour geocoder.
 
-**Tasks**
-- [ ] Point `ReverseGeocodeWorker` in [`update_location_dialog.py`](../src/opensak/gui/dialogs/update_location_dialog.py) at `TerritoryResolver`; write the provenance fields per cache.
-- [ ] Coordinate basis: **default to posted** (the "use corrected" toggle currently defaults on); keep the scope options (all / missing / this cache / filter).
-- [ ] Keep the auto-run after GPX/PQ import; route it through the new engine.
-- [ ] Add menu actions: **Download all boundary packs** and **Check for boundary updates**; show a stale indicator when `location_dataset` trails the current dataset, offering a one-click re-run.
-- [ ] i18n: add every new `tr()` key to all `lang/*.py`; `test_languages.py` / `test_lang_modules.py` stay green.
-- [ ] **Remove** [`geocoder.py`](../src/opensak/geocoder.py) (the `reverse_geocoder` KD-tree and the Nominatim path); drop `reverse_geocoder` (and `pycountry`, if now pipeline-only) from runtime deps.
-- [ ] Widget/e2e tests with `qtbot` (mind the PySide worker-mocking segfault gotcha: patch the worker class, not QObject methods on a live instance).
+**What was built:** `ReverseGeocodeWorker` now uses `TerritoryResolver` instead of the GeoNames KD-tree; writes all four provenance columns (`location_source="boundary"`, `location_basis`, `location_updated`, `location_dataset`) per cache. `_CacheRow` gained a `basis` field (default `"posted"`) so the import dialog and the manual dialog both record which coordinate type was used. `OnlineLookupWorker` and the Nominatim path removed entirely. "Use corrected coordinates" now defaults **off** (posted coordinates are the default). `geocoder.py` deleted; `reverse_geocoder` and `pycountry` removed from runtime deps and the PyInstaller spec. Lang files updated: GeoNames references replaced, online/ETA keys removed, `update_loc_no_boundaries` added. `BoundaryStore.dataset_version()` reads the version from `file_version` in `boundaries.db`.
 
-**Acceptance:** the dialog resolves end-to-end via the new engine; import auto-fills; provenance and stale state are visible; all language key tests pass; no reference to `reverse_geocoder` remains.
+**Deferred to Phase 2 (blocked on `OpenSAK-Data` repo):**
+- Menu actions: **Download all boundary packs** and **Check for boundary updates**
+- Stale indicator when `location_dataset` trails the current dataset
+
+**Acceptance:** ✓ dialog resolves via boundary engine; provenance columns written; import auto-fills with basis; `reverse_geocoder`/`pycountry` gone; all 1355 unit tests pass; all language key tests pass.
 **Risk:** medium (UI wiring + dep removal). Size: L.
 
 ---

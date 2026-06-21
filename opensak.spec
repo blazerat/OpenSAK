@@ -10,11 +10,6 @@ from PyInstaller.utils.hooks import collect_data_files
 
 block_cipher = None
 
-# reverse_geocoder (GeoNames CSV) and pycountry (ISO JSON) ship data files and
-# are imported lazily inside geocoder.py, so PyInstaller's static graph misses
-# them — bundle their data and force the imports below.
-geocode_datas = collect_data_files("reverse_geocoder") + collect_data_files("pycountry")
-
 # certifi's cacert.pem is required for HTTPS calls (update checker) to work
 # from a bundled .exe — without it, Windows builds can fail SSL verification
 # even though the same code works fine from a normal Python install, because
@@ -40,13 +35,11 @@ a = Analysis(
         ("assets/icons/opensak.ico",  "assets/icons/"),
         ("assets/icons/opensak.icns", "assets/icons/"),
         ("src/opensak/lang/",          "opensak/lang/"),
-    ] + geocode_datas + certifi_datas,
+    ] + certifi_datas,
     hiddenimports=[
         "PySide6.QtWebEngineWidgets",
         "PySide6.QtWebEngineCore",
         "sqlalchemy.dialects.sqlite",
-        "reverse_geocoder",
-        "pycountry",
         "certifi",
     ],
     hookspath=[],

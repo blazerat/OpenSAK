@@ -258,8 +258,8 @@ class DatabaseManager:
     def switch_to(self, db_info: "DatabaseInfo") -> None:
         """Skift aktiv database og initialiser den."""
         from opensak.db.database import init_db
-        self._active = db_info
-        init_db(db_path=db_info.path)
+        init_db(db_path=db_info.path)  # raises if the file is not a valid DB
+        self._active = db_info          # only update state after successful init
         self._save_to_settings()
 
     def rename(self, db_info: "DatabaseInfo", new_name: str) -> None:

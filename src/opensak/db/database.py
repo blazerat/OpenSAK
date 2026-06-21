@@ -97,22 +97,27 @@ def init_db(db_path: Path | None = None) -> Engine:
             from opensak.config import get_db_path
             db_path = get_db_path()
 
-    _engine = _make_engine(db_path)
-    _SessionLocal = sessionmaker(
-        bind=_engine,
+    new_engine = _make_engine(db_path)
+    new_session = sessionmaker(
+        bind=new_engine,
         autoflush=False,
         autocommit=False,
         expire_on_commit=False,  # keep objects usable after session closes
     )
 
-    # Create all tables that don't exist yet (safe to call multiple times)
-    Base.metadata.create_all(_engine)
+    # Create all tables that don't exist yet (safe to call multiple times).
+    # Do this before touching the globals — if the file is not a valid SQLite
+    # database create_all() raises here and the current engine is unaffected.
+    Base.metadata.create_all(new_engine)
 
     # Kør schema-migrationer for eksisterende databaser (kun én gang per DB-sti)
     if db_path not in _migrated_paths:
-        _run_migrations(_engine)
+        _run_migrations(new_engine)
         _migrated_paths.add(db_path)
 
+    # Only swap the global pointers after everything above succeeded.
+    _engine = new_engine
+    _SessionLocal = new_session
     return _engine
 
 

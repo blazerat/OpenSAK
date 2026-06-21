@@ -102,6 +102,13 @@ class BoundaryStore:
             self._packs[pack] = cached
         return cached
 
+    def dataset_version(self) -> str:
+        cur = self._conn().execute(
+            "SELECT version FROM file_version WHERE layer = 'dataset'"
+        )
+        row = cur.fetchone()
+        return str(row["version"]) if row else "unknown"
+
     @staticmethod
     def _layer(layer: str) -> str:
         if layer not in _LAYER_DIR:
