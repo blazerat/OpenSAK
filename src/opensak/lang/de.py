@@ -183,7 +183,7 @@ STRINGS: dict[str, str] = {
     "filter_where_note_found":      "1 = von mir gefunden",
     "filter_where_note_fav":        "Community-Favoritenpunkte (API)",
     "filter_where_note_logcount":   "Gesamtanzahl der Logs",
-    "filter_where_note_distance":   "Entfernung vom Heimatpunkt in km",
+    "filter_where_note_distance":   "Entfernung vom Heimatpunkt in {unit}",
     "filter_where_note_userdata":   "Persönliche Benutzerfelder",
     "filter_where_examples_heading": "Beispiele:",
 

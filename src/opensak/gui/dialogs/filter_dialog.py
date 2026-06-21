@@ -757,6 +757,9 @@ class FilterDialog(QDialog):
     def _show_where_info(self) -> None:
         """Show a dialog with the available SQL column reference."""
         from PySide6.QtWidgets import QScrollArea as _QScrollArea
+        from opensak.gui.settings import get_settings
+
+        dist_unit = "mi" if get_settings().use_miles else "km"
 
         dlg = QDialog(self)
         dlg.setWindowTitle(tr("filter_where_info_title"))
@@ -802,7 +805,7 @@ class FilterDialog(QDialog):
             "<tr><td><code>premium_only</code></td><td>boolean</td><td>1 or 0</td></tr>"
             f"<tr><td><code>favorite_points</code></td><td>integer</td><td>{tr('filter_where_note_fav')}</td></tr>"
             f"<tr><td><code>log_count</code></td><td>integer</td><td>{tr('filter_where_note_logcount')}</td></tr>"
-            f"<tr><td><code>distance</code></td><td>decimal</td><td>{tr('filter_where_note_distance')}</td></tr>"
+            f"<tr><td><code>distance</code></td><td>decimal</td><td>{tr('filter_where_note_distance', unit=dist_unit)}</td></tr>"
             f"<tr><td><code>user_data_1</code> – <code>user_data_4</code></td>"
             f"<td>text</td><td>{tr('filter_where_note_userdata')}</td></tr>"
             "</table><br>"

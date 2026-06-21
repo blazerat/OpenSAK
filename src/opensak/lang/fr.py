@@ -183,7 +183,7 @@ STRINGS: dict[str, str] = {
     "filter_where_note_found":      "1 = trouvé par moi",
     "filter_where_note_fav":        "Points favoris de la communauté (API)",
     "filter_where_note_logcount":   "Nombre total de logs",
-    "filter_where_note_distance":   "Distance du point d'origine en km",
+    "filter_where_note_distance":   "Distance du point d'origine en {unit}",
     "filter_where_note_userdata":   "Champs utilisateur personnels",
     "filter_where_examples_heading": "Exemples :",
 

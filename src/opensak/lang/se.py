@@ -183,7 +183,7 @@ STRINGS: dict[str, str] = {
     "filter_where_note_found":      "1 = hittad av mig",
     "filter_where_note_fav":        "Gemenskapens favoritpoäng (API)",
     "filter_where_note_logcount":   "Totalt antal loggar",
-    "filter_where_note_distance":   "Avstånd från hemmabasen i km",
+    "filter_where_note_distance":   "Avstånd från hemmabasen i {unit}",
     "filter_where_note_userdata":   "Personliga användarfält",
     "filter_where_examples_heading": "Exempel:",
 
