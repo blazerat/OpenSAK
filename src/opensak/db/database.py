@@ -62,7 +62,7 @@ _migrated_paths: set = set()  # undgår at køre migrationer to gange på samme 
 # bumped to the highest migration number whenever a new migration is added
 # below — _run_migrations() skips the whole block when the database already
 # reports this version, so a stale constant means new migrations never run.
-SCHEMA_VERSION = 11
+SCHEMA_VERSION = 12
 
 
 def init_db(db_path: Path | None = None) -> Engine:
@@ -387,6 +387,29 @@ def _run_migrations(engine: Engine) -> None:
         if created_idx:
             conn.commit()
             print(f"Migration: oprettede {len(created_idx)} indexes på caches ({', '.join(created_idx)})")
+
+        # ── Migration 12: location provenance columns (issue #60 phase 3) ──────
+        # Four nullable columns record where territory values came from and which
+        # dataset version produced them — needed by the Phase 4 GUI and the
+        # stale-indicator logic. All default to NULL ("unknown / imported").
+        existing_caches = [
+            row[1]
+            for row in conn.execute(text("PRAGMA table_info(caches)")).fetchall()
+        ]
+        provenance_columns = [
+            ("location_source",  "VARCHAR(16)"),
+            ("location_basis",   "VARCHAR(16)"),
+            ("location_updated", "DATETIME"),
+            ("location_dataset", "VARCHAR(64)"),
+        ]
+        added = []
+        for col_name, col_def in provenance_columns:
+            if col_name not in existing_caches:
+                conn.execute(text(f"ALTER TABLE caches ADD COLUMN {col_name} {col_def}"))
+                added.append(col_name)
+        if added:
+            conn.commit()
+            print(f"Migration: tilføjede provenance-kolonner til caches: {', '.join(added)}")
 
         # ── Stamp the schema version so the next launch skips the probes ─────
         # PRAGMA does not accept bind parameters; SCHEMA_VERSION is a trusted

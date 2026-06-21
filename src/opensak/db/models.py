@@ -137,6 +137,15 @@ class Cache(Base):
     # NULL for all real geocaches imported from GPX/PQ.
     parent_gc_code: Mapped[Optional[str]] = mapped_column(String(16), nullable=True, index=True)
 
+    # Location provenance (issue #60 — reverse-geocoding phase 3)
+    # 'groundspeak' = taken from GPX import, 'computed' = offline boundary engine
+    location_source: Mapped[Optional[str]] = mapped_column(String(16), nullable=True)
+    # 'posted' = original coordinates used, 'corrected' = user-solved coords used
+    location_basis: Mapped[Optional[str]] = mapped_column(String(16), nullable=True)
+    location_updated: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    # boundaries dataset version string (e.g. "2025-06-01") used for the last resolve
+    location_dataset: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+
     # Metadata
     imported_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
     source_file: Mapped[Optional[str]] = mapped_column(String(512))  # which GPX this came from

@@ -354,3 +354,70 @@ class TestReloadCachesFull:
         ghost = Cache(gc_code="GCGONE", name="Not saved")
         ghost.id = 424242  # an id with no matching row
         assert reload_caches_full([ghost]) == [ghost]
+
+
+# ── Location provenance columns (issue #60 phase 3) ──────────────────────────
+
+class TestLocationProvenanceColumns:
+    def test_columns_default_to_null(self, tmp_path):
+        # Fresh DB: all four provenance columns must be present and default NULL.
+        import sqlite3 as _sql
+        init_db(db_path=tmp_path / "prov.db")
+        with get_session() as s:
+            cache = Cache(
+                gc_code="GCPROV1", name="Provenance test",
+                cache_type="Traditional Cache", latitude=55.0, longitude=12.0,
+            )
+            s.add(cache)
+
+        with get_session() as s:
+            c = s.query(Cache).filter_by(gc_code="GCPROV1").one()
+            assert c.location_source is None
+            assert c.location_basis is None
+            assert c.location_updated is None
+            assert c.location_dataset is None
+
+    def test_columns_are_writable(self, tmp_path):
+        from datetime import datetime
+        init_db(db_path=tmp_path / "prov2.db")
+        with get_session() as s:
+            cache = Cache(
+                gc_code="GCPROV2", name="Written", cache_type="Traditional Cache",
+                latitude=55.0, longitude=12.0,
+                location_source="computed", location_basis="posted",
+                location_updated=datetime(2025, 6, 1),
+                location_dataset="2025-06-01",
+            )
+            s.add(cache)
+
+        with get_session() as s:
+            c = s.query(Cache).filter_by(gc_code="GCPROV2").one()
+            assert c.location_source == "computed"
+            assert c.location_basis == "posted"
+            assert c.location_dataset == "2025-06-01"
+
+    def test_migration_adds_columns_to_old_schema(self, tmp_path):
+        # Create a v12 DB, strip the 4 provenance columns, rewind to v11,
+        # then re-run init_db() — migration 12 must re-add all four.
+        import sqlite3 as _sql
+        from opensak.db.database import _migrated_paths
+
+        db_file = tmp_path / "old_schema.db"
+        _migrated_paths.discard(db_file)
+        init_db(db_path=db_file)
+
+        provenance = ("location_source", "location_basis", "location_updated", "location_dataset")
+        with _sql.connect(db_file) as con:
+            for col in provenance:
+                con.execute(f"ALTER TABLE caches DROP COLUMN {col}")
+            con.execute("PRAGMA user_version = 11")
+
+        _migrated_paths.discard(db_file)
+        init_db(db_path=db_file)
+
+        cols = {
+            row[1]
+            for row in _sql.connect(db_file).execute("PRAGMA table_info(caches)").fetchall()
+        }
+        for col in provenance:
+            assert col in cols, f"migration 12 did not restore column: {col}"
