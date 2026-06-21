@@ -95,16 +95,17 @@ class ReverseGeocodeWorker(QThread):
         check.close()
         now = datetime.now(timezone.utc)
 
-        # Phase 1 — parallel resolve (one BoundaryStore per thread, no shared state)
+        # Phase 1 — parallel resolve (one BoundaryStore per thread, reused across rows)
+        import threading
+        _tls = threading.local()
+
         def _resolve_one(row: _CacheRow):
             if self._cancel:
                 return None
-            store = BoundaryStore()
-            try:
-                loc = TerritoryResolver(store).resolve(row.lat, row.lon)
-                return row, loc
-            finally:
-                store.close()
+            if not hasattr(_tls, "store"):
+                _tls.store = BoundaryStore()
+            loc = TerritoryResolver(_tls.store).resolve(row.lat, row.lon)
+            return row, loc
 
         workers = min(4, os.cpu_count() or 1)
         resolved = []
