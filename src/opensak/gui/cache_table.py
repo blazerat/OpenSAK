@@ -19,7 +19,7 @@ from opensak.filters.engine import _haversine_km, haversine_km_batch
 from opensak.gui.settings import get_settings
 from opensak.coords import format_coords, format_lat, format_lon, format_lat, format_lon
 from opensak.lang import tr
-from opensak.utils.types import DateFormat, GcCode, TEXT_SIZE_MAP
+from opensak.utils.types import DateFormat, GcCode, TEXT_SIZE_MAP, TextSize
 from opensak.utils.utils import normalize_geocacher_name
 from opensak.gui.icon_provider import get_cache_type_icon, get_cache_size_icon
 from opensak.gui.dialogs.column_dialog import get_column_widths, set_column_widths, get_container_display
@@ -989,7 +989,8 @@ class CacheTableView(QTableView):
                         self.setItemDelegateForColumn(i, None)  # type: ignore[arg-type]
                     else:
                         self._size_bar_delegate = SizeBarDelegate(self)
-                        sizes = TEXT_SIZE_MAP[get_settings().text_size]
+                        text_size = getattr(get_settings(), 'text_size', TextSize.MEDIUM)
+                        sizes = TEXT_SIZE_MAP[text_size]
                         self._size_bar_delegate.set_icon_size(sizes["icon"])
                         self.setItemDelegateForColumn(i, self._size_bar_delegate)
                 elif col_id == "gc_code":
@@ -1343,7 +1344,8 @@ class CacheTableView(QTableView):
         """Re-paint all visible cells after UI size change (font-size, etc.)."""
         # Opdatér SizeBarDelegate icon-størrelse
         if hasattr(self, "_size_bar_delegate"):
-            sizes = TEXT_SIZE_MAP[get_settings().text_size]
+            text_size = getattr(get_settings(), 'text_size', TextSize.MEDIUM)
+            sizes = TEXT_SIZE_MAP[text_size]
             self._size_bar_delegate.set_icon_size(sizes["icon"])
         # Genrender alle celler
         self._model.refresh_visuals()
