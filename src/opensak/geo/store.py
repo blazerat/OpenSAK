@@ -10,6 +10,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from opensak.logger import get_logger
+from opensak.debug_flags import is_debug_enabled
+
+log = get_logger("geo.store")
+
 # Boundary layers, coarse to fine. A county hit can fill all three fields.
 LAYERS = ("country", "state", "county")
 
@@ -44,6 +49,8 @@ class BoundaryStore:
         self.data_dir = data_dir or default_data_dir()
         self._db: sqlite3.Connection | None = None
         self._packs: dict[tuple[str, str], Any] = {}  # (layer, pack filename) -> parsed FeatureCollection
+        if is_debug_enabled("geo"):
+            log.debug("BoundaryStore initialized with data_dir=%s", self.data_dir)
 
     @property
     def db_path(self) -> Path:
@@ -92,6 +99,8 @@ class BoundaryStore:
 
     def _conn(self) -> sqlite3.Connection:
         if self._db is None:
+            if is_debug_enabled("geo"):
+                log.debug("opening boundaries.db at %s", self.db_path)
             self._db = sqlite3.connect(f"file:{self.db_path}?mode=ro", uri=True)
             self._db.row_factory = sqlite3.Row
         return self._db
@@ -103,8 +112,12 @@ class BoundaryStore:
             path = self.data_dir / _LAYER_DIR[self._layer(layer)] / pack
             if not path.is_file() and layer == "county":
                 # On-demand fetch: county packs are not bundled, downloaded lazily.
+                if is_debug_enabled("geo"):
+                    log.debug("fetching county pack: %s", pack)
                 from opensak.geo import packs as _packs
                 _packs.fetch_pack(pack, path.parent)
+            if is_debug_enabled("geo"):
+                log.debug("loading pack: %s", path)
             cached = json.loads(path.read_text(encoding="utf-8"))
             self._packs[cache_key] = cached
         return cached

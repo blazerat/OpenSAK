@@ -5,6 +5,10 @@ from __future__ import annotations
 from typing import Any, NamedTuple
 
 from opensak.geo.store import BoundaryStore
+from opensak.logger import get_logger
+from opensak.debug_flags import is_debug_enabled
+
+log = get_logger("geo.boundaries")
 
 try:
     from shapely.geometry import Point as _Point
@@ -32,16 +36,23 @@ class TerritoryResolver:
         # Shapely geometry objects cached by (layer, region_id). _shape() is
         # expensive for complex coastlines — construct once, reuse across rows.
         self._shape_cache: dict = {}
+        if is_debug_enabled("geo"):
+            log.debug("TerritoryResolver initialized, shapely=%s", _HAS_SHAPELY)
 
     def resolve(self, lat: float, lon: float) -> GeoLocation:
-        return GeoLocation(
+        result = GeoLocation(
             country=self._resolve_layer("country", lat, lon),
             state=self._resolve_layer("state", lat, lon),
             county=self._resolve_layer("county", lat, lon),
         )
+        if is_debug_enabled("geo"):
+            log.debug("resolve(%.4f, %.4f) -> %s", lat, lon, result)
+        return result
 
     def _resolve_layer(self, layer: str, lat: float, lon: float) -> str | None:
         ids = self._store.candidates(layer, lat, lon)
+        if is_debug_enabled("geo"):
+            log.debug("_resolve_layer(%s, %.4f, %.4f): %d candidates", layer, lat, lon, len(ids))
         if not ids:
             return None
         for region_id in ids:  # always do polygon check — a single bbox hit is not enough near borders
@@ -52,8 +63,12 @@ class TerritoryResolver:
                 geom = self._store.geometry(layer, region)
             except FileNotFoundError:
                 # pack missing and on-demand fetch failed (no network) — skip candidate
+                if is_debug_enabled("geo"):
+                    log.debug("geometry file not found for %s[%d]", layer, region_id)
                 continue
             if _point_in_geometry(lat, lon, geom, self._shape_cache, (layer, region_id)):
+                if is_debug_enabled("geo"):
+                    log.debug("_resolve_layer(%s): matched %s", layer, region.name)
                 return region.name
         return None
 

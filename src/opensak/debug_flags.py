@@ -22,6 +22,7 @@ DEBUG_MODULES: dict[str, bool] = {
     "filter_engine":    False,  # filter beregning
     "map_widget":       False,  # Leaflet/kort
     "database":         False,  # SQLAlchemy queries
+    "geo":              False,  # reverse geocoding (boundaries, packs, store)
 }
 
 
