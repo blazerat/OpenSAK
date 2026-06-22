@@ -24,6 +24,7 @@ from opensak.lang import tr
 from opensak.coords import format_coords
 from opensak.gui.settings import get_settings
 from opensak.utils.types import DateFormat
+from opensak.hint_detect import split_hint
 
 
 def _format_date(d: datetime) -> str:
@@ -246,6 +247,8 @@ class CacheDetailPanel(QWidget):
         self._decode_btn.setMaximumWidth(200)
         self._decode_btn.clicked.connect(self._toggle_hint_decode)
         self._hint_decoded = False
+        self._hint_plain = ""
+        self._hint_cipher = ""
         hint_btn_row.addWidget(self._decode_btn)
         hint_btn_row.addStretch()
         hint_layout.addLayout(hint_btn_row)
@@ -292,16 +295,12 @@ class CacheDetailPanel(QWidget):
     def _toggle_hint_decode(self) -> None:
         self._hint_decoded = not self._hint_decoded
         if self._hint_decoded:
-            decoded = self._raw_hint.translate(
-                str.maketrans(
-                    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz",
-                    "NOPQRSTUVWXYZABCDEFGHIJKLMnopqrstuvwxyzabcdefghijklm"
-                )
-            )
-            self._hint_browser.setPlainText(decoded if decoded else tr("detail_no_hint"))
+            shown = self._hint_plain if self._hint_plain else tr("detail_no_hint")
+            self._hint_browser.setPlainText(shown)
             self._decode_btn.setText(tr("detail_encode_btn"))
         else:
-            self._hint_browser.setPlainText(self._raw_hint if self._raw_hint else tr("detail_no_hint"))
+            shown = self._hint_cipher if self._hint_cipher else tr("detail_no_hint")
+            self._hint_browser.setPlainText(shown)
             self._decode_btn.setText(tr("detail_decode_btn"))
 
     def _format_coords(self, lat: float, lon: float) -> str:
@@ -413,7 +412,8 @@ class CacheDetailPanel(QWidget):
         self._desc_view.setHtml("")
         self._hint_browser.setPlainText("")
         self._log_browser.setHtml("")
-        self._raw_hint = ""
+        self._hint_plain = ""
+        self._hint_cipher = ""
         self._hint_decoded = False
         self._decode_btn.setText(tr("detail_decode_btn"))
         self._log_search.setText("")
@@ -505,12 +505,15 @@ class CacheDetailPanel(QWidget):
                 f"<p style='color:gray'>{tr('detail_no_description')}</p>"
             ))
 
-        # Hint — gem rå hint og nulstil decode state
-        self._raw_hint = cache.encoded_hints or ""
+        # Hint — issue #329: geocaching.com leverer hints i klartekst i
+        # moderne PQ'er, men ældre GSAK-eksporter kan stadig indeholde ægte
+        # ROT13-kodet tekst. split_hint() gætter hvilken er hvilken og vi
+        # viser altid den skjulte udgave som standard (spoiler-beskyttelse).
+        self._hint_plain, self._hint_cipher = split_hint(cache.encoded_hints or "")
         self._hint_decoded = False
         self._decode_btn.setText(tr("detail_decode_btn"))
         self._hint_browser.setPlainText(
-            self._raw_hint if self._raw_hint else tr("detail_no_hint")
+            self._hint_cipher if self._hint_cipher else tr("detail_no_hint")
         )
 
         # Logs — viser alle (sorteret efter dato, nyeste først)

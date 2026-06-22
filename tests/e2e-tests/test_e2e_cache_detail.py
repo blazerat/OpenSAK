@@ -71,19 +71,27 @@ def test_detail_panel_clears_between_caches(seeded_window, qtbot):
 
 
 # ── Hint tab ───────────────────────────────────────────────────────────────────
+# issue #329: geocaching.com leverer hints i klartekst i moderne PQ'er.
+# OpenSAK gætter (via split_hint/vokal-heuristik) hvilken retning der er
+# læsbar, og viser altid den SKJULTE udgave som standard (spoiler-
+# beskyttelse) — uanset om kildedata reelt var klartekst eller ROT13.
+# Test-fixturens hint "Under a rock." er kort (under heuristikkens
+# tærskel) og antages derfor at være klartekst, så den skjulte
+# standardvisning er dens ROT13-transformation "Haqre n ebpx.".
 
 
-def test_hint_tab_shows_raw_encoded_text(seeded_window, qtbot):
-    # The hint browser initially shows the raw (ROT13-encoded) hint text.
+def test_hint_tab_shows_obscured_text_by_default(seeded_window, qtbot):
+    # Hint-browseren viser som udgangspunkt den skjulte (ROT13'ede) udgave,
+    # ikke den læsbare klartekst — uanset hvilken retning kildedata var i.
     window = seeded_window
     _select_by_gc(window, qtbot, "GC12345")
 
-    raw = window._detail_panel._hint_browser.toPlainText()
-    assert raw == "Under a rock."
+    shown = window._detail_panel._hint_browser.toPlainText()
+    assert shown == "Haqre n ebpx."
 
 
-def test_decode_button_rot13_decodes_hint(seeded_window, qtbot):
-    # Clicking 'Decode' translates 'Under a rock.' via ROT13 to 'Haqre n ebpx.'.
+def test_decode_button_reveals_plaintext_hint(seeded_window, qtbot):
+    # Klik på 'Decode' afslører den læsbare klartekst.
     window = seeded_window
     _select_by_gc(window, qtbot, "GC12345")
 
@@ -94,11 +102,11 @@ def test_decode_button_rot13_decodes_hint(seeded_window, qtbot):
     qtbot.wait(50)
 
     assert panel._hint_decoded
-    assert panel._hint_browser.toPlainText() == "Haqre n ebpx."
+    assert panel._hint_browser.toPlainText() == "Under a rock."
 
 
-def test_encode_button_restores_raw_hint(seeded_window, qtbot):
-    # Clicking 'Encode' after 'Decode' restores the original hint text.
+def test_encode_button_restores_obscured_hint(seeded_window, qtbot):
+    # Klik på 'Encode' efter 'Decode' skjuler hint'et igen.
     window = seeded_window
     _select_by_gc(window, qtbot, "GC12345")
 
@@ -109,7 +117,7 @@ def test_encode_button_restores_raw_hint(seeded_window, qtbot):
     qtbot.wait(30)
 
     assert not panel._hint_decoded
-    assert panel._hint_browser.toPlainText() == "Under a rock."
+    assert panel._hint_browser.toPlainText() == "Haqre n ebpx."
 
 
 # ── Log search ─────────────────────────────────────────────────────────────────

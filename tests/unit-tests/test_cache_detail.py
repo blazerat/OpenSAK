@@ -32,7 +32,8 @@ def test_decode_no_hint_shows_no_hint_label(qapp):
     # Regression for #324: decoding a cache with no hint showed an empty text
     # browser instead of keeping the "(no hint)" feedback visible.
     panel = CacheDetailPanel()
-    panel._raw_hint = ""
+    panel._hint_plain = ""
+    panel._hint_cipher = ""
     panel._hint_decoded = False
 
     panel._toggle_hint_decode()  # decode
