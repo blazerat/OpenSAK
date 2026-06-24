@@ -1972,7 +1972,11 @@ class MainWindow(QMainWindow):
                 return
 
         from opensak import __version__
-        changelog_url = "https://github.com/AgreeDK/opensak/blob/main/CHANGELOG.md"
+        # Point at the specific release tag, not always `main` — betas live on
+        # the `beta` branch and aren't merged to `main` until they go stable,
+        # so a hardcoded main link showed the wrong (older) changelog entry
+        # for anyone running a beta.
+        changelog_url = f"https://github.com/AgreeDK/opensak/blob/{latest_tag}/CHANGELOG.md"
 
         msg = QMessageBox(self)
         if is_prerelease:

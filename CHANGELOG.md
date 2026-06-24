@@ -8,6 +8,21 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [1.14.0-beta.10] — 2026-06-24
+
+> **Beta release** — continuing the 1.14.0 testing period.
+
+### Fixed
+
+- **"See changelog" link in the update popup always pointed to `main`** —
+  beta releases live on the `beta` branch and aren't merged into `main`
+  until they go stable, so anyone notified about a new beta and clicking
+  "See changelog" saw an older changelog that didn't mention what had
+  actually changed. The link now points at the specific release tag
+  instead of always `main`, so it always shows the right entry.
+
+---
+
 ## [1.14.0-beta.9] — 2026-06-24
 
 > **Beta release** — continuing the 1.14.0 testing period.
