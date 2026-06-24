@@ -455,6 +455,10 @@ class MainWindow(QMainWindow):
         act_about.triggered.connect(self._show_about)
         help_menu.addAction(act_about)
 
+        act_user_guide = QAction(tr("action_user_guide"), self)
+        act_user_guide.triggered.connect(self._open_user_guide)
+        help_menu.addAction(act_user_guide)
+
         act_check_update = QAction(tr("action_check_update"), self)
         act_check_update.triggered.connect(self._check_update_manual)
         help_menu.addAction(act_check_update)
@@ -1896,6 +1900,12 @@ class MainWindow(QMainWindow):
             tr("about_title"),
             tr("about_text", version=__version__),
         )
+
+    def _open_user_guide(self) -> None:
+        """Open the online User Guide in the default browser."""
+        from PySide6.QtGui import QDesktopServices
+        from PySide6.QtCore import QUrl
+        QDesktopServices.openUrl(QUrl("https://opensak.com/user-guide.html"))
 
     def _open_log_file(self) -> None:
         """Åbn logfilen i systemets standard tekstprogram (issue #232)."""

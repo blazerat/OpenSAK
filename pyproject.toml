@@ -34,6 +34,10 @@ where = ["src"]
 testpaths = ["tests/unit-tests", "tests/e2e-tests"]
 pythonpath = ["src", "."]
 addopts = "--import-mode=importlib"
+# tests/screenshots is a separate, slower, opt-in suite for generating
+# marketing/doc screenshots (site/, User Guide) — it must not run as part of
+# a normal `pytest tests/` sweep. Run it explicitly: pytest tests/screenshots -v
+norecursedirs = [".git", ".venv", "build", "dist", "tests/screenshots"]
 markers = [
     "gui: tests that require a display and pytest-qt",
 ]

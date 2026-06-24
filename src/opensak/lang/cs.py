@@ -79,6 +79,7 @@ STRINGS: dict[str, str] = {
     # Help menu
     "action_about":                 "O &OpenSAK…",
     "action_check_update":          "Zkontrolovat aktualizace…",
+    "action_user_guide":            "Uživatelská příručka",
 
     "action_open_log_file": "Otevřít soubor protokolu",
     "log_file_not_found": "Soubor protokolu ještě nebyl nalezen: {path}",

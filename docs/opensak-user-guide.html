@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>OpenSAK User Guide — v1.13.11</title>
+<title>OpenSAK User Guide — v1.14.0-beta.8</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Source+Serif+4:ital,wght@0,300;0,400;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap');
 
@@ -330,6 +330,27 @@
     margin: 1rem 0;
   }
 
+  /* ── Screenshots ─────────────────────────────────────── */
+
+  figure.screenshot {
+    margin: 1.4rem 0;
+    text-align: center;
+  }
+
+  figure.screenshot img {
+    max-width: 100%;
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    box-shadow: 0 6px 18px rgba(26, 26, 46, 0.10);
+  }
+
+  figure.screenshot figcaption {
+    margin-top: 0.6rem;
+    font-size: 0.82rem;
+    color: var(--ink-light);
+    font-style: italic;
+  }
+
   /* ── Filter chips ────────────────────────────────────── */
 
   .chip {
@@ -452,7 +473,7 @@
 <nav>
   <div class="nav-header">
     <span class="nav-logo">OpenSAK</span>
-    <div class="nav-version">User Guide · v1.13.11</div>
+    <div class="nav-version">User Guide · v1.14.0-beta.8</div>
   </div>
 
   <div class="nav-section-heading">Getting Started</div>
@@ -484,7 +505,7 @@
 
   <div class="nav-section-heading">Export</div>
   <a href="#gps">Send to GPS</a>
-  <a href="#file-export">File Export (GPX/LOC/GGZ)</a>
+  <a href="#file-export">File Export (GPX/LOC)</a>
   <a href="#kml">Export to Google Maps (KML)</a>
   <a href="#trip-planner">Trip Planner</a>
 
@@ -514,8 +535,13 @@
     <div class="hero-eyebrow">Complete User Guide</div>
     <h1>OpenSAK</h1>
     <p class="hero-sub">The open-source geocache management tool for Windows, Linux, and macOS.</p>
-    <div class="hero-meta">Version 1.13.11 &nbsp;·&nbsp; MIT Licence &nbsp;·&nbsp; <a href="https://github.com/AgreeDK/opensak">github.com/AgreeDK/opensak</a></div>
+    <div class="hero-meta">Version 1.14.0-beta.8 &nbsp;·&nbsp; MIT Licence &nbsp;·&nbsp; <a href="https://github.com/AgreeDK/opensak">github.com/AgreeDK/opensak</a></div>
   </div>
+
+  <figure class="screenshot" style="margin-top:-0.5rem;">
+    <img src="assets/screenshots/main-window.png" alt="OpenSAK main window showing the cache list, cache detail panel, and OpenStreetMap view">
+    <figcaption>The main window: cache list (top), details and map (bottom) — all resizable.</figcaption>
+  </figure>
 
   <!-- TOC -->
   <div class="toc">
@@ -651,23 +677,10 @@ python run.py</code></pre>
   <section id="interface">
     <h2><span class="section-num">04</span>Main Window Layout</h2>
 
-    <div class="layout-diagram">┌─ Toolbar ───────────────────────────────────────────────────────────┐
-│  [Databases ▾] [Import] [⟳] [🔍 Filter] [✕] [Profile ▾] [📤GPS] [🗺️]│
-│  [Home ▾] [⌂] [⚙]                                                   │
-│  GC: [_________]  Name: [____________________]                       │
-├─ Cache List (full width) ────────────────────────────────────────────┤
-│  📍 GC Code │ Name        │ Type │ D/T  │ Distance │ Size │ Found   │
-│  ─────────────────────────────────────────────────────────────────── │
-│  GC1A2B3  │ Old Bridge   │ 🟢T  │ 2/2  │  1.4 km  │  S   │  ✓     │
-│  GC9XY77  │ Mystery Peak │ 🟡M  │ 4/3  │  8.1 km  │  M   │        │
-├─ Info Bar ────────────────────────────────────────────────────────────┤
-│  Filter: None  │  142 caches in database  │  🚩 = 0  │  Count: 3 15 │
-├─ Cache Details ──────────────────────┬─ Map ────────────────────────┤
-│  GC1A2B3 — Old Bridge Cache         │                              │
-│  Type: Traditional  D:2 / T:2       │   🗺️  OpenStreetMap          │
-│  Hidden: 2018-05-12  Size: Small    │        with cache pins       │
-│  [Description] [Hint] [Logs] [Attr] │                              │
-└──────────────────────────────────────┴──────────────────────────────┘</div>
+    <figure class="screenshot">
+      <img src="assets/screenshots/main-window.png" alt="OpenSAK main window layout: cache list on top, detail panel and map below">
+      <figcaption>Cache list (top, full width), Cache Detail Panel (bottom-left), Map (bottom-right).</figcaption>
+    </figure>
 
     <p>The window is divided into three main areas, all resizable by dragging the dividers:</p>
     <ul>
@@ -730,10 +743,17 @@ python run.py</code></pre>
     <h3>Tabs</h3>
     <ul>
       <li><strong>Description</strong> — full HTML cache description as published on geocaching.com</li>
-      <li><strong>Hint</strong> — encrypted hint; click anywhere on the hint text to toggle ROT13 decoding</li>
+      <li><strong>Hint</strong> — encrypted hint; click the <strong>Decode hint (ROT13)</strong> button to toggle decoding</li>
       <li><strong>Logs</strong> — recent logs from all finders; includes a search box to find specific entries</li>
       <li><strong>Attributes</strong> — all Groundspeak attributes set on the cache (dogs, parking, etc.)</li>
     </ul>
+
+    <figure class="screenshot">
+      <img src="assets/screenshots/cache-detail-hint.png" alt="Cache detail panel showing a decoded hint with the Encode hint (ROT13) button">
+      <figcaption>The Hint tab after clicking decode — geocaching.com hints are ROT13-encoded by default.</figcaption>
+    </figure>
+
+    <div class="callout note"><div class="callout-icon">ℹ️</div><div>Some hints are stored as plain text rather than ROT13 — OpenSAK detects this automatically and shows the hint directly, without a decode step.</div></div>
 
     <h3>Clickable Elements</h3>
     <ul>
@@ -822,11 +842,16 @@ python run.py</code></pre>
     <h2><span class="section-num">10</span>Filter Dialog</h2>
     <p>Open with <strong>View → Set filter…</strong> or <kbd>Ctrl+F</kbd>, or click the 🔍 Filter button in the toolbar.</p>
 
+    <figure class="screenshot">
+      <img src="assets/screenshots/filter-dialog-general.png" alt="Filter dialog General tab showing cache type, container size, and difficulty/terrain filters">
+      <figcaption>The General tab — cache type, container size, and difficulty/terrain range.</figcaption>
+    </figure>
+
     <h3>AND / OR Logic</h3>
     <p>All filters default to <strong>AND</strong> mode — a cache must pass every active filter to appear. Switch the group to <strong>OR</strong> to show caches matching <em>any</em> filter. Groups can be nested for complex conditions.</p>
 
     <h3>Filter Tabs</h3>
-    <p>The filter dialog has four tabs:</p>
+    <p>The filter dialog has five tabs:</p>
     <ul>
       <li><strong>General</strong> — type, container, difficulty, terrain, distance, found/not found, availability, country, state, county, name, GC code, placed by, owner, trackables, premium, corrected coords</li>
       <li><strong>Dates</strong> — filter by found date, hidden date, or last log date</li>
@@ -834,6 +859,11 @@ python run.py</code></pre>
       <li><strong>Other</strong> — user flag, DNF flag, FTF flag, favorite points range</li>
       <li><strong>Where</strong> — raw SQL WHERE clause against the caches table (advanced)</li>
     </ul>
+
+    <figure class="screenshot">
+      <img src="assets/screenshots/filter-dialog-attributes.png" alt="Filter dialog Attributes tab showing a list of Groundspeak attributes with Yes/No/Any checkboxes">
+      <figcaption>The Attributes tab — match on any combination of the ~70 Groundspeak attributes.</figcaption>
+    </figure>
 
     <h3>Clearing the Filter</h3>
     <p>Click the red <strong>✕</strong> button in the toolbar, or go to <strong>View → Clear filter</strong>. The button turns grey when no filter is active.</p>
@@ -1042,6 +1072,11 @@ python run.py</code></pre>
 
     <p>Open with <strong>GPS → Send to GPS…</strong> (<kbd>Ctrl+G</kbd>) or the 📤 button in the toolbar.</p>
 
+    <figure class="screenshot">
+      <img src="assets/screenshots/gps-export.png" alt="Send to GPS dialog showing destination options and export settings">
+      <figcaption>The Send to GPS dialog — send directly to a connected device, or save as a GPX file.</figcaption>
+    </figure>
+
     <h3>Sending to a Garmin Device</h3>
     <ol class="steps">
       <li>Connect your Garmin device via USB.</li>
@@ -1066,7 +1101,7 @@ python run.py</code></pre>
 
   <!-- ══════════════════════════════════════════════════════════ -->
   <section id="file-export">
-    <h2><span class="section-num">21</span>File Export (GPX / LOC / GGZ)</h2>
+    <h2><span class="section-num">21</span>File Export (GPX / LOC)</h2>
     <p>Export your filtered caches to standard geocaching file formats via <strong>File → Export</strong>:</p>
 
     <table>
@@ -1074,11 +1109,12 @@ python run.py</code></pre>
       <tbody>
         <tr><td>GPX</td><td>Full export with descriptions, logs, and waypoints — compatible with most GPS apps</td></tr>
         <tr><td>LOC</td><td>Lightweight coordinate-only format for basic GPS devices</td></tr>
-        <tr><td>GGZ</td><td>Garmin-native compressed format — supports unlimited caches (no 1000-cache GPX limit)</td></tr>
       </tbody>
     </table>
 
     <p>All exports use the caches currently visible in the list (respecting the active filter).</p>
+
+    <div class="callout note"><div class="callout-icon">ℹ️</div><div><strong>GGZ export (Garmin's native compressed format) is planned but not yet available</strong> — it isn't in this build. Follow <a href="https://github.com/AgreeDK/opensak/issues/348">issue #348</a> on GitHub for progress.</div></div>
   </section>
 
   <!-- ══════════════════════════════════════════════════════════ -->
@@ -1190,6 +1226,11 @@ python run.py</code></pre>
     <h2><span class="section-num">29</span>Settings</h2>
     <p>Open with <strong>Settings → Settings…</strong> (<kbd>Ctrl+,</kbd>) or the ⚙ button in the toolbar.</p>
 
+    <figure class="screenshot">
+      <img src="assets/screenshots/settings-general.png" alt="Settings dialog General tab showing display options including text and icon size">
+      <figcaption>The General tab — distance units, map app, coordinate format, date format, and text/icon size.</figcaption>
+    </figure>
+
     <h3>General Tab</h3>
     <table>
       <thead><tr><th>Setting</th><th>Description</th></tr></thead>
@@ -1200,11 +1241,15 @@ python run.py</code></pre>
         <tr><td>Show found caches</td><td>Include found caches by default</td></tr>
         <tr><td>Map app</td><td>Google Maps or OpenStreetMap (used when clicking coordinates)</td></tr>
         <tr><td>Coordinate format</td><td>DMM, DMS, or Decimal Degrees — used throughout the interface</td></tr>
+        <tr><td>Date format</td><td>OS locale, dd.mm.yyyy, mm/dd/yyyy, or yyyy-mm-dd</td></tr>
+        <tr><td>Text and icon size</td><td>Small, Medium, or Large — currently affects the cache header info next to the map</td></tr>
         <tr><td>Theme</td><td>Automatic (follow OS), Light, or Dark</td></tr>
         <tr><td>Language</td><td>Choose UI language (restart required)</td></tr>
         <tr><td>Check for updates automatically</td><td>Background update check at startup</td></tr>
       </tbody>
     </table>
+
+    <div class="callout warn"><div class="callout-icon">⚠️</div><div><strong>Text and icon size — known limitation:</strong> the new size only changes after you select a different cache in the grid, and the difference between Small and Large is currently subtle. Both are being looked at for a future beta.</div></div>
 
     <h3>Geocaching.com Tab</h3>
     <table>
@@ -1230,6 +1275,12 @@ python run.py</code></pre>
   <section id="columns">
     <h2><span class="section-num">30</span>Choosing Columns</h2>
     <p>Go to <strong>View → Choose columns…</strong> to select which columns appear in the cache list and in what order. Drag rows to reorder, check/uncheck to show or hide.</p>
+
+    <figure class="screenshot">
+      <img src="assets/screenshots/column-chooser.png" alt="Column chooser dialog with a checklist of available columns and a container size display option">
+      <figcaption>Choose columns — GC Code and Name can't be hidden, everything else is optional.</figcaption>
+    </figure>
+
     <p>Column visibility and order are saved between sessions.</p>
   </section>
 
@@ -1339,6 +1390,10 @@ python run.py</code></pre>
   <!-- ══════════════════════════════════════════════════════════ -->
   <section id="help">
     <h2><span class="section-num">35</span>Getting Help</h2>
+
+    <h3>Debug Log</h3>
+    <p>If something isn't working as expected, go to <strong>Help → Open log file</strong> to find the application log. Including it with a bug report makes the problem much easier to track down.</p>
+
     <table>
       <thead><tr><th>Resource</th><th>Link</th></tr></thead>
       <tbody>
@@ -1354,7 +1409,7 @@ python run.py</code></pre>
     <div class="callout tip"><div class="callout-icon">💡</div><div>OpenSAK is free and open-source software released under the MIT licence. Contributions of any kind — code, translations, documentation, or testing — are very welcome.</div></div>
 
     <p style="margin-top:2rem;color:var(--ink-light);font-size:0.85rem;font-style:italic;">
-      This guide was generated from the OpenSAK source code (v1.13.11). Last updated May 2026.
+      This guide was generated from the OpenSAK source code (v1.14.0-beta.8). Last updated June 2026.
     </p>
   </section>
 

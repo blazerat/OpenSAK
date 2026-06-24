@@ -8,6 +8,20 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [1.14.0-beta.9] — 2026-06-24
+
+> **Beta release** — continuing the 1.14.0 testing period.
+
+### Added
+
+- **User Guide link in the Help menu** — a new "User Guide" item, between
+  "About OpenSAK…" and "Check for updates…", opens the online User Guide
+  (opensak.com/user-guide.html) directly in your default browser. No more
+  hunting for the link on GitHub or the website — help is one click away
+  from inside the app. Translated into all 8 supported languages.
+
+---
+
 ## [1.14.0-beta.8] — 2026-06-22
 
 > **Beta release** — continuing the 1.14.0 testing period.

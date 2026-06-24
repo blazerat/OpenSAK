@@ -79,6 +79,7 @@ STRINGS: dict[str, str] = {
     # Help menu
     "action_about":                 "About &OpenSAK…",
     "action_check_update":          "Check for updates…",
+    "action_user_guide":            "User Guide",
 
     "action_open_log_file": "Open log file",
     "log_file_not_found": "Log file not found yet: {path}",
