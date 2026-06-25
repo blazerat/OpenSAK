@@ -8,6 +8,30 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [1.14.0-beta.12] — 2026-06-25
+
+> **Beta release** — continuing the 1.14.0 testing period.
+
+### Added
+
+- **Regression test locking the update-popup changelog link to the release
+  tag** — the link was previously fixed (beta.10) to point at
+  `blob/<tag>/CHANGELOG.md` instead of a hardcoded branch, but nothing
+  enforced that in code. Testers on older betas (≤beta.9) were still seeing
+  the stale hardcoded link until they upgraded, which understandably read
+  as a fresh bug report on Facebook. A test now fails immediately if a
+  future change reintroduces a literal `main` or `beta` branch name in
+  that link, so this can't silently regress again.
+
+### Notes
+
+- No functional change for anyone already on beta.10 or later — the
+  changelog and download links in the update popup were already correct.
+  This release exists to get everyone still on an older beta onto a build
+  where both links are guaranteed right.
+
+---
+
 ## [1.14.0-beta.11] — 2026-06-24
 
 > **Beta release** — continuing the 1.14.0 testing period.

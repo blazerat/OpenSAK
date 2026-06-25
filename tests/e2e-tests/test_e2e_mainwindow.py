@@ -895,3 +895,31 @@ class TestAboutUpdates:
         from opensak.gui.settings import get_settings
         get_settings().updates_skipped_version = "v1.2.3"
         seeded_window._on_update_available("v1.2.3", "http://x", manual=False)
+
+    def test_on_update_available_changelog_link_uses_tag_not_branch(
+        self, seeded_window, monkeypatch
+    ):
+        """Regression for the bug fixed in beta.10: the changelog link must
+        always pin to the immutable release tag, never a moving branch name
+        like 'main' or 'beta'. A branch-HEAD link drifts as soon as that
+        branch moves on, so beta testers ended up seeing the stable
+        changelog instead of the beta entry they were told about — exactly
+        what a hardcoded 'blob/main/CHANGELOG.md' caused before. Fail this
+        test before reinstating any literal branch name in the link.
+        """
+        captured: dict[str, str] = {}
+
+        def fake_exec(self):
+            captured["informative_text"] = self.informativeText()
+            return icon_mod.QMessageBox.StandardButton.Ok
+
+        monkeypatch.setattr(icon_mod.QMessageBox, "exec", fake_exec)
+
+        seeded_window._on_update_available(
+            "v1.14.0-beta.12", "http://x", is_prerelease=True, manual=True
+        )
+
+        text = captured["informative_text"]
+        assert "blob/v1.14.0-beta.12/CHANGELOG.md" in text
+        assert "blob/main/" not in text
+        assert "blob/beta/" not in text
