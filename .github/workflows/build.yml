@@ -266,7 +266,7 @@ jobs:
             3. First launch: right-click → Open (required as the app is not signed with an Apple certificate)
 
             ---
-            See [CHANGELOG.md](https://github.com/AgreeDK/OpenSAK/blob/main/CHANGELOG.md) for details.
+            See [CHANGELOG.md](https://github.com/AgreeDK/OpenSAK/blob/${{ steps.version.outputs.VERSION }}/CHANGELOG.md) for details.
           files: release-files/**/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

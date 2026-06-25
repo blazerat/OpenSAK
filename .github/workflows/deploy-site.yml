@@ -26,7 +26,18 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      # On a `release` event, checkout defaults to whatever's on the default
+      # branch (main) — NOT the tag that was actually released. That silently
+      # turned this into a no-op for every beta release, since main's site/
+      # only gets updated by an explicit manual sync. Pin the ref explicitly:
+      # release events deploy site/ exactly as it existed at the released
+      # tag (which lives on `beta` for betas), so the site always tracks
+      # whatever was just shipped without a manual sync step ever again.
+      # Plain pushes to main and manual workflow_dispatch runs keep their
+      # normal ref (github.ref) unaffected.
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event_name == 'release' && github.event.release.tag_name || github.ref }}
 
       - uses: actions/configure-pages@v6
 
