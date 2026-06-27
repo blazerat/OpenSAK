@@ -9,11 +9,16 @@ pytest.importorskip("pytestqt")
 
 from opensak.gui import cache_detail as cd
 from opensak.gui.cache_detail import CacheDetailPanel
-from opensak.utils.types import DateFormat, TEXT_SIZE_MAP, TextSize
+from opensak.lang import tr
+from opensak.utils.types import CoordFormat, DateFormat, TEXT_SIZE_MAP, TextSize
 
 
-def _fake_settings(fmt: DateFormat = DateFormat.DMY, text_size: TextSize = TextSize.MEDIUM) -> SimpleNamespace:
-    return SimpleNamespace(date_format=fmt, text_size=text_size)
+def _fake_settings(
+    fmt: DateFormat = DateFormat.DMY,
+    text_size: TextSize = TextSize.MEDIUM,
+    coord_format: CoordFormat = CoordFormat.DMM,
+) -> SimpleNamespace:
+    return SimpleNamespace(date_format=fmt, text_size=text_size, coord_format=coord_format)
 
 
 @pytest.mark.parametrize("fmt, expected", [
@@ -54,3 +59,62 @@ def test_decode_no_hint_shows_no_hint_label(qapp):
 
     panel._toggle_hint_decode()  # encode back
     assert panel._hint_browser.toPlainText() != ""
+
+
+def _fake_wp(prefix="PK", wp_type="Parking Area", name="Park here",
+             lat=55.0, lon=12.0, description="", comment=""):
+    return SimpleNamespace(
+        prefix=prefix, wp_type=wp_type, name=name,
+        latitude=lat, longitude=lon,
+        description=description, comment=comment,
+    )
+
+
+def test_waypoints_tab_empty(monkeypatch, qapp):
+    # Regression for #378: cache with no child waypoints shows the empty message.
+    monkeypatch.setattr(cd, "get_settings", lambda: _fake_settings())
+    panel = CacheDetailPanel()
+    panel._render_waypoints(SimpleNamespace(waypoints=[]))
+    assert tr("detail_no_waypoints") in panel._wp_browser.toPlainText()
+    assert panel._tabs.tabText(3) == tr("detail_tab_waypoints")
+
+
+def test_waypoints_tab_count_in_title(monkeypatch, qapp):
+    # Regression for #378: tab title shows count when waypoints are present.
+    monkeypatch.setattr(cd, "get_settings", lambda: _fake_settings())
+    panel = CacheDetailPanel()
+    panel._render_waypoints(SimpleNamespace(waypoints=[_fake_wp(), _fake_wp("SB", "Stages Begin", "Stage 1")]))
+    assert panel._tabs.tabText(3) == tr("detail_tab_waypoints_count", count=2)
+
+
+def test_waypoints_tab_renders_fields(monkeypatch, qapp):
+    # Regression for #378: prefix, type, name, coords and description are shown.
+    monkeypatch.setattr(cd, "get_settings", lambda: _fake_settings())
+    panel = CacheDetailPanel()
+    wp = _fake_wp(prefix="FN", wp_type="Final Location", name="The final", lat=55.1, lon=12.1, description="Dig here")
+    panel._render_waypoints(SimpleNamespace(waypoints=[wp]))
+    html = panel._wp_browser.toHtml()
+    assert "FN" in html
+    assert "Final Location" in html
+    assert "The final" in html
+    assert "Dig here" in html
+
+
+def test_waypoints_tab_no_coords(monkeypatch, qapp):
+    # Regression for #378: waypoint with missing coords shows fallback text.
+    monkeypatch.setattr(cd, "get_settings", lambda: _fake_settings())
+    panel = CacheDetailPanel()
+    wp = _fake_wp(lat=None, lon=None)
+    panel._render_waypoints(SimpleNamespace(waypoints=[wp]))
+    assert tr("detail_wp_no_coords") in panel._wp_browser.toHtml()
+
+
+def test_waypoints_tab_cleared_on_clear(monkeypatch, qapp):
+    # Regression for #378: clear() resets the waypoints tab to its default state.
+    monkeypatch.setattr(cd, "get_settings", lambda: _fake_settings())
+    panel = CacheDetailPanel()
+    panel._render_waypoints(SimpleNamespace(waypoints=[_fake_wp()]))
+    assert panel._tabs.tabText(3) == tr("detail_tab_waypoints_count", count=1)
+    panel.clear()
+    assert panel._tabs.tabText(3) == tr("detail_tab_waypoints")
+    assert panel._wp_browser.toPlainText() == ""
