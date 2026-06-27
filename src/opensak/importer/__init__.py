@@ -310,7 +310,9 @@ def _parse_wpt(wpt_el) -> Optional[dict]:
     gsak_user_note: Optional[str] = None
 
     for gsak_uri in _GSAK_NAMESPACES:
-        gsak_ext = wpt_el.find(f"{{{gsak_uri}}}wptExtension")
+        # Search descendants: gsak:wptExtension may be a direct <wpt> child (GSAK
+        # format) or nested inside <extensions> (OpenSAK GPX 1.1 export).
+        gsak_ext = wpt_el.find(f".//{{{gsak_uri}}}wptExtension")
         if gsak_ext is not None:
             ftf_el = gsak_ext.find(f"{{{gsak_uri}}}FirstToFind")
             if ftf_el is not None and ftf_el.text:
