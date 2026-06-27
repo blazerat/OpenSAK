@@ -23,7 +23,7 @@ from opensak.db.models import Cache
 from opensak.lang import tr
 from opensak.coords import format_coords
 from opensak.gui.settings import get_settings
-from opensak.utils.types import DateFormat
+from opensak.utils.types import DateFormat, norm_locale_date_fmt
 from opensak.hint_detect import split_hint
 
 
@@ -36,7 +36,8 @@ def _format_date(d: datetime) -> str:
     if fmt == DateFormat.YMD:
         return d.strftime("%Y-%m-%d")
     qd = QDate(d.year, d.month, d.day)
-    return QLocale.system().toString(qd, QLocale.FormatType.ShortFormat)
+    locale_fmt = norm_locale_date_fmt(QLocale.system().dateFormat(QLocale.FormatType.ShortFormat))
+    return QLocale.system().toString(qd, locale_fmt)
 
 
 # issue #219 — geocaching.com logge bruger markdown-links: [linktekst](https://url)

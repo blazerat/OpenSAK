@@ -760,7 +760,7 @@ class FilterDialog(QDialog):
         from PySide6.QtWidgets import QScrollArea as _QScrollArea
         from PySide6.QtCore import QLocale
         from opensak.gui.settings import get_settings
-        from opensak.utils.types import DateFormat
+        from opensak.utils.types import DateFormat, norm_locale_date_fmt
 
         settings = get_settings()
         dist_unit = "mi" if settings.use_miles else "km"
@@ -777,8 +777,9 @@ class FilterDialog(QDialog):
             date_where_eg = "2023-01-01"
         else:  # LOCALE
             _loc = QLocale.system()
-            date_col_eg = _loc.toString(QDate(2020, 6, 15), QLocale.FormatType.ShortFormat)
-            date_where_eg = _loc.toString(QDate(2023, 1, 1), QLocale.FormatType.ShortFormat)
+            _fmt = norm_locale_date_fmt(_loc.dateFormat(QLocale.FormatType.ShortFormat))
+            date_col_eg = _loc.toString(QDate(2020, 6, 15), _fmt)
+            date_where_eg = _loc.toString(QDate(2023, 1, 1), _fmt)
 
         dlg = QDialog(self)
         dlg.setWindowTitle(tr("filter_where_info_title"))

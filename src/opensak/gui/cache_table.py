@@ -19,7 +19,7 @@ from opensak.filters.engine import _haversine_km, haversine_km_batch
 from opensak.gui.settings import get_settings
 from opensak.coords import format_coords, format_lat, format_lon, format_lat, format_lon
 from opensak.lang import tr
-from opensak.utils.types import DateFormat, GcCode, TEXT_SIZE_MAP, TextSize
+from opensak.utils.types import DateFormat, GcCode, TEXT_SIZE_MAP, TextSize, norm_locale_date_fmt
 from opensak.utils.utils import normalize_geocacher_name
 from opensak.gui.icon_provider import get_cache_type_icon, get_cache_size_icon, get_flag_placeholder_icon
 from opensak.gui.dialogs.column_dialog import get_column_widths, set_column_widths, get_container_display
@@ -119,9 +119,10 @@ def _format_date(d: datetime) -> str:
         return d.strftime("%m/%d/%Y")
     if fmt == DateFormat.YMD:
         return d.strftime("%Y-%m-%d")
-    # LOCALE: ask Qt for the OS short-date pattern
+    # LOCALE: ask Qt for the OS short-date pattern, normalised to zero-padded fields
     qd = QDate(d.year, d.month, d.day)
-    return QLocale.system().toString(qd, QLocale.FormatType.ShortFormat)
+    locale_fmt = norm_locale_date_fmt(QLocale.system().dateFormat(QLocale.FormatType.ShortFormat))
+    return QLocale.system().toString(qd, locale_fmt)
 
 
 def _gc_sort_key(gc_code: GcCode) -> str:
