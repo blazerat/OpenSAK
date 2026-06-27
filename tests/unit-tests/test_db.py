@@ -421,3 +421,37 @@ class TestLocationProvenanceColumns:
         }
         for col in provenance:
             assert col in cols, f"migration 12 did not restore column: {col}"
+
+    def test_migration_13_adds_parent_gc_code_to_waypoints(self, tmp_path):
+        # Create a v13 DB, drop parent_gc_code, rewind to v12, re-run init_db —
+        # migration 13 must add the column and back-fill it from caches.
+        import sqlite3 as _sql
+        from opensak.db.database import _migrated_paths
+        from opensak.db.models import Cache, Waypoint
+
+        db_file = tmp_path / "m13.db"
+        _migrated_paths.discard(db_file)
+        init_db(db_path=db_file)
+
+        from opensak.db.database import get_session
+        with get_session() as s:
+            cache = Cache(gc_code="GCTEST1", name="Test", cache_type="Traditional Cache",
+                          latitude=55.0, longitude=12.0)
+            s.add(cache)
+            s.flush()
+            s.add(Waypoint(cache_id=cache.id, parent_gc_code="GCTEST1",
+                           prefix="PK", wp_type="Parking Area"))
+            s.commit()
+
+        with _sql.connect(db_file) as con:
+            con.execute("ALTER TABLE waypoints DROP COLUMN parent_gc_code")
+            con.execute("PRAGMA user_version = 12")
+
+        _migrated_paths.discard(db_file)
+        init_db(db_path=db_file)
+
+        with _sql.connect(db_file) as con:
+            wpt_cols = {row[1] for row in con.execute("PRAGMA table_info(waypoints)").fetchall()}
+            assert "parent_gc_code" in wpt_cols, "migration 13 did not add waypoints.parent_gc_code"
+            gc = con.execute("SELECT parent_gc_code FROM waypoints LIMIT 1").fetchone()[0]
+            assert gc == "GCTEST1", f"back-fill failed: got {gc!r}"

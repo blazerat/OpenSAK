@@ -129,6 +129,7 @@ def test_import_with_companion_wpts(tmp_db, gpx_file, wpts_file):
         assert wp.prefix == "PK"
         assert wp.latitude == pytest.approx(55.6762)
         assert wp.comment == "Park here and walk 200m south."
+        assert wp.parent_gc_code == "GC12345"
 
 
 # ── ZIP import tests ──────────────────────────────────────────────────────────
@@ -266,6 +267,7 @@ def test_import_gpx_inline_extra_waypoints(tmp_db, tmp_path):
         assert wp.prefix == "PK"
         assert wp.wp_type == "Parking Area"
         assert wp.comment == "Street parking available."
+        assert wp.parent_gc_code == "GC12345"
 
 
 # ── ImportResult.__str__ ──────────────────────────────────────────────────────
