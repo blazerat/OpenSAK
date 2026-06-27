@@ -1141,7 +1141,10 @@ def _link_extra_waypoints(
             count += 1
 
     # Refresh waypoint_count for every matched cache in one SQL pass.
+    # flush() is required because autoflush=False; the subquery must see the
+    # newly added Waypoint rows before the UPDATE executes.
     if target_ids:
+        session.flush()
         for i in range(0, len(target_ids), 500):
             chunk = target_ids[i:i + 500]
             placeholders = ", ".join(str(cid) for cid in chunk)
