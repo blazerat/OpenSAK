@@ -46,6 +46,15 @@ def test_refresh_sizes_updates_title_font(monkeypatch, qapp):
     assert panel._title.font().pointSize() == TEXT_SIZE_MAP[TextSize.LARGE]["label"]
 
 
+def test_type_icon_cleared_on_clear(monkeypatch, qapp):
+    # Regression for #286: clear() removes the type icon from the detail panel.
+    monkeypatch.setattr(cd, "get_settings", lambda: _fake_settings())
+    panel = CacheDetailPanel()
+    panel.clear()
+    pix = panel._type_icon_lbl.pixmap()
+    assert pix is None or pix.isNull()
+
+
 def test_decode_no_hint_shows_no_hint_label(qapp):
     # Regression for #324: decoding a cache with no hint showed an empty text
     # browser instead of keeping the "(no hint)" feedback visible.
@@ -317,3 +326,56 @@ def test_notes_tab_clear_resets_editor(monkeypatch, qapp):
     panel._note_editor.setPlainText("Some text")
     panel.clear()
     assert panel._note_editor.toPlainText() == ""
+
+
+# ── Type icon tests (issue #286) ──────────────────────────────────────────────
+
+def _load_cache(tmp_path, db_suffix="icon"):
+    from opensak.db.database import get_session, init_db
+    from opensak.importer import import_gpx
+    db_path = tmp_path / f"{db_suffix}.db"
+    init_db(db_path=db_path)
+    p = tmp_path / f"{db_suffix}.gpx"
+    p.write_text(_minimal_gpx(), encoding="utf-8")
+    import_gpx(p, db_path)
+    from opensak.db.models import Cache as CacheModel
+    from sqlalchemy.orm import joinedload
+    with get_session() as s:
+        cache = (
+            s.query(CacheModel)
+            .options(
+                joinedload(CacheModel.user_note),
+                joinedload(CacheModel.logs),
+                joinedload(CacheModel.waypoints),
+            )
+            .filter_by(gc_code="GCNOTES1")
+            .one()
+        )
+        s.expunge_all()
+    return cache
+
+
+def test_type_icon_shown_on_show_cache(monkeypatch, tmp_path, qapp):
+    # Regression for #286: a type icon is rendered before the cache name.
+    monkeypatch.setattr(cd, "get_settings", lambda: _fake_settings(text_size=TextSize.MEDIUM))
+    cache = _load_cache(tmp_path)
+    panel = CacheDetailPanel()
+    panel.show_cache(cache)
+    pix = panel._type_icon_lbl.pixmap()
+    assert pix is not None and not pix.isNull()
+    expected = TEXT_SIZE_MAP[TextSize.MEDIUM]["detail_icon"]
+    assert panel._type_icon_lbl.width() == expected
+    assert panel._type_icon_lbl.height() == expected
+
+
+def test_type_icon_resizes_on_refresh(monkeypatch, tmp_path, qapp):
+    # Regression for #286: type icon tracks text-size setting changes.
+    monkeypatch.setattr(cd, "get_settings", lambda: _fake_settings(text_size=TextSize.SMALL))
+    cache = _load_cache(tmp_path, db_suffix="icon_resize")
+    panel = CacheDetailPanel()
+    panel.show_cache(cache)
+    assert panel._type_icon_lbl.width() == TEXT_SIZE_MAP[TextSize.SMALL]["detail_icon"]
+
+    monkeypatch.setattr(cd, "get_settings", lambda: _fake_settings(text_size=TextSize.LARGE))
+    panel.refresh_sizes()
+    assert panel._type_icon_lbl.width() == TEXT_SIZE_MAP[TextSize.LARGE]["detail_icon"]

@@ -23,6 +23,7 @@ from opensak.db.models import Cache
 from opensak.lang import tr
 from opensak.coords import format_coords
 from opensak.gui.settings import get_settings
+from opensak.gui.icon_provider import get_cache_type_pixmap_composite
 from opensak.utils.types import DateFormat, TEXT_SIZE_MAP, norm_locale_date_fmt
 from opensak.hint_detect import split_hint
 
@@ -86,13 +87,24 @@ class CacheDetailPanel(QWidget):
         layout.setSpacing(4)
 
         # ── Header ────────────────────────────────────────────────────────────
+        header_row = QHBoxLayout()
+        header_row.setSpacing(8)
+        header_row.setContentsMargins(0, 0, 0, 0)
+
+        self._type_icon_lbl = QLabel()
+        self._type_icon_lbl.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
+        self._type_icon_lbl.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        header_row.addWidget(self._type_icon_lbl)
+
         self._title = QLabel(tr("detail_select_cache"))
         font = QFont()
         font.setPointSize(TEXT_SIZE_MAP[get_settings().text_size]["label"])
         font.setBold(True)
         self._title.setFont(font)
         self._title.setWordWrap(True)
-        layout.addWidget(self._title)
+        header_row.addWidget(self._title, 1)
+
+        layout.addLayout(header_row)
 
         # ── Meta row (GC code | Type | D/T | Container | Country) ────────────
         meta_frame = QFrame()
@@ -441,27 +453,37 @@ class CacheDetailPanel(QWidget):
     def _apply_ui_sizes(self) -> None:
         """Re-apply text/icon sizes from current settings. Called after settings change."""
         sizes = TEXT_SIZE_MAP[get_settings().text_size]
-        
+
         # Title (main label)
         font = self._title.font()
         font.setPointSize(sizes["label"])
         font.setBold(True)
         self._title.setFont(font)
-        
+
         # Metadata labels (GC Code, Type, D/T, Container, Country, Coords)
-        for lbl in [self._gc_code_lbl, self._type_lbl, self._dt_lbl, 
+        for lbl in [self._gc_code_lbl, self._type_lbl, self._dt_lbl,
                     self._container_lbl, self._country_lbl, self._coords_lbl]:
             font = lbl.font()
             font.setPointSize(sizes["secondary"])
             font.setBold(True)
             lbl.setFont(font)
-        
+
         # Corrected coords label
         font = self._corrected_lbl.font()
         font.setPointSize(sizes["secondary"])
         font.setBold(True)
         self._corrected_lbl.setFont(font)
-        
+
+        # Type icon — re-render at new size if a cache is shown
+        icon_size = sizes["detail_icon"]
+        cache_type = getattr(self, "_current_cache_type", None)
+        if cache_type is not None:
+            found = getattr(self, "_current_found", False)
+            dnf = getattr(self, "_current_dnf", False)
+            pixmap = get_cache_type_pixmap_composite(cache_type, icon_size, found=found, dnf=dnf)
+            self._type_icon_lbl.setPixmap(pixmap)
+            self._type_icon_lbl.setFixedSize(pixmap.width(), pixmap.height())
+
         self._title.update()
 
     def refresh_sizes(self) -> None:
@@ -473,6 +495,10 @@ class CacheDetailPanel(QWidget):
         self._current_lon: float | None = None
         self._corrected_lat = None
         self._corrected_lon = None
+        self._current_cache_type: str | None = None
+        self._current_found: bool = False
+        self._current_dnf: bool = False
+        self._type_icon_lbl.clear()
         self._coords_lbl.setStyleSheet("")
         self._title.setText(tr("detail_select_cache"))
         self._gc_code_lbl.setText("—")
@@ -508,7 +534,12 @@ class CacheDetailPanel(QWidget):
         found_mark = " ✓" if cache.found else ""
         archived_mark = tr("detail_archived_mark") if cache.archived else ""
         self._title.setText(f"{cache.name}{found_mark}{archived_mark}")
-        self._apply_ui_sizes()  # Re-apply sizes after settings change
+
+        # Type icon — store for resize and render at current size
+        self._current_cache_type = cache.cache_type
+        self._current_found = bool(cache.found)
+        self._current_dnf = bool(cache.dnf)
+        self._apply_ui_sizes()  # Re-apply sizes (also renders the icon)
 
         # Meta — GC kode som klikbart link
         gc = cache.gc_code or "—"

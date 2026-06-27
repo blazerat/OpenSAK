@@ -35,7 +35,7 @@ def _note(corrected=False):
 def _cache(**kw):
     d = dict(gc_code="GC1", name="Name", cache_type="Traditional Cache",
              difficulty=1.5, terrain=2.0, latitude=55.0, longitude=12.0,
-             found=False, user_note=None)
+             found=False, dnf=False, user_note=None)
     d.update(kw)
     return SimpleNamespace(**d)
 
