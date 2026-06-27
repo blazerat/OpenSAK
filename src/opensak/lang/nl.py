@@ -924,7 +924,7 @@ STRINGS: dict[str, str] = {
     # ── Info bar (GSAK-style status bar) ────────────────────
     "infobar_filter":                    "Filter",
     "infobar_filter_none":               "Geen",
-    "infobar_filter_active":             "Actief",
+    "infobar_filter_active":             "{count} actief",
     "infobar_total":                     "caches in database",
     "infobar_center":                    "Middelpunt",
     "infobar_count_label":               "Aantal:",
