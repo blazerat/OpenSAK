@@ -100,6 +100,22 @@ MAP_HTML = """<!DOCTYPE html>
     border: 3px solid #fff;
     box-shadow: 0 1px 4px rgba(0,0,0,0.5);
   }
+  .waypoint-marker {
+    width: 22px; height: 22px;
+    background: #7b1fa2;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 9px;
+    font-weight: bold;
+    font-family: sans-serif;
+    text-align: center;
+    line-height: 22px;
+  }
 </style>
 </head>
 <body>
@@ -140,6 +156,7 @@ var markers = {};          // gc_code → marker
 var homeMarker = null;
 var selectedGcCode = null;
 var bridge = null;
+var waypointMarkers = [];
 
 // ── WebChannel setup ──────────────────────────────────────────────────────────
 new QWebChannel(qt.webChannelTransport, function(channel) {
@@ -293,6 +310,37 @@ function panToHome() {
     if (homeMarker) {
         map.panTo(homeMarker.getLatLng());
         map.setZoom(12);
+    }
+}
+
+function clearWaypointMarkers() {
+    waypointMarkers.forEach(function(m) { map.removeLayer(m); });
+    waypointMarkers = [];
+}
+
+function showWaypointMarkers(waypointsJson) {
+    clearWaypointMarkers();
+    var wps = JSON.parse(waypointsJson);
+    wps.forEach(function(wp) {
+        var icon = L.divIcon({
+            className: '',
+            html: '<div class="waypoint-marker">' + wp.prefix + '</div>',
+            iconSize: [22, 22],
+            iconAnchor: [11, 11],
+            popupAnchor: [0, -13]
+        });
+        var label = '[' + wp.prefix + '] ' + (wp.wp_type || '');
+        var popup = '<b>[' + wp.prefix + ']</b> ' + (wp.wp_type || '') + (wp.name ? '<br>' + wp.name : '');
+        var m = L.marker([wp.lat, wp.lon], {icon: icon, title: label});
+        m.bindPopup(popup);
+        m.addTo(map);
+        waypointMarkers.push(m);
+    });
+    if (waypointMarkers.length > 0) {
+        try {
+            var group = L.featureGroup(waypointMarkers);
+            map.fitBounds(group.getBounds().pad(0.5));
+        } catch(e) {}
     }
 }
 
@@ -504,6 +552,18 @@ class MapWidget(QWidget):
             self._run_js(f"panToCache('{safe}')")
 
 
+
+    def show_waypoint_markers(self, waypoints_json: str) -> None:
+        """Render child waypoint markers on the map (called when Waypoints tab is activated)."""
+        if not self._ready:
+            return
+        safe = waypoints_json.replace("\\", "\\\\").replace("`", "\\`")
+        self._run_js(f"showWaypointMarkers(`{safe}`)")
+
+    def clear_waypoint_markers(self) -> None:
+        """Remove all waypoint markers (called when Waypoints tab is left)."""
+        if self._ready:
+            self._run_js("clearWaypointMarkers()")
 
     def fit_all(self) -> None:
         if self._ready:

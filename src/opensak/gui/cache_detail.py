@@ -72,6 +72,8 @@ class CacheDetailPanel(QWidget):
     """Displays full details for a single selected cache."""
 
     corrected_coords_changed = Signal(str)  # gc_code
+    waypoints_tab_shown = Signal(str)       # JSON: [{lat, lon, prefix, wp_type, name}, ...]
+    waypoints_tab_hidden = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -287,6 +289,7 @@ class CacheDetailPanel(QWidget):
         self._tabs.addTab(wp_widget, tr("detail_tab_waypoints"))
 
         layout.addWidget(self._tabs)
+        self._tabs.currentChanged.connect(self._on_tab_changed)
 
     def _meta_label(self, text: str) -> QLabel:
         lbl = QLabel(text)
@@ -460,6 +463,8 @@ class CacheDetailPanel(QWidget):
         self._conv_btn.setEnabled(False)
         self._corrected_frame.setVisible(False)
         self._add_corrected_btn.setVisible(False)
+        self._current_waypoints: list = []
+        self.waypoints_tab_hidden.emit()
 
     def show_cache(self, cache: Cache) -> None:
         """Populate the panel with data from *cache*."""
@@ -620,6 +625,7 @@ class CacheDetailPanel(QWidget):
 
     def _render_waypoints(self, cache: Cache) -> None:
         wps = cache.waypoints
+        self._current_waypoints = list(wps)
         count = len(wps)
         tab_idx = 3
         self._tabs.setTabText(
@@ -646,6 +652,25 @@ class CacheDetailPanel(QWidget):
                 html.append(f'<p style="color:#555;margin-top:2px"><i>{wp.comment}</i></p>')
             html.append("<hr>")
         self._wp_browser.setHtml("".join(html))
+        if self._tabs.currentIndex() == 3:
+            self._emit_waypoint_markers()
+
+    def _on_tab_changed(self, idx: int) -> None:
+        if idx == 3:
+            self._emit_waypoint_markers()
+        else:
+            self.waypoints_tab_hidden.emit()
+
+    def _emit_waypoint_markers(self) -> None:
+        import json
+        data = [
+            {"lat": wp.latitude, "lon": wp.longitude,
+             "prefix": wp.prefix or "", "wp_type": wp.wp_type or "",
+             "name": wp.name or ""}
+            for wp in self._current_waypoints
+            if wp.latitude is not None and wp.longitude is not None
+        ]
+        self.waypoints_tab_shown.emit(json.dumps(data))
 
     def _cleanup_webengine(self) -> None:
         """Slet QWebEnginePage før Qt rydder defaultProfile op.

@@ -118,3 +118,77 @@ def test_waypoints_tab_cleared_on_clear(monkeypatch, qapp):
     panel.clear()
     assert panel._tabs.tabText(3) == tr("detail_tab_waypoints")
     assert panel._wp_browser.toPlainText() == ""
+
+
+def test_waypoints_tab_shown_signal_emits_coords(monkeypatch, qapp):
+    # Regression for #393: switching to waypoints tab emits waypoints_tab_shown with coord JSON.
+    import json
+    monkeypatch.setattr(cd, "get_settings", lambda: _fake_settings())
+    panel = CacheDetailPanel()
+    panel._render_waypoints(SimpleNamespace(waypoints=[
+        _fake_wp(prefix="PK", wp_type="Parking Area", name="Park", lat=55.1, lon=12.1),
+        _fake_wp(prefix="FN", wp_type="Final Location", name="Final", lat=55.2, lon=12.2),
+    ]))
+    received = []
+    panel.waypoints_tab_shown.connect(received.append)
+    panel._tabs.setCurrentIndex(3)
+    assert len(received) == 1
+    data = json.loads(received[0])
+    assert len(data) == 2
+    prefixes = {d["prefix"] for d in data}
+    assert prefixes == {"PK", "FN"}
+
+
+def test_waypoints_tab_hidden_signal_on_leave(monkeypatch, qapp):
+    # Regression for #393: switching away from the waypoints tab emits waypoints_tab_hidden.
+    monkeypatch.setattr(cd, "get_settings", lambda: _fake_settings())
+    panel = CacheDetailPanel()
+    panel._tabs.setCurrentIndex(3)
+    hidden = []
+    panel.waypoints_tab_hidden.connect(lambda: hidden.append(True))
+    panel._tabs.setCurrentIndex(0)
+    assert hidden == [True]
+
+
+def test_waypoints_tab_excludes_no_coord_waypoints(monkeypatch, qapp):
+    # Regression for #393: waypoints without coords are excluded from the map signal.
+    import json
+    monkeypatch.setattr(cd, "get_settings", lambda: _fake_settings())
+    panel = CacheDetailPanel()
+    panel._render_waypoints(SimpleNamespace(waypoints=[
+        _fake_wp(lat=None, lon=None),
+        _fake_wp(prefix="FN", lat=55.0, lon=12.0),
+    ]))
+    received = []
+    panel.waypoints_tab_shown.connect(received.append)
+    panel._tabs.setCurrentIndex(3)
+    data = json.loads(received[0])
+    assert len(data) == 1
+    assert data[0]["prefix"] == "FN"
+
+
+def test_waypoints_tab_shown_on_cache_change_while_active(monkeypatch, qapp):
+    # Regression for #393: if the waypoints tab is already open when a new cache
+    # is loaded, the map signal fires with the updated waypoints.
+    import json
+    monkeypatch.setattr(cd, "get_settings", lambda: _fake_settings())
+    panel = CacheDetailPanel()
+    panel._tabs.setCurrentIndex(3)
+    received = []
+    panel.waypoints_tab_shown.connect(received.append)
+    panel._render_waypoints(SimpleNamespace(waypoints=[
+        _fake_wp(prefix="SB", lat=55.5, lon=12.5),
+    ]))
+    assert len(received) == 1
+    data = json.loads(received[0])
+    assert data[0]["prefix"] == "SB"
+
+
+def test_clear_emits_waypoints_hidden(monkeypatch, qapp):
+    # Regression for #393: clear() emits waypoints_tab_hidden so the map removes markers.
+    monkeypatch.setattr(cd, "get_settings", lambda: _fake_settings())
+    panel = CacheDetailPanel()
+    hidden = []
+    panel.waypoints_tab_hidden.connect(lambda: hidden.append(True))
+    panel.clear()
+    assert hidden == [True]
