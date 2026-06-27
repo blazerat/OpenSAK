@@ -226,10 +226,12 @@ class TestDisplayValues:
         # YMD
         fake_settings.date_format = DateFormat.YMD
         assert model._display_value(_cache(hidden_date=d), "hidden_date") == "2024-03-01"
-        # LOCALE — just verify it's non-empty (format depends on OS locale)
+        # LOCALE — verify non-empty and zero-padded (regression for issue #369)
         fake_settings.date_format = DateFormat.LOCALE
         result = model._display_value(_cache(hidden_date=d), "hidden_date")
         assert result
+        # March 1 — both day and month are single digits; must appear with leading zero.
+        assert "01" in result and "03" in result
 
     def test_counts_and_user_fields(self, model):
         assert model._display_value(_cache(log_count=7), "log_count") == "7"

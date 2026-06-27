@@ -167,3 +167,34 @@ class TestNormalizeGeocacherName:
         # Only the specific "(Key=N ...)" stats pattern is stripped — other
         # parenthetical content in a name is left intact.
         assert normalize_geocacher_name("Team (Denmark)") == "team (denmark)"
+
+
+# ── norm_locale_date_fmt (issue #369) ────────────────────────────────────────
+
+from opensak.utils.types import norm_locale_date_fmt
+
+
+class TestNormLocaleDateFmt:
+    def test_single_d_padded(self):
+        assert norm_locale_date_fmt("d/M/yy") == "dd/MM/yyyy"
+
+    def test_space_separated_no_leading_zeros(self):
+        # Regression for issue #369: some macOS locales produce "d M yyyy"
+        assert norm_locale_date_fmt("d M yyyy") == "dd MM yyyy"
+
+    def test_already_padded_unchanged(self):
+        assert norm_locale_date_fmt("dd.MM.yyyy") == "dd.MM.yyyy"
+
+    def test_two_digit_year_expanded(self):
+        assert norm_locale_date_fmt("MM/dd/yy") == "MM/dd/yyyy"
+
+    def test_abbreviated_weekday_untouched(self):
+        # ddd is an abbreviated weekday — must not become dddd
+        assert norm_locale_date_fmt("ddd, d MMM yyyy") == "ddd, dd MMM yyyy"
+
+    def test_full_month_name_untouched(self):
+        # MMMM is the full month name — must not become MMMMM
+        assert norm_locale_date_fmt("d MMMM yyyy") == "dd MMMM yyyy"
+
+    def test_four_digit_year_unchanged(self):
+        assert norm_locale_date_fmt("d/M/yyyy") == "dd/MM/yyyy"
