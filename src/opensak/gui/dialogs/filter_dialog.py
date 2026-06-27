@@ -6,7 +6,7 @@ Seks faner:
 2. Datoer      — udlagt dato, fundet dato, DNF dato, seneste log dato
 3. Øvrigt      — land/stat/kommune, user flag, DNF, favorit points
 4. Attributter — alle Groundspeak attributter
-5. Tekstsøgning — søg i beskrivelse, logs, noter og hint
+5. Tekstsøgning — søg i beskrivelse, noter og hint
 6. Where       — rå SQL WHERE-betingelse
 
 Understøtter gem/indlæs filterprofiler.
@@ -740,10 +740,6 @@ class FilterDialog(QDialog):
         self._text_search_description.setChecked(True)
         group_layout.addRow(self._text_search_description)
 
-        self._text_search_logs = QCheckBox(tr("detail_tab_logs"))
-        self._text_search_logs.setChecked(True)
-        group_layout.addRow(self._text_search_logs)
-
         self._text_search_notes = QCheckBox(tr("filter_text_search_notes"))
         self._text_search_notes.setChecked(True)
         group_layout.addRow(self._text_search_notes)
@@ -875,7 +871,17 @@ class FilterDialog(QDialog):
             "<code>favorite_points &gt; 100</code><br>"
             "<code>found = 0 AND available = 1</code><br>"
             "<code>name LIKE '%night%'</code><br>"
-            f"<code>hidden_date &gt; '{date_where_eg}'</code>"
+            "<code>long_description LIKE '%waterfall%'</code><br>"
+            f"<code>hidden_date &gt; '{date_where_eg}'</code><br><br>"
+            f"<b>{tr('filter_where_subquery_heading')}</b><br>"
+            "<table cellspacing='4'>"
+            f"<tr><th align='left'>{tr('filter_where_col_header')}</th>"
+            f"<th align='left'>{tr('filter_where_notes_header')}</th></tr>"
+            f"<tr><td><code>logs.text</code></td><td>{tr('filter_where_note_log_text')}</td></tr>"
+            f"<tr><td><code>user_notes.note</code></td><td>{tr('filter_where_note_user_note')}</td></tr>"
+            "</table><br>"
+            "<code>EXISTS (SELECT 1 FROM logs WHERE logs.cache_id = caches.id AND logs.text LIKE '%TFTC%')</code><br>"
+            "<code>EXISTS (SELECT 1 FROM user_notes WHERE user_notes.cache_id = caches.id AND user_notes.note LIKE '%bookmark%')</code>"
         )
 
         scroll.setWidget(content)
@@ -974,7 +980,6 @@ class FilterDialog(QDialog):
     def _reset_text_search(self) -> None:
         self._text_search_input.clear()
         self._text_search_description.setChecked(True)
-        self._text_search_logs.setChecked(True)
         self._text_search_notes.setChecked(True)
         self._text_search_hint.setChecked(False)
 
@@ -1213,7 +1218,7 @@ class FilterDialog(QDialog):
             fs.add(TextSearchFilter(
                 text=ts_text,
                 search_description=self._text_search_description.isChecked(),
-                search_logs=self._text_search_logs.isChecked(),
+                search_logs=False,
                 search_notes=self._text_search_notes.isChecked(),
                 search_hint=self._text_search_hint.isChecked(),
             ))
@@ -1388,7 +1393,6 @@ class FilterDialog(QDialog):
             elif ftype == "text_search":
                 self._text_search_input.setText(getattr(f, "text", ""))
                 self._text_search_description.setChecked(getattr(f, "search_description", True))
-                self._text_search_logs.setChecked(getattr(f, "search_logs", True))
                 self._text_search_notes.setChecked(getattr(f, "search_notes", True))
                 self._text_search_hint.setChecked(getattr(f, "search_hint", False))
             elif ftype == "where_clause":
