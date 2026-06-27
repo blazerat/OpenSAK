@@ -368,6 +368,25 @@ class TestProfiles:
         assert not p.exists()
 
 
+# ── default button / Enter key (#370) ──────────────────────────────────────────
+
+class TestDefaultButton:
+    def test_apply_is_default_and_save_is_not(self, dlg):
+        from PySide6.QtWidgets import QPushButton
+        buttons = dlg.findChildren(QPushButton)
+        default_buttons = [b for b in buttons if b.isDefault()]
+        # exactly one default button, and it is not the narrow save button (maxWidth 110)
+        assert len(default_buttons) == 1
+        assert default_buttons[0].maximumWidth() != 110
+
+    def test_save_btn_not_autodefault(self, dlg):
+        from PySide6.QtWidgets import QPushButton
+        # the save button is the only one with maxWidth 110
+        buttons = dlg.findChildren(QPushButton)
+        save_btn = next(b for b in buttons if b.maximumWidth() == 110)
+        assert not save_btn.autoDefault()
+
+
 # ── apply ───────────────────────────────────────────────────────────────────────
 
 class TestApply:

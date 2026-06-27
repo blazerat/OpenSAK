@@ -250,6 +250,7 @@ class FilterDialog(QDialog):
 
         save_btn = QPushButton(tr("filter_save_btn"))
         save_btn.setMaximumWidth(110)
+        save_btn.setAutoDefault(False)
         save_btn.clicked.connect(self._save_profile)
         profile_row.addWidget(save_btn)
 
@@ -281,7 +282,7 @@ class FilterDialog(QDialog):
         btn_row = QHBoxLayout()
 
         apply_btn = QPushButton(tr("filter_apply_btn"))
-        apply_btn.setStyleSheet("font-weight: bold;")
+        apply_btn.setDefault(True)
         apply_btn.clicked.connect(self._apply)
         btn_row.addWidget(apply_btn)
 
