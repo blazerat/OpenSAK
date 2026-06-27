@@ -523,7 +523,8 @@ def get_cache_type_pixmap_composite(
 ) -> QPixmap:
     """
     Return QPixmap with the cache type icon and, if found or dnf, a smiley
-    overlay in the top-right corner — matching the map pin appearance.
+    overlay centred on the icon's top-right corner (half inside, half outside)
+    — matching the map pin appearance.
       found → gold smiley; dnf (and not found) → dark-blue smiley.
     """
     key = _db_type_to_key(cache_type)
@@ -537,13 +538,20 @@ def get_cache_type_pixmap_composite(
         return base
 
     overlay_size = max(8, size // 2)
+    half = overlay_size // 2
+
+    # Canvas is enlarged by `half` on the right and top so the smiley can
+    # straddle the icon's top-right corner (center of smiley = corner of icon).
+    canvas_w = size + half
+    canvas_h = size + half
+    canvas = QPixmap(canvas_w, canvas_h)
+    canvas.fill(Qt.GlobalColor.transparent)
+
     overlay_px = _svg_to_pixmap(overlay_svg, overlay_size)
 
-    canvas = QPixmap(size, size)
-    canvas.fill(Qt.GlobalColor.transparent)
     painter = QPainter(canvas)
-    painter.drawPixmap(0, 0, base)
-    painter.drawPixmap(size - overlay_size, 0, overlay_px)
+    painter.drawPixmap(0, half, base)                        # icon shifted down
+    painter.drawPixmap(size - half, 0, overlay_px)          # smiley at top-right
     painter.end()
     return canvas
 
