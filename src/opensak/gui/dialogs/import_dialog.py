@@ -27,6 +27,7 @@ class ImportWorker(QThread):
     file_finished = Signal(int, object)  # (index, ImportResult)
     file_error    = Signal(int, str)     # (index, error message)
     progress      = Signal(int)          # cache count within current file
+    total         = Signal(int)          # total wpt count for current file (-1 = unknown)
     # Completion is reported via QThread.finished (emitted after run() returns
     # and isRunning() is already false), NOT a custom signal emitted from inside
     # run(). Emitting from run()'s tail let the dialog proceed — and tests tear
@@ -41,7 +42,7 @@ class ImportWorker(QThread):
     def run(self) -> None:
         from opensak.db.database import get_session, init_db
         from opensak.db.manager import get_db_manager
-        from opensak.importer import import_gpx, import_zip
+        from opensak.importer import import_gpx, import_zip, _count_wpts
         from opensak.utils.utils import get_import_type, ImportType
 
         # Switch to target DB if different from active
@@ -64,6 +65,14 @@ class ImportWorker(QThread):
                         ImportType.ZIP: import_zip,
                     }
                     import_func = importers[import_type]
+
+                    if import_type == ImportType.GPX:
+                        try:
+                            self.total.emit(_count_wpts(path))
+                        except Exception:
+                            self.total.emit(-1)
+                    else:
+                        self.total.emit(-1)
 
                     with get_session() as session:
                         result = import_func(
@@ -269,6 +278,7 @@ class ImportDialog(QDialog):
         self._worker.file_finished.connect(self._on_file_finished)
         self._worker.file_error.connect(self._on_file_error)
         self._worker.progress.connect(self._on_progress)
+        self._worker.total.connect(self._on_total)
         # React to QThread.finished (thread already stopped) rather than a signal
         # emitted from inside run(). Connect _on_all_done before deleteLater so it
         # runs first; both are queued, and by the time they run isRunning() is
@@ -283,12 +293,22 @@ class ImportDialog(QDialog):
             item.setText(f"🔄  {name}")
         self._file_list.scrollToItem(self._file_list.item(index))
         self._append_log(tr("import_running_file", name=name))
+        self._progress.setRange(0, 0)  # indeterminate while pre-counting
+
+    def _on_total(self, total: int) -> None:
+        if total > 0:
+            self._progress.setRange(0, total)
+            self._progress.setValue(0)
+        else:
+            self._progress.setRange(0, 0)
 
     def _on_progress(self, count: int) -> None:
         if count < 0:
             self._replace_last_log_line(f"  {tr('import_saving')}")
         elif count % 100 == 0 and count > 0:
             self._replace_last_log_line(f"  {tr('import_progress', count=count)}")
+        if count >= 0 and self._progress.maximum() > 0:
+            self._progress.setValue(count)
 
     def _on_file_finished(self, index: int, result) -> None:
         path = self._selected_paths[index]
