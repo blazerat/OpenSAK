@@ -528,13 +528,22 @@ class CacheTableModel(QAbstractTableModel):
         self.endResetModel()
 
     def _update_distances(self) -> None:
-        # Vectorised: compute distance + bearing for every cache in one numpy
-        # pass instead of a per-row Python loop. This runs on every table
-        # refresh, so on large databases (100k+ caches) the loop was a real
-        # per-keystroke cost; the batch form is ~negligible.
-        settings = get_settings()
+        from opensak.utils import flags as _flags
         self._distances = {}
         self._bearings = {}
+
+        if _flags.distance_computation:
+            # Flag ON: distance and bearing are pre-computed in the DB by
+            # recalculate_distances(); just read from the already-loaded objects.
+            for c in self._caches:
+                if c.distance is not None:
+                    self._distances[c.id] = float(c.distance)
+                if c.bearing is not None:
+                    self._bearings[c.id] = float(c.bearing)
+            return
+
+        # Flag OFF (legacy): vectorised on-the-fly computation per refresh.
+        settings = get_settings()
         valid = [
             c for c in self._caches
             if c.latitude is not None and c.longitude is not None
