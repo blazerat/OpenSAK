@@ -5,7 +5,7 @@ from pathlib import Path
 
 from opensak.db.database import get_session, init_db
 from opensak.db.models import Cache
-from opensak.importer import import_gpx, import_zip, ImportResult
+from opensak.importer import import_gpx, import_zip, ImportResult, _count_wpts
 
 from tests.data import (
     SAMPLE_GPX, SAMPLE_WPTS_GPX, EMPTY_GPX,
@@ -335,3 +335,15 @@ def test_import_zip_no_gpx_in_archive(tmp_path):
     z = make_zip(tmp_path, "no_gpx.zip", {"readme.txt": "hello"})
     result = import_zip(z)
     assert any("No .gpx" in e for e in result.errors)
+
+
+def test_count_wpts(tmp_path):
+    # _count_wpts must return the exact number of <wpt> elements without importing
+    gpx = build_gpx(cache_wpt("GC0001"), cache_wpt("GC0002"), cache_wpt("GC0003"))
+    f = write_gpx(tmp_path, "count_test.gpx", gpx)
+    assert _count_wpts(f) == 3
+
+
+def test_count_wpts_empty(tmp_path):
+    f = write_gpx(tmp_path, "empty.gpx", '<?xml version="1.0"?><gpx version="1.0"></gpx>')
+    assert _count_wpts(f) == 0

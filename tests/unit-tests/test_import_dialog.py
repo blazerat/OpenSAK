@@ -150,6 +150,7 @@ class TestImportDialog:
                 self.file_finished = MagicMock()
                 self.file_error = MagicMock()
                 self.progress = MagicMock()
+                self.total = MagicMock()
                 self.finished = MagicMock()
                 self.deleteLater = MagicMock()
                 self.isRunning = MagicMock(return_value=False)
@@ -261,3 +262,77 @@ class TestImportDialog:
         assert "second" in dlg._log.toPlainText()
         dlg._replace_last_log_line("replaced")
         assert "replaced" in dlg._log.toPlainText()
+
+    # ── Progress bar determinism (#372) ─────────────────────────────────────────
+
+    def test_on_total_positive_makes_bar_determinate(self, dlg):
+        dlg._on_total(50)
+        assert dlg._progress.maximum() == 50
+        assert dlg._progress.value() == 0
+
+    def test_on_total_negative_keeps_bar_indeterminate(self, dlg):
+        dlg._on_total(-1)
+        assert dlg._progress.maximum() == 0
+
+    def test_on_progress_drives_bar_when_determinate(self, dlg):
+        dlg._on_total(100)
+        dlg._on_progress(42)
+        assert dlg._progress.value() == 42
+
+    def test_on_progress_no_setValue_when_indeterminate(self, dlg):
+        # indeterminate bar: maximum is 0, setValue must not change that
+        assert dlg._progress.maximum() == 0
+        dlg._on_progress(42)
+        assert dlg._progress.maximum() == 0
+
+    def test_on_file_started_resets_bar_to_indeterminate(self, dlg):
+        dlg.add_files([Path("/a.gpx")])
+        dlg._on_total(200)  # bar goes determinate
+        assert dlg._progress.maximum() == 200
+        dlg._on_file_started(0, "a.gpx")  # must reset to indeterminate
+        assert dlg._progress.maximum() == 0
+
+
+class TestImportWorkerTotal:
+    def _patch(self, monkeypatch, import_type_val, active_path=Path("/active.db")):
+        monkeypatch.setattr("opensak.db.manager.get_db_manager",
+                            lambda: SimpleNamespace(active_path=active_path))
+        monkeypatch.setattr("opensak.db.database.get_session", _fake_session)
+        monkeypatch.setattr("opensak.importer.import_gpx",
+                            lambda p, s, progress_cb=None: _result())
+        monkeypatch.setattr("opensak.importer.import_zip",
+                            lambda p, s, progress_cb=None: _result(created=5))
+        from opensak.utils.utils import ImportType
+        monkeypatch.setattr("opensak.utils.utils.get_import_type",
+                            lambda p: import_type_val)
+        return ImportType
+
+    def test_emits_total_count_for_gpx(self, monkeypatch):
+        from opensak.utils.utils import ImportType
+        self._patch(monkeypatch, ImportType.GPX)
+        monkeypatch.setattr("opensak.importer._count_wpts", lambda p: 42)
+        w = ImportWorker([Path("/a.gpx")])
+        totals = []
+        w.total.connect(lambda t: totals.append(t))
+        w.run()
+        assert totals == [42]
+
+    def test_emits_minus1_for_zip(self, monkeypatch):
+        from opensak.utils.utils import ImportType
+        self._patch(monkeypatch, ImportType.ZIP)
+        w = ImportWorker([Path("/a.zip")])
+        totals = []
+        w.total.connect(lambda t: totals.append(t))
+        w.run()
+        assert totals == [-1]
+
+    def test_emits_minus1_when_count_raises(self, monkeypatch):
+        from opensak.utils.utils import ImportType
+        self._patch(monkeypatch, ImportType.GPX)
+        monkeypatch.setattr("opensak.importer._count_wpts",
+                            lambda p: (_ for _ in ()).throw(RuntimeError("oops")))
+        w = ImportWorker([Path("/a.gpx")])
+        totals = []
+        w.total.connect(lambda t: totals.append(t))
+        w.run()
+        assert totals == [-1]
