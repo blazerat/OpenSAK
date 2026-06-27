@@ -74,11 +74,12 @@ class TextSize(StrEnum):
 #   secondary_pt  — corrected coords, hints label
 #   grid_pt       — cell text in the cache grid
 #   row_height    — vertical section size (px) in the cache grid
+#   grid_icon     — type/container decoration icon in the cache grid (px)
 #   detail_icon   — type icon in detail panel header (px)
 TEXT_SIZE_MAP = {
-    TextSize.SMALL:  {"icon": 5,  "label": 9,  "secondary": 8,  "grid": 8,  "row_height": 20, "detail_icon": 20},
-    TextSize.MEDIUM: {"icon": 7,  "label": 13, "secondary": 10, "grid": 10, "row_height": 24, "detail_icon": 28},
-    TextSize.LARGE:  {"icon": 10, "label": 18, "secondary": 14, "grid": 13, "row_height": 30, "detail_icon": 36},
+    TextSize.SMALL:  {"icon": 5,  "label": 9,  "secondary": 8,  "grid": 8,  "row_height": 20, "grid_icon": 14, "detail_icon": 20},
+    TextSize.MEDIUM: {"icon": 7,  "label": 13, "secondary": 10, "grid": 10, "row_height": 24, "grid_icon": 20, "detail_icon": 28},
+    TextSize.LARGE:  {"icon": 10, "label": 18, "secondary": 14, "grid": 13, "row_height": 30, "grid_icon": 26, "detail_icon": 36},
 }
 
 
