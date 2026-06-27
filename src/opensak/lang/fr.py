@@ -280,7 +280,9 @@ STRINGS: dict[str, str] = {
 
     "settings_group_folders": "Dossiers",
     "settings_install_dir_label": "Dossier d'installation (paramètres et journaux) :",
-    "settings_install_dir_note": "Pour modifier ceci, relancez l'assistant de configuration ou modifiez le fichier bootstrap manuellement.",
+    "settings_install_dir_note": "Pour modifier ceci, cliquez sur « Relancer l'assistant de configuration » ci-dessous, ou modifiez le fichier bootstrap manuellement.",
+    "settings_run_wizard_button": "Relancer l'assistant de configuration",
+    "settings_run_wizard_restart_notice": "Le dossier d'installation a été modifié. Redémarrez OpenSAK pour que cela prenne effet.",
     "settings_db_dir_label": "Dossier des bases de données :",
     "settings_folders_restart_hint": "La modification du dossier des bases de données nécessite un redémarrage d'OpenSAK.",
     "settings_db_dir_changed_message": "Le dossier des bases de données a été modifié. Redémarrez OpenSAK pour appliquer ce changement.",

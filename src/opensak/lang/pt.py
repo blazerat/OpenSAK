@@ -280,7 +280,9 @@ STRINGS: dict[str, str] = {
 
     "settings_group_folders": "Pastas",
     "settings_install_dir_label": "Pasta de instalação (definições e registos):",
-    "settings_install_dir_note": "Para alterar isto, execute novamente o assistente de configuração ou edite o ficheiro bootstrap manualmente.",
+    "settings_install_dir_note": "Para alterar isto, clique em \"Executar novamente o assistente de configuração\" abaixo, ou edite o ficheiro bootstrap manualmente.",
+    "settings_run_wizard_button": "Executar novamente o assistente de configuração",
+    "settings_run_wizard_restart_notice": "A pasta de instalação foi alterada. Reinicie o OpenSAK para que isto tenha efeito.",
     "settings_db_dir_label": "Pasta de bases de dados:",
     "settings_folders_restart_hint": "Alterar a pasta de bases de dados requer reiniciar o OpenSAK.",
     "settings_db_dir_changed_message": "A pasta de bases de dados foi alterada. Reinicie o OpenSAK para que isto tenha efeito.",

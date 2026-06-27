@@ -280,7 +280,9 @@ STRINGS: dict[str, str] = {
 
     "settings_group_folders": "Folders",
     "settings_install_dir_label": "Installation folder (settings & logs):",
-    "settings_install_dir_note": "To change this, run the setup wizard again or edit the bootstrap file manually.",
+    "settings_install_dir_note": "To change this, click \"Run setup wizard again\" below, or edit the bootstrap file manually.",
+    "settings_run_wizard_button": "Run setup wizard again",
+    "settings_run_wizard_restart_notice": "The installation folder has been changed. Restart OpenSAK for this to take effect.",
     "settings_db_dir_label": "Database folder:",
     "settings_folders_restart_hint": "Changing the database folder requires restarting OpenSAK to take effect.",
     "settings_db_dir_changed_message": "The database folder has been changed. Restart OpenSAK for this to take effect.",

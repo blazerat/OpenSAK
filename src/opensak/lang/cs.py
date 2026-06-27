@@ -280,7 +280,9 @@ STRINGS: dict[str, str] = {
 
     "settings_group_folders": "Složky",
     "settings_install_dir_label": "Instalační složka (nastavení a protokoly):",
-    "settings_install_dir_note": "Chcete-li to změnit, spusťte znovu průvodce nastavením nebo upravte soubor bootstrap manuálně.",
+    "settings_install_dir_note": "Chcete-li to změnit, klikněte níže na „Spustit znovu průvodce nastavením“, nebo upravte soubor bootstrap manuálně.",
+    "settings_run_wizard_button": "Spustit znovu průvodce nastavením",
+    "settings_run_wizard_restart_notice": "Instalační složka byla změněna. Restartujte OpenSAK, aby se změna projevila.",
     "settings_db_dir_label": "Složka databáze:",
     "settings_folders_restart_hint": "Změna složky databáze vyžaduje restart OpenSAK.",
     "settings_db_dir_changed_message": "Složka databáze byla změněna. Restartujte OpenSAK, aby se změna projevila.",

@@ -2,8 +2,9 @@
 src/opensak/gui/dialogs/welcome_wizard.py — Velkomst-wizard til første opstart.
 
 Issue #210: Bruger vælger installations-mappe og database-mappe ved første opstart.
+Issue #358: Kan også genåbnes manuelt fra Settings → Advanced.
 
-4 trin:
+5 trin:
   1. Velkomst + sprog-valg
   2. Installationsmappe (settings + logs)
   3. Databasemappe
@@ -174,9 +175,14 @@ class WelcomeWizard(QDialog):
             self.windowFlags() & ~Qt.WindowType.WindowContextHelpButtonHint
         )
 
-        from opensak.settings_store import get_install_dir, _default_install_dir
+        from opensak.settings_store import get_install_dir, get_db_dir
         self._default_install = get_install_dir()
-        self._default_db = self._default_install  # samme som default
+        # Issue #358: brug den faktiske nuværende databasemappe som default —
+        # ikke installationsmappen. De er kun ens ved selve første opstart
+        # (get_db_dir() falder netop tilbage til get_install_dir() i det
+        # tilfælde), men ved genkørsel af wizarden skal det IKKE foreslå at
+        # flytte en allerede valgt databasemappe tilbage til install-mappen.
+        self._default_db = get_db_dir()
 
         self._setup_ui()
         self._update_buttons()

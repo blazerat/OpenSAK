@@ -280,7 +280,9 @@ STRINGS: dict[str, str] = {
 
     "settings_group_folders": "Ordner",
     "settings_install_dir_label": "Installationsordner (Einstellungen & Protokolle):",
-    "settings_install_dir_note": "Um dies zu ändern, führen Sie den Einrichtungsassistenten erneut aus oder bearbeiten Sie die Bootstrap-Datei manuell.",
+    "settings_install_dir_note": "Um dies zu ändern, klicken Sie unten auf „Einrichtungsassistenten erneut ausführen“ oder bearbeiten Sie die Bootstrap-Datei manuell.",
+    "settings_run_wizard_button": "Einrichtungsassistenten erneut ausführen",
+    "settings_run_wizard_restart_notice": "Der Installationsordner wurde geändert. Starten Sie OpenSAK neu, damit dies wirksam wird.",
     "settings_db_dir_label": "Datenbankordner:",
     "settings_folders_restart_hint": "Das Ändern des Datenbankordners erfordert einen Neustart von OpenSAK.",
     "settings_db_dir_changed_message": "Der Datenbankordner wurde geändert. Starten Sie OpenSAK neu, damit dies wirksam wird.",

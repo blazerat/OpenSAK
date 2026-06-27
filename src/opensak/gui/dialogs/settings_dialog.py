@@ -362,6 +362,16 @@ class SettingsDialog(QDialog):
         install_note.setStyleSheet("color: gray; font-size: 10px;")
         folders_layout.addWidget(install_note)
 
+        # Issue #358: tidligere lovede teksten ovenfor at man kunne "køre
+        # opsætnings-guiden igen", men der var ingen vej til faktisk at gøre
+        # det — wizarden blev kun vist automatisk ved allerførste opstart.
+        run_wizard_row = QHBoxLayout()
+        run_wizard_btn = QPushButton(tr("settings_run_wizard_button"))
+        run_wizard_btn.clicked.connect(self._on_run_wizard_again)
+        run_wizard_row.addWidget(run_wizard_btn)
+        run_wizard_row.addStretch()
+        folders_layout.addLayout(run_wizard_row)
+
         folders_layout.addSpacing(8)
         folders_layout.addWidget(QLabel(tr("settings_db_dir_label")))
         self._db_dir_row = DirRow(get_db_dir())
@@ -435,6 +445,49 @@ class SettingsDialog(QDialog):
 
         layout.addStretch()
         return tab
+
+    def _on_run_wizard_again(self) -> None:
+        """
+        Genåbn velkomst-wizarden manuelt (issue #358).
+
+        Wizarden gemmer selv sine valg direkte i settings_store, uafhængigt
+        af denne dialogs egen _save()/accept()-flow. Vi opdaterer derfor kun
+        de viste mappe-felter bagefter, og advarer kun om genstart hvis der
+        faktisk blev ændret noget der kræver det.
+        """
+        from opensak.settings_store import get_install_dir, get_db_dir
+        from opensak.gui.dialogs.welcome_wizard import WelcomeWizard
+
+        old_install_dir = get_install_dir()
+        old_db_dir = get_db_dir()
+        old_lang = current_language()
+
+        wizard = WelcomeWizard(self)
+        wizard.exec()
+
+        new_install_dir = get_install_dir()
+        new_db_dir = get_db_dir()
+        self._install_dir_row.set_path(new_install_dir)
+        self._db_dir_row.set_path(new_db_dir)
+
+        if new_install_dir != old_install_dir:
+            QMessageBox.information(
+                self,
+                tr("restart_required"),
+                tr("settings_run_wizard_restart_notice"),
+            )
+        elif new_db_dir != old_db_dir:
+            QMessageBox.information(
+                self,
+                tr("restart_required"),
+                tr("settings_db_dir_changed_message"),
+            )
+        elif current_language() != old_lang:
+            QMessageBox.information(
+                self,
+                tr("restart_required"),
+                tr("restart_message"),
+            )
 
     # ── Fane 2: Geocaching.com ────────────────────────────────────────────────
 

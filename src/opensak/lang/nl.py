@@ -283,7 +283,9 @@ STRINGS: dict[str, str] = {
 
     "settings_group_folders": "Mappen",
     "settings_install_dir_label": "Installatiemap (instellingen en logboeken):",
-    "settings_install_dir_note": "Om dit te wijzigen, voert u de installatiewizard opnieuw uit of bewerkt u het bootstrap-bestand handmatig.",
+    "settings_install_dir_note": "Om dit te wijzigen, klikt u hieronder op \"Installatiewizard opnieuw uitvoeren\", of bewerkt u het bootstrap-bestand handmatig.",
+    "settings_run_wizard_button": "Installatiewizard opnieuw uitvoeren",
+    "settings_run_wizard_restart_notice": "De installatiemap is gewijzigd. Start OpenSAK opnieuw om dit door te voeren.",
     "settings_db_dir_label": "Databasemap:",
     "settings_folders_restart_hint": "Het wijzigen van de databasemap vereist het opnieuw starten van OpenSAK.",
     "settings_db_dir_changed_message": "De databasemap is gewijzigd. Start OpenSAK opnieuw om dit door te voeren.",

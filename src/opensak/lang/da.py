@@ -280,7 +280,9 @@ STRINGS: dict[str, str] = {
 
     "settings_group_folders": "Mapper",
     "settings_install_dir_label": "Installationsmappe (indstillinger og logs):",
-    "settings_install_dir_note": "For at ændre denne, køt opsætnings-guiden igen, eller redigér bootstrap-filen manuelt.",
+    "settings_install_dir_note": "For at ændre denne, klik på \"Kør opsætnings-guide igen\" nedenfor, eller redigér bootstrap-filen manuelt.",
+    "settings_run_wizard_button": "Kør opsætnings-guide igen",
+    "settings_run_wizard_restart_notice": "Installationsmappen er blevet ændret. Genstart OpenSAK for at ændringen træder i kraft.",
     "settings_db_dir_label": "Databasemappe:",
     "settings_folders_restart_hint": "Ændring af databasemappen kræver genstart af OpenSAK for at træde i kraft.",
     "settings_db_dir_changed_message": "Databasemappen er blevet ændret. Genstart OpenSAK for at ændringen træder i kraft.",
