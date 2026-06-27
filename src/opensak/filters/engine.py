@@ -70,6 +70,89 @@ def haversine_km_batch(lat0: float, lon0: float, lats, lons):
     return R * 2 * np.arctan2(np.sqrt(a), np.sqrt(1 - a))
 
 
+def _vincenty_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """Vincenty WGS84 ellipsoidal distance in kilometres.
+
+    More accurate than Haversine (accounts for the oblate spheroid); the
+    difference is up to ~0.3 % on long distances. Falls back to Haversine
+    when the formula fails to converge (antipodal points).
+    """
+    # WGS84 ellipsoid parameters
+    a = 6378.137          # semi-major axis (km)
+    f = 1 / 298.257223563
+    b = a * (1 - f)       # semi-minor axis (km)
+
+    phi1, phi2 = math.radians(lat1), math.radians(lat2)
+    L = math.radians(lon2 - lon1)
+
+    U1 = math.atan((1 - f) * math.tan(phi1))
+    U2 = math.atan((1 - f) * math.tan(phi2))
+    sU1, cU1 = math.sin(U1), math.cos(U1)
+    sU2, cU2 = math.sin(U2), math.cos(U2)
+
+    lam = L
+    for _ in range(100):
+        sl = math.sin(lam)
+        cl = math.cos(lam)
+        sin_sigma = math.sqrt((cU2 * sl) ** 2 + (cU1 * sU2 - sU1 * cU2 * cl) ** 2)
+        if sin_sigma == 0.0:
+            return 0.0  # coincident points
+        cos_sigma = sU1 * sU2 + cU1 * cU2 * cl
+        sigma = math.atan2(sin_sigma, cos_sigma)
+        sin_alpha = cU1 * cU2 * sl / sin_sigma
+        cos2a = 1 - sin_alpha ** 2
+        cos2sm = (cos_sigma - 2 * sU1 * sU2 / cos2a) if cos2a else 0.0
+        C = f / 16 * cos2a * (4 + f * (4 - 3 * cos2a))
+        lam_prev = lam
+        lam = L + (1 - C) * f * sin_alpha * (
+            sigma + C * sin_sigma * (cos2sm + C * cos_sigma * (-1 + 2 * cos2sm ** 2))
+        )
+        if abs(lam - lam_prev) < 1e-12:
+            break
+    else:
+        return _haversine_km(lat1, lon1, lat2, lon2)  # non-convergence fallback
+
+    u2 = cos2a * (a ** 2 - b ** 2) / b ** 2
+    Av = 1 + u2 / 16384 * (4096 + u2 * (-768 + u2 * (320 - 175 * u2)))
+    Bv = u2 / 1024 * (256 + u2 * (-128 + u2 * (74 - 47 * u2)))
+    ds = Bv * sin_sigma * (
+        cos2sm + Bv / 4 * (
+            cos_sigma * (-1 + 2 * cos2sm ** 2)
+            - Bv / 6 * cos2sm * (-3 + 4 * sin_sigma ** 2) * (-3 + 4 * cos2sm ** 2)
+        )
+    )
+    return b * Av * (sigma - ds)
+
+
+def vincenty_km_batch(lat0: float, lon0: float, lats, lons):
+    """Vincenty WGS84 distance (km) from (lat0, lon0) to each point.
+
+    Vincenty is iterative and does not vectorise cleanly, so this always
+    falls back to a Python loop. The cost is still small because this path
+    only runs once per centre-point change (not on every table refresh).
+    Returns a list of floats.
+    """
+    return [_vincenty_km(lat0, lon0, la, lo) for la, lo in zip(lats, lons)]
+
+
+def distance_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """Scalar distance (km) dispatched by the user's distance_method setting."""
+    from opensak.gui.settings import get_settings
+    from opensak.utils import flags
+    if flags.distance_computation and get_settings().distance_method == "vincenty":
+        return _vincenty_km(lat1, lon1, lat2, lon2)
+    return _haversine_km(lat1, lon1, lat2, lon2)
+
+
+def distance_km_batch(lat0: float, lon0: float, lats, lons):
+    """Batch distance (km) dispatched by the user's distance_method setting."""
+    from opensak.gui.settings import get_settings
+    from opensak.utils import flags
+    if flags.distance_computation and get_settings().distance_method == "vincenty":
+        return vincenty_km_batch(lat0, lon0, lats, lons)
+    return haversine_km_batch(lat0, lon0, lats, lons)
+
+
 # Matches the word "distance" but not substrings like "my_distance".
 _DISTANCE_RE = re.compile(r"\bdistance\b")
 
@@ -1067,14 +1150,13 @@ def _sql_order_expr(field: str):
     reproduces the Python key exactly (COALESCE for the ``x or default``
     fallbacks). Text fields are deliberately excluded — SQLite's lower() is
     ASCII-only and would diverge from Python's Unicode str.lower() on accented
-    values. Derived / model-only fields (distance, bearing, log_count,
-    last_log, corrected, lat/lon) are also excluded and stay in Python.
-
-    The caller must append Cache.id as a final tiebreaker so the SQL order
-    matches Python's *stable* sort (ties keep the id-ascending load order).
+    values. When the distance-computation flag is ON, distance is stored in the
+    DB column and can be ordered in SQL; otherwise it stays in Python.
     """
+    from opensak.utils import flags
     from sqlalchemy import func
-    return {
+    distance_expr = func.coalesce(Cache.distance, 99999.0) if flags.distance_computation else None
+    exprs = {
         # Numeric (mirror "x or 0.0/0/999999")
         "difficulty":      func.coalesce(Cache.difficulty, 0.0),
         "terrain":         func.coalesce(Cache.terrain, 0.0),
@@ -1094,7 +1176,10 @@ def _sql_order_expr(field: str):
         "hidden_date":     Cache.hidden_date,
         "found_date":      Cache.found_date,
         "dnf_date":        Cache.dnf_date,
-    }.get(field)
+        # distance: only sortable in SQL when the DB column is populated
+        "distance":        distance_expr,
+    }
+    return exprs.get(field)
 
 
 @dataclass
@@ -1294,13 +1379,16 @@ def apply_filters(
     if sort is None:
         sort = SortSpec("name", ascending=True)
 
-    # Push ORDER BY into SQL for the safe (numeric/boolean/date) fields. The
+    # Push ORDER BY into SQL for safe (numeric/boolean/date) fields. The
     # Python filter pass below preserves row order, so a SQL-ordered result
     # stays ordered. A trailing Cache.id keeps the order identical to Python's
-    # stable sort (ties retain the id-ascending load order). The distance sort
-    # needs a live reference point, so it always stays in Python.
+    # stable sort (ties retain the id-ascending load order).
+    # When distance-computation flag is ON the DB column is pre-populated so
+    # distance sort is also pushed to SQL via _sql_order_expr; otherwise it
+    # falls back to the Python scalar loop further below.
+    from opensak.utils import flags as _flags
     sql_sorted = False
-    if not (sort.field == "distance" and distance_from):
+    if not (sort.field == "distance" and distance_from and not _flags.distance_computation):
         order_expr = _sql_order_expr(sort.field)
         if order_expr is not None:
             direction = order_expr.asc() if sort.ascending else order_expr.desc()
@@ -1316,8 +1404,9 @@ def apply_filters(
         results = list(all_caches)
 
     # Sort in Python only for fields not handled by SQL above.
+    # Distance stays in Python only when the flag is OFF (legacy path).
     if not sql_sorted:
-        if sort.field == "distance" and distance_from:
+        if sort.field == "distance" and distance_from and not _flags.distance_computation:
             lat, lon = distance_from
             results.sort(
                 key=lambda c: _haversine_km(lat, lon, c.latitude or 0, c.longitude or 0),
