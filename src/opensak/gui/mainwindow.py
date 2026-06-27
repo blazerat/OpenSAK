@@ -891,7 +891,7 @@ class MainWindow(QMainWindow):
         if self._active_filter_name:
             filter_name = self._active_filter_name
         elif len(self._current_filterset) > 0:
-            filter_name = tr("infobar_filter_active")
+            filter_name = tr("infobar_filter_active", count=len(self._current_filterset))
         else:
             filter_name = ""
 
