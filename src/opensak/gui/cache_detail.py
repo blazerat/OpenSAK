@@ -402,7 +402,8 @@ class CacheDetailPanel(QWidget):
             self.corrected_coords_changed.emit(self._current_gc_code)
 
     def eventFilter(self, obj, event) -> bool:
-        if obj is self._note_editor and event.type() == QEvent.Type.FocusOut:
+        note_editor = getattr(self, "_note_editor", None)
+        if note_editor is not None and obj is note_editor and event.type() == QEvent.Type.FocusOut:
             self._save_note()
         return super().eventFilter(obj, event)
 
