@@ -298,6 +298,13 @@ class TestDataRoles:
         assert model.data(type_idx, Qt.ItemDataRole.DecorationRole) is not None
         assert model.data(cont_idx, Qt.ItemDataRole.DecorationRole) is not None
 
+    def test_flag_placeholder_icon_when_unset(self, model):
+        model.load([_cache(user_flag=False), _cache(gc_code="GCB", user_flag=True)])
+        unset_idx = model.index(0, ALL_COLUMNS.index("user_flag"))
+        set_idx   = model.index(1, ALL_COLUMNS.index("user_flag"))
+        assert model.data(unset_idx, Qt.ItemDataRole.DecorationRole) is not None
+        assert model.data(set_idx,   Qt.ItemDataRole.DecorationRole) is None
+
     def test_userrole_returns_cache_and_dict(self, model):
         model.load([_cache(container="Micro", cache_type="Virtual Cache")])
         idx = model.index(0, 0)

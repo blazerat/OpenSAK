@@ -507,3 +507,19 @@ def get_all_type_keys() -> list[str]:
 def get_all_size_keys() -> list[str]:
     """Return sorteret liste af alle kendte cache størrelse nøgler."""
     return sorted(_CACHE_SIZE_SVGS.keys())
+
+
+_FLAG_PLACEHOLDER_SVG = (
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16">'
+    '<line x1="4" y1="2" x2="4" y2="14" stroke="#aaaaaa" stroke-width="1.5"'
+    ' stroke-linecap="round"/>'
+    '<polygon points="4,3 13,6 4,9" fill="none" stroke="#aaaaaa" stroke-width="1"'
+    ' stroke-linejoin="round"/>'
+    '</svg>'
+)
+
+
+@lru_cache(maxsize=8)
+def get_flag_placeholder_icon(size: int = 16) -> QIcon:
+    """Faint outlined flag QIcon shown in the user_flag column when flag is unset."""
+    return QIcon(_svg_to_pixmap(_FLAG_PLACEHOLDER_SVG, size))

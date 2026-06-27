@@ -21,7 +21,7 @@ from opensak.coords import format_coords, format_lat, format_lon, format_lat, fo
 from opensak.lang import tr
 from opensak.utils.types import DateFormat, GcCode, TEXT_SIZE_MAP, TextSize
 from opensak.utils.utils import normalize_geocacher_name
-from opensak.gui.icon_provider import get_cache_type_icon, get_cache_size_icon
+from opensak.gui.icon_provider import get_cache_type_icon, get_cache_size_icon, get_flag_placeholder_icon
 from opensak.gui.dialogs.column_dialog import get_column_widths, set_column_widths, get_container_display
 import math
 
@@ -697,6 +697,8 @@ class CacheTableModel(QAbstractTableModel):
             if get_container_display() == "text":
                 return None
             return get_cache_size_icon(self._size_icon_key(cache), size=20)
+        if col == "user_flag" and not cache.user_flag:
+            return get_flag_placeholder_icon(16)
         return None
 
     @staticmethod
