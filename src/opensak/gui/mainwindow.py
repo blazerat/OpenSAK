@@ -266,6 +266,8 @@ class MainWindow(QMainWindow):
         self._map_widget = MapWidget()
         self._map_widget.cache_selected.connect(self._on_map_cache_selected)
         self._map_widget.set_corrected_requested.connect(self._on_set_corrected_from_map)
+        self._detail_panel.waypoints_tab_shown.connect(self._map_widget.show_waypoint_markers)
+        self._detail_panel.waypoints_tab_hidden.connect(self._map_widget.clear_waypoint_markers)
         self._map_widget.setMinimumWidth(300)
         self._bottom_splitter.addWidget(self._map_widget)
 
