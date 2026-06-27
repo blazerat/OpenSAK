@@ -482,7 +482,7 @@ class CacheDetailPanel(QWidget):
             dnf = getattr(self, "_current_dnf", False)
             pixmap = get_cache_type_pixmap_composite(cache_type, icon_size, found=found, dnf=dnf)
             self._type_icon_lbl.setPixmap(pixmap)
-            self._type_icon_lbl.setFixedSize(icon_size, icon_size)
+            self._type_icon_lbl.setFixedSize(pixmap.width(), pixmap.height())
 
         self._title.update()
 

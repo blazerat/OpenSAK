@@ -672,14 +672,13 @@ class CacheTableModel(QAbstractTableModel):
     def _decoration_value(self, cache: Cache, col: str):
         """Return QIcon for columns that show icons."""
         if col == "cache_type":
-            return get_cache_type_icon(
-                self._type_icon_key(cache),
-                size=24,
-            )
+            icon_size = TEXT_SIZE_MAP[get_settings().text_size]["grid_icon"]
+            return get_cache_type_icon(self._type_icon_key(cache), size=icon_size)
         if col == "container":
             if get_container_display() == "text":
                 return None
-            return get_cache_size_icon(self._size_icon_key(cache), size=20)
+            icon_size = TEXT_SIZE_MAP[get_settings().text_size]["grid_icon"]
+            return get_cache_size_icon(self._size_icon_key(cache), size=icon_size)
         if col == "user_flag" and not cache.user_flag:
             return get_flag_placeholder_icon(16)
         return None
