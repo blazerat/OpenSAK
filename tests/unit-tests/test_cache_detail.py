@@ -9,11 +9,11 @@ pytest.importorskip("pytestqt")
 
 from opensak.gui import cache_detail as cd
 from opensak.gui.cache_detail import CacheDetailPanel
-from opensak.utils.types import DateFormat
+from opensak.utils.types import DateFormat, TEXT_SIZE_MAP, TextSize
 
 
-def _fake_settings(fmt: DateFormat) -> SimpleNamespace:
-    return SimpleNamespace(date_format=fmt)
+def _fake_settings(fmt: DateFormat = DateFormat.DMY, text_size: TextSize = TextSize.MEDIUM) -> SimpleNamespace:
+    return SimpleNamespace(date_format=fmt, text_size=text_size)
 
 
 @pytest.mark.parametrize("fmt, expected", [
@@ -26,6 +26,19 @@ def test_format_date_respects_settings(monkeypatch, qapp, fmt, expected):
     monkeypatch.setattr(cd, "get_settings", lambda: _fake_settings(fmt))
     result = cd._format_date(datetime(2024, 12, 25))
     assert result == expected
+
+
+def test_refresh_sizes_updates_title_font(monkeypatch, qapp):
+    # Regression for #371: text size change in Settings had no effect until a
+    # new cache was selected because _apply_ui_sizes() was never called.
+    monkeypatch.setattr(cd, "get_settings", lambda: _fake_settings(text_size=TextSize.SMALL))
+    panel = CacheDetailPanel()
+    panel.refresh_sizes()
+    assert panel._title.font().pointSize() == TEXT_SIZE_MAP[TextSize.SMALL]["label"]
+
+    monkeypatch.setattr(cd, "get_settings", lambda: _fake_settings(text_size=TextSize.LARGE))
+    panel.refresh_sizes()
+    assert panel._title.font().pointSize() == TEXT_SIZE_MAP[TextSize.LARGE]["label"]
 
 
 def test_decode_no_hint_shows_no_hint_label(qapp):
