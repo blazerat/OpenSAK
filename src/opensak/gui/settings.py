@@ -229,6 +229,21 @@ class AppSettings:
     # ── Units ─────────────────────────────────────────────────────────────────
 
     @property
+    def distance_method(self) -> str:
+        """Distance calculation method — 'haversine' (default) or 'vincenty'.
+
+        Only used when the distance-computation feature flag is ON.
+        Haversine matches Groundspeak's behaviour; Vincenty WGS84 is more
+        accurate (~0.3 % improvement for long distances).
+        """
+        val = get_store().get("computation.distance_method", "haversine")
+        return val if val in ("haversine", "vincenty") else "haversine"
+
+    @distance_method.setter
+    def distance_method(self, value: str) -> None:
+        get_store().set("computation.distance_method", value)
+
+    @property
     def use_miles(self) -> bool:
         val = get_store().get("display.use_miles", False)
         if isinstance(val, bool):

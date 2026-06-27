@@ -321,6 +321,17 @@ STRINGS: dict[str, str] = {
     "update_changelog":              "Zobrazit protokol změn",
     "settings_group_updates":        "Aktualizace",
     "settings_update_check_label":   "Automaticky kontrolovat nové verze při spuštění",
+
+    "settings_group_distance":          "Distance Calculation",
+    "settings_distance_method_label":   "Method:",
+    "settings_distance_haversine":      "Haversine (Groundspeak compatible)",
+    "settings_distance_vincenty":       "Vincenty WGS84 (higher accuracy)",
+    "settings_distance_hint":
+        "Haversine treats the Earth as a sphere (matches Geocaching.com). "
+        "Vincenty uses the WGS84 ellipsoid and is ~0.3 % more accurate on "
+        "long distances. Distances are recalculated whenever the centre point "
+        "changes, not on every table refresh.",
+
     "update_uptodate_title":        "Žádná aktualizace",
     "update_uptodate_msg":          "Používáte nejnovější verzi OpenSAK.",
 

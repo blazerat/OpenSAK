@@ -443,6 +443,29 @@ class SettingsDialog(QDialog):
 
         layout.addWidget(update_group)
 
+        # ── Distance calculation (only when distance-computation flag is ON) ──
+        if flags.distance_computation:
+            dist_group = QGroupBox(tr("settings_group_distance"))
+            dist_layout = QVBoxLayout(dist_group)
+
+            method_row = QHBoxLayout()
+            method_row.addWidget(QLabel(tr("settings_distance_method_label")))
+            self._distance_method_combo: QComboBox | None = QComboBox()
+            self._distance_method_combo.addItem(tr("settings_distance_haversine"), "haversine")
+            self._distance_method_combo.addItem(tr("settings_distance_vincenty"),  "vincenty")
+            method_row.addWidget(self._distance_method_combo)
+            method_row.addStretch()
+            dist_layout.addLayout(method_row)
+
+            dist_hint = QLabel(tr("settings_distance_hint"))
+            dist_hint.setWordWrap(True)
+            dist_hint.setStyleSheet("color: gray; font-size: 10px;")
+            dist_layout.addWidget(dist_hint)
+
+            layout.addWidget(dist_group)
+        else:
+            self._distance_method_combo = None
+
         layout.addStretch()
         return tab
 
@@ -926,6 +949,9 @@ class SettingsDialog(QDialog):
         if self._nominatim_cb is not None:
             self._nominatim_cb.setChecked(s.nominatim_enabled)
         self._update_check_cb.setChecked(s.updates_check_enabled)
+        if self._distance_method_combo is not None:
+            idx = self._distance_method_combo.findData(s.distance_method)
+            self._distance_method_combo.setCurrentIndex(idx if idx >= 0 else 0)
         # Opdater GC-status
         self._refresh_gc_status_on_open()
 
@@ -966,6 +992,8 @@ class SettingsDialog(QDialog):
         if self._nominatim_cb is not None:
             s.nominatim_enabled = self._nominatim_cb.isChecked()
         s.updates_check_enabled = self._update_check_cb.isChecked()
+        if self._distance_method_combo is not None:
+            s.distance_method = self._distance_method_combo.currentData()
         s.sync()
 
         # Database-mappe — kun gem og advar hvis brugeren faktisk har ændret den
