@@ -35,9 +35,9 @@ class TileInterceptor(QWebEngineUrlRequestInterceptor):
 from opensak.gui.icon_provider import get_map_pin_html as _get_pin_html
 
 
-def _cache_pin_html(cache_type: str, found: bool) -> str:
-    """Return Leaflet divIcon HTML for a cache — SVG ikon, smiley hvis fundet."""
-    return _get_pin_html(cache_type, found=found)
+def _cache_pin_html(cache_type: str, found: bool, dnf: bool = False) -> str:
+    """Return Leaflet divIcon HTML for a cache — type icon with gold/blue smiley overlay."""
+    return _get_pin_html(cache_type, found=found, dnf=dnf)
 
 
 # ── Python ↔ JavaScript bro ───────────────────────────────────────────────────
@@ -536,7 +536,7 @@ class MapWidget(QWidget):
                 "clon":           eff_lon,
                 "corrected":      has_corrected,
                 "corrected_label": tr("detail_corrected_coords"),
-                "pin_html":       _cache_pin_html(c.cache_type or "", bool(c.found)),
+                "pin_html":       _cache_pin_html(c.cache_type or "", bool(c.found), bool(c.dnf)),
                 "found":          c.found,
             })
 
@@ -589,7 +589,7 @@ class MapWidget(QWidget):
             "clon":            eff_lon,
             "corrected":       has_corrected,
             "corrected_label": tr("detail_corrected_coords"),
-            "pin_html":        _cache_pin_html(cache.cache_type or "", bool(cache.found)),
+            "pin_html":        _cache_pin_html(cache.cache_type or "", bool(cache.found), bool(cache.dnf)),
             "found":           cache.found,
         }
         json_str = json.dumps(data, ensure_ascii=False)
