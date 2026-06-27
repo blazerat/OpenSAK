@@ -555,14 +555,12 @@ STRINGS: dict[str, str] = {
     "detail_wp_no_coords":          "(Ingen koordinater)",
     "detail_decode_btn":            "🔓  Dekod hint (ROT13)",
     "detail_encode_btn":            "🔒  Kodér hint (ROT13)",
-    "detail_log_search_placeholder":"Søg i logs…",
     "detail_archived_mark":         " [ARKIVERET]",
     "detail_placed_by":             "Udlagt af: {name}",
     "detail_hidden_date":           "Dato: {date}",
     "detail_no_description":        "(Ingen beskrivelse)",
     "detail_no_hint":               "(Intet hint)",
     "detail_no_logs":               "(Ingen logs)",
-    "detail_no_logs_match":         "(Ingen logs matcher '{text}')",
 
     # ── Toolbar ekstra ────────────────────────────────────────────────────────
 

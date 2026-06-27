@@ -559,14 +559,12 @@ STRINGS: dict[str, str] = {
     "detail_wp_no_coords":          "(Geen coördinaten)",
     "detail_decode_btn":            "🔓  Hint decoderen (ROT13)",
     "detail_encode_btn":            "🔒  Hint coderen (ROT13)",
-    "detail_log_search_placeholder":"Zoeken in logs…",
     "detail_archived_mark":         " [GEARCHIVEERD]",
     "detail_placed_by":             "Geplaatst door: {name}",
     "detail_hidden_date":           "Datum: {date}",
     "detail_no_description":        "(Geen beschrijving)",
     "detail_no_hint":               "(Geen hint)",
     "detail_no_logs":               "(Geen logs)",
-    "detail_no_logs_match":         "(Geen logs gevonden voor '{text}')",
 
     # ── Cache table columns ───────────────────────────────────────────────────
     "col_gc_code":      "GC-code",

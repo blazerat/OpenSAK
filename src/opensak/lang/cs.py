@@ -556,14 +556,12 @@ STRINGS: dict[str, str] = {
     "detail_wp_no_coords":          "(Žádné souřadnice)",
     "detail_decode_btn":            "🔓  Dekódovat nápovědu (ROT13)",
     "detail_encode_btn":            "🔒  Kódovat nápovědu (ROT13)",
-    "detail_log_search_placeholder":"Hledat v lozích…",
     "detail_archived_mark":         " [ARCHIVOVÁNO]",
     "detail_placed_by":             "Umístil: {name}",
     "detail_hidden_date":           "Datum: {date}",
     "detail_no_description":        "(Bez popisu)",
     "detail_no_hint":               "(Bez nápovědy)",
     "detail_no_logs":               "(Žádné logy)",
-    "detail_no_logs_match":         "(Žádné logy neodpovídají '{text}')",
 
     # ── Toolbar extras ────────────────────────────────────────────────────────
 

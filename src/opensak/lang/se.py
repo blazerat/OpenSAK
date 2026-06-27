@@ -555,14 +555,12 @@ STRINGS: dict[str, str] = {
     "detail_wp_no_coords":          "(Inga koordinater)",
     "detail_decode_btn":            "🔓  Avkoda ledtråd (ROT13)",
     "detail_encode_btn":            "🔒  Koda ledtråd (ROT13)",
-    "detail_log_search_placeholder":"Sök i loggar…",
     "detail_archived_mark":         " [ARKIVERAD]",
     "detail_placed_by":             "Utlagd av: {name}",
     "detail_hidden_date":           "Datum: {date}",
     "detail_no_description":        "(Ingen beskrivning)",
     "detail_no_hint":               "(Ingen ledtråd)",
     "detail_no_logs":               "(Inga loggar)",
-    "detail_no_logs_match":         "(Inga loggar matchar '{text}')",
 
     # ── Toolbar extras ────────────────────────────────────────────────────────
     

@@ -555,14 +555,12 @@ STRINGS: dict[str, str] = {
     "detail_wp_no_coords":          "(Pas de coordonnées)",
     "detail_decode_btn":            "🔓  Decoder l'indice (ROT13)",
     "detail_encode_btn":            "🔒  Encoder l'indice (ROT13)",
-    "detail_log_search_placeholder":"Rechercher dans les logs…",
     "detail_archived_mark":         " [ARCHIVÉE]",
     "detail_placed_by":             "Placée par: {name}",
     "detail_hidden_date":           "Date: {date}",
     "detail_no_description":        "(Aucune description)",
     "detail_no_hint":               "(Aucun indice)",
     "detail_no_logs":               "(Aucun log)",
-    "detail_no_logs_match":         "(Aucun log ne correspond à '{text}')",
 
     # ── Toolbar extras ────────────────────────────────────────────────────────
 
