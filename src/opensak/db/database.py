@@ -62,7 +62,7 @@ _migrated_paths: set = set()  # undgår at køre migrationer to gange på samme 
 # bumped to the highest migration number whenever a new migration is added
 # below — _run_migrations() skips the whole block when the database already
 # reports this version, so a stale constant means new migrations never run.
-SCHEMA_VERSION = 13
+SCHEMA_VERSION = 14
 
 
 def init_db(db_path: Path | None = None) -> Engine:
@@ -436,6 +436,26 @@ def _run_migrations(engine: Engine) -> None:
             """))
             conn.commit()
             print("Migration: tilføjede waypoints.parent_gc_code")
+
+        # ── Migration 14: waypoint_count on caches (issue #377) ──────────────
+        # Cached count of child waypoints so the grid can show a visual cue
+        # without loading the noload'ed waypoints relationship.
+        existing_caches_14 = [
+            row[1]
+            for row in conn.execute(text("PRAGMA table_info(caches)")).fetchall()
+        ]
+        if "waypoint_count" not in existing_caches_14:
+            conn.execute(text(
+                "ALTER TABLE caches ADD COLUMN waypoint_count INTEGER NOT NULL DEFAULT 0"
+            ))
+            conn.execute(text("""
+                UPDATE caches
+                SET waypoint_count = (
+                    SELECT COUNT(*) FROM waypoints WHERE waypoints.cache_id = caches.id
+                )
+            """))
+            conn.commit()
+            print("Migration: tilføjede caches.waypoint_count")
 
         # ── Stamp the schema version so the next launch skips the probes ─────
         # PRAGMA does not accept bind parameters; SCHEMA_VERSION is a trusted

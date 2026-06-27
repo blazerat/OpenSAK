@@ -132,6 +132,12 @@ class Cache(Base):
     # without loading the noload'ed logs relationship. Updated on import.
     last_log_date: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
+    # ── Issue #377: Cached waypoint count ────────────────────────────────────
+    # Number of child waypoints (parking, stages, etc.), cached so the grid
+    # can show a visual cue without loading the noload'ed waypoints relation.
+    # Updated on import in _insert_extra_wpts() and _link_extra_waypoints().
+    waypoint_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+
     # Custom waypoint link (issue #141)
     # For CW... entries: optionally links to a parent geocache's gc_code.
     # NULL for all real geocaches imported from GPX/PQ.

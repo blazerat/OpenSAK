@@ -601,6 +601,8 @@ class CacheTableModel(QAbstractTableModel):
             font.setPointSize(TEXT_SIZE_MAP[text_size]["grid"])
             if cache.found:
                 font.setItalic(True)
+            if col == "name" and (cache.waypoint_count or 0) > 0:
+                font.setBold(True)
             return font
 
         if role == Qt.ItemDataRole.ToolTipRole:

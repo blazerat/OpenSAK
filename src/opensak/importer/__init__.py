@@ -582,6 +582,21 @@ def _insert_extra_wpts(session: Session, extra_wpts: list, commit_every: int = 5
             session.expunge_all()
 
     session.commit()
+
+    # Refresh waypoint_count for every affected cache in one SQL pass.
+    if target_ids:
+        for i in range(0, len(target_ids), 500):
+            chunk = target_ids[i:i + 500]
+            placeholders = ", ".join(str(cid) for cid in chunk)
+            session.execute(_sa_text(f"""
+                UPDATE caches
+                SET waypoint_count = (
+                    SELECT COUNT(*) FROM waypoints WHERE waypoints.cache_id = caches.id
+                )
+                WHERE id IN ({placeholders})
+            """))
+        session.commit()
+
     return count
 
 
@@ -734,6 +749,7 @@ def _upsert_cache(
         session.query(Attribute).filter_by(cache_id=cache.id).delete(synchronize_session=False)
         session.query(Trackable).filter_by(cache_id=cache.id).delete(synchronize_session=False)
         session.query(Waypoint).filter_by(cache_id=cache.id).delete(synchronize_session=False)
+        cache.waypoint_count = 0
         session.flush()
 
     # Scalar fields
@@ -1123,6 +1139,23 @@ def _link_extra_waypoints(
                 longitude=wp["longitude"],
             ))
             count += 1
+
+    # Refresh waypoint_count for every matched cache in one SQL pass.
+    # flush() is required because autoflush=False; the subquery must see the
+    # newly added Waypoint rows before the UPDATE executes.
+    if target_ids:
+        session.flush()
+        for i in range(0, len(target_ids), 500):
+            chunk = target_ids[i:i + 500]
+            placeholders = ", ".join(str(cid) for cid in chunk)
+            session.execute(_sa_text(f"""
+                UPDATE caches
+                SET waypoint_count = (
+                    SELECT COUNT(*) FROM waypoints WHERE waypoints.cache_id = caches.id
+                )
+                WHERE id IN ({placeholders})
+            """))
+        session.commit()
 
     return count
 

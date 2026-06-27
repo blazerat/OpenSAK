@@ -132,6 +132,44 @@ def test_import_with_companion_wpts(tmp_db, gpx_file, wpts_file):
         assert wp.parent_gc_code == "GC12345"
 
 
+def test_waypoint_count_set_after_companion_import(tmp_db, gpx_file, wpts_file):
+    # waypoint_count on the Cache row must reflect companion waypoints after import.
+    with get_session() as s:
+        import_gpx(gpx_file, s, wpts_path=wpts_file)
+
+    with get_session() as s:
+        cache = s.query(Cache).filter_by(gc_code="GC12345").one()
+        assert cache.waypoint_count == 1
+        no_wpts = s.query(Cache).filter_by(gc_code="GC99999").one()
+        assert no_wpts.waypoint_count == 0
+
+
+def test_waypoint_count_set_after_inline_import(tmp_db, tmp_path):
+    # waypoint_count must be set when waypoints are embedded in the same GPX.
+    gpx = write_gpx(tmp_path, "inline.gpx", make_gpx_with_inline_wpt())
+    import_gpx(gpx)
+
+    with get_session() as s:
+        cache = s.query(Cache).filter_by(gc_code="GC12345").one()
+        assert cache.waypoint_count == 1
+
+
+def test_waypoint_count_reset_on_reimport_without_wpts(tmp_db, gpx_file, wpts_file, tmp_path):
+    # Re-importing a cache without waypoints must zero out waypoint_count.
+    with get_session() as s:
+        import_gpx(gpx_file, s, wpts_path=wpts_file)
+
+    with get_session() as s:
+        assert s.query(Cache).filter_by(gc_code="GC12345").one().waypoint_count == 1
+
+    # Re-import the same GPX without the companion file.
+    with get_session() as s:
+        import_gpx(gpx_file, s)
+
+    with get_session() as s:
+        assert s.query(Cache).filter_by(gc_code="GC12345").one().waypoint_count == 0
+
+
 # ── ZIP import tests ──────────────────────────────────────────────────────────
 
 def test_import_zip(tmp_db, zip_file):

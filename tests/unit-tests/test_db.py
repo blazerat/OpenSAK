@@ -455,3 +455,37 @@ class TestLocationProvenanceColumns:
             assert "parent_gc_code" in wpt_cols, "migration 13 did not add waypoints.parent_gc_code"
             gc = con.execute("SELECT parent_gc_code FROM waypoints LIMIT 1").fetchone()[0]
             assert gc == "GCTEST1", f"back-fill failed: got {gc!r}"
+
+    def test_migration_14_adds_waypoint_count_to_caches(self, tmp_path):
+        # Create a v14 DB, drop waypoint_count, rewind to v13, re-run init_db —
+        # migration 14 must add the column and back-fill it from waypoints.
+        import sqlite3 as _sql
+        from opensak.db.database import _migrated_paths
+        from opensak.db.models import Cache, Waypoint
+
+        db_file = tmp_path / "m14.db"
+        _migrated_paths.discard(db_file)
+        init_db(db_path=db_file)
+
+        from opensak.db.database import get_session
+        with get_session() as s:
+            cache = Cache(gc_code="GCWPT01", name="Test", cache_type="Traditional Cache",
+                          latitude=55.0, longitude=12.0)
+            s.add(cache)
+            s.flush()
+            s.add(Waypoint(cache_id=cache.id, parent_gc_code="GCWPT01",
+                           prefix="PK", wp_type="Parking Area"))
+            s.commit()
+
+        with _sql.connect(db_file) as con:
+            con.execute("ALTER TABLE caches DROP COLUMN waypoint_count")
+            con.execute("PRAGMA user_version = 13")
+
+        _migrated_paths.discard(db_file)
+        init_db(db_path=db_file)
+
+        with _sql.connect(db_file) as con:
+            cache_cols = {row[1] for row in con.execute("PRAGMA table_info(caches)").fetchall()}
+            assert "waypoint_count" in cache_cols, "migration 14 did not add caches.waypoint_count"
+            cnt = con.execute("SELECT waypoint_count FROM caches WHERE gc_code='GCWPT01'").fetchone()[0]
+            assert cnt == 1, f"back-fill failed: got {cnt!r}"

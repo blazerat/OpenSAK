@@ -297,6 +297,30 @@ class TestDataRoles:
         assert font.italic()
         assert font.pointSize() == TEXT_SIZE_MAP[TextSize.LARGE]["grid"]
 
+    def test_font_role_bold_name_when_has_waypoints(self, model):
+        # Name column must be bold when waypoint_count > 0.
+        c = _cache(waypoint_count=2)
+        model.load([c])
+        name_col = ALL_COLUMNS.index("name")
+        font = model.data(model.index(0, name_col), Qt.ItemDataRole.FontRole)
+        assert font is not None and font.bold()
+
+    def test_font_role_no_bold_name_without_waypoints(self, model):
+        # Name column must not be bold when waypoint_count == 0.
+        c = _cache(waypoint_count=0)
+        model.load([c])
+        name_col = ALL_COLUMNS.index("name")
+        font = model.data(model.index(0, name_col), Qt.ItemDataRole.FontRole)
+        assert font is not None and not font.bold()
+
+    def test_font_role_other_col_not_bold_with_waypoints(self, model):
+        # Non-name columns must not be bold even when waypoints exist.
+        c = _cache(waypoint_count=3)
+        model.load([c])
+        gc_col = ALL_COLUMNS.index("gc_code")
+        font = model.data(model.index(0, gc_col), Qt.ItemDataRole.FontRole)
+        assert font is not None and not font.bold()
+
     def test_tooltip_cache_type(self, model):
         model.load([_cache(cache_type="Unknown Cache")])
         tip = model.data(model.index(0, ALL_COLUMNS.index("cache_type")),
