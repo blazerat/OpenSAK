@@ -1204,6 +1204,15 @@ def _parse_gpx_to_data(
     return caches, extra_wpts, companion_data, errors
 
 
+def _count_wpts(gpx_path: Path) -> int:
+    count = 0
+    for _, elem in etree.iterparse(str(gpx_path), events=("end",)):
+        if etree.QName(elem).localname == "wpt":
+            count += 1
+        elem.clear()
+    return count
+
+
 def import_gpx(
     gpx_path: Path,
     session: Session | None = None,
