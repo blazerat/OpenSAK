@@ -6,7 +6,6 @@ Files are imported sequentially in a background thread.
 """
 
 from __future__ import annotations
-from collections.abc import Callable
 from pathlib import Path
 
 from PySide6.QtCore import Qt, QThread, Signal
@@ -60,26 +59,27 @@ class ImportWorker(QThread):
                 self.file_started.emit(i, path.name)
                 try:
                     import_type: ImportType = get_import_type(path)
-                    importers: dict[ImportType, Callable] = {
-                        ImportType.GPX: import_gpx,
-                        ImportType.ZIP: import_zip,
-                    }
-                    import_func = importers[import_type]
 
                     if import_type == ImportType.GPX:
                         try:
                             self.total.emit(_count_wpts(path))
                         except Exception:
                             self.total.emit(-1)
+                        wpts_candidate = path.parent / f"{path.stem}-wpts.gpx"
+                        wpts_path = wpts_candidate if wpts_candidate.exists() else None
+                        with get_session() as session:
+                            result = import_gpx(
+                                path, session,
+                                wpts_path=wpts_path,
+                                progress_cb=self.progress.emit,
+                            )
                     else:
                         self.total.emit(-1)
-
-                    with get_session() as session:
-                        result = import_func(
-                            path,
-                            session,
-                            progress_cb=self.progress.emit
-                        )
+                        with get_session() as session:
+                            result = import_zip(
+                                path, session,
+                                progress_cb=self.progress.emit,
+                            )
 
                     self.file_finished.emit(i, result)
 
