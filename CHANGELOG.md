@@ -8,12 +8,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
-## [1.14.0-beta.16] — 2026-06-29
+## [1.14.0-beta.17] — 2026-06-29
 
-> **Beta release** — continuing the 1.14.0 testing period. Supersedes the
-> `v1.14.0-beta.15` tag, which was cut from a commit where `__init__.py` had
-> not actually been bumped yet (see Notes) and never got a published release
-> as a result.
+> **Beta release** — continuing the 1.14.0 testing period. Supersedes both
+> `v1.14.0-beta.15` and `v1.14.0-beta.16`, neither of which got a published
+> release (see Notes for why).
 
 ### Added
 
@@ -166,9 +165,14 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   `site/user-guide.html` already claimed beta.15. That mismatch is what made
   `test_user_guide_changelog_link_pins_to_release_tag` fail across every CI
   matrix leg. `__init__.py` has since been corrected on `beta`, the full
-  pipeline is green, and this entry (beta.16) is the one that actually ships.
-  No public GitHub Release was ever published for beta.15, so nothing
-  user-facing needs correcting.
+  pipeline is green.
+- The `v1.14.0-beta.16` tag is *also* void, for the same class of bug in a
+  different spot: `site/user-guide.html` hardcodes its version label in five
+  places, and the beta.16 release commit bumped `__init__.py` without
+  updating them, so they still said beta.15. Same test, same failure mode,
+  second occurrence. Fixed on `beta`; this entry (beta.17) is the one that
+  actually ships. No public GitHub Release was published for either dead
+  tag, so nothing user-facing needs correcting.
 - 11 unused translation keys were removed (#397) after a new CI test started
   detecting language keys with no remaining source reference — this should
   keep the language files from quietly accumulating dead entries going forward.
