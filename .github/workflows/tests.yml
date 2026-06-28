@@ -34,7 +34,7 @@ jobs:
       - name: Run unit tests
         env:
           QT_QPA_PLATFORM: offscreen
-        run: pytest tests/unit-tests -v --cov=opensak --cov-report=term-missing
+        run: pytest tests/unit-tests -v --cov=opensak --cov-report=term-missing --cov-fail-under=80
 
   e2e-tests:
     needs: unit-tests
