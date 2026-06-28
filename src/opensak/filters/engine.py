@@ -1199,6 +1199,30 @@ class FilterSet:
 
 # ── Sort spec ─────────────────────────────────────────────────────────────────
 
+# Logical container sort: physical sizes first (micro→large), then non-physical
+# types (earthcache/lab/virtual), then empty/not-chosen. Mirrors _container_sort_key
+# in gui/cache_table.py — both must be kept in sync.
+_CONTAINER_PHYSICAL_ORDER = {"micro": 1, "small": 2, "regular": 3, "large": 4}
+_NON_PHYSICAL_TYPES = {
+    "earthcache": "E", "lab cache": "V",
+    "virtual cache": "V", "locationless (reverse) cache": "R",
+}
+_EMPTY_CONTAINERS = {"", "not chosen"}
+
+
+def _container_sort_key(c) -> tuple:
+    ct = (c.cache_type or "").strip().lower()
+    letter = _NON_PHYSICAL_TYPES.get(ct)
+    if letter is not None:
+        return (2, letter)
+    key = (c.container or "").strip().lower()
+    if key in _CONTAINER_PHYSICAL_ORDER:
+        return (1, _CONTAINER_PHYSICAL_ORDER[key])
+    if key in _EMPTY_CONTAINERS:
+        return (3, "")
+    return (2, "O")
+
+
 # Valid sort fields and how to extract the sort key from a Cache object
 SORT_FIELDS: dict[str, Any] = {
     "name":            lambda c: (c.name or "").lower(),
@@ -1211,7 +1235,7 @@ SORT_FIELDS: dict[str, Any] = {
     "state":           lambda c: (c.state or "").lower(),
     "county":          lambda c: (c.county or "").lower(),
     "placed_by":       lambda c: (c.placed_by or "").lower(),
-    "container":       lambda c: (c.container or "").lower(),
+    "container":       _container_sort_key,
     "found":           lambda c: int(c.found),
     "archived":        lambda c: int(c.archived),
     # Kolonner sorteret i CacheTableModel — accepteres af SortSpec men bruges
