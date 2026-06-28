@@ -572,6 +572,7 @@ STRINGS: dict[str, str] = {
     "detail_tab_waypoints":         "Waypoints",
     "detail_tab_waypoints_count":   "Waypoints ({count})",
     "detail_no_waypoints":          "(No child waypoints)",
+    "detail_no_attrs":              "(No attributes)",
     "detail_tab_notes":             "Notes",
     "detail_note_placeholder":      "Add a personal note for this cache…",
     "detail_wp_no_coords":          "(No coordinates)",
