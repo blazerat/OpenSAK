@@ -398,11 +398,23 @@ def _fake_attr(name, is_on=True, attribute_id=1):
 
 
 def test_attrs_tab_empty(monkeypatch, qapp):
-    # Regression for #417: cache with no attributes shows the empty message.
+    # Regression for #417: cache with no attributes shows the empty message and base tab title.
     monkeypatch.setattr(cd, "get_settings", lambda: _fake_settings())
     panel = CacheDetailPanel()
     panel._render_attributes(SimpleNamespace(attributes=[]))
     assert tr("detail_no_attrs") in panel._attr_browser.toPlainText()
+    assert panel._tabs.tabText(4) == tr("filter_tab_attributes")
+
+
+def test_attrs_tab_count_in_title(monkeypatch, qapp):
+    # Regression for #417: tab title shows count when attributes are present.
+    monkeypatch.setattr(cd, "get_settings", lambda: _fake_settings())
+    panel = CacheDetailPanel()
+    panel._render_attributes(SimpleNamespace(attributes=[
+        _fake_attr("Dogs allowed", attribute_id=1),
+        _fake_attr("Kids", is_on=False, attribute_id=2),
+    ]))
+    assert panel._tabs.tabText(4) == tr("detail_tab_attrs_count", count=2)
 
 
 def test_attrs_tab_renders_yes_attribute(monkeypatch, qapp):
@@ -426,9 +438,11 @@ def test_attrs_tab_renders_no_attribute(monkeypatch, qapp):
 
 
 def test_attrs_tab_cleared_on_clear(monkeypatch, qapp):
-    # Regression for #417: clear() resets the attributes browser.
+    # Regression for #417: clear() resets the attributes browser and tab title.
     monkeypatch.setattr(cd, "get_settings", lambda: _fake_settings())
     panel = CacheDetailPanel()
     panel._render_attributes(SimpleNamespace(attributes=[_fake_attr("Dogs allowed")]))
+    assert panel._tabs.tabText(4) == tr("detail_tab_attrs_count", count=1)
     panel.clear()
     assert panel._attr_browser.toPlainText() == ""
+    assert panel._tabs.tabText(4) == tr("filter_tab_attributes")

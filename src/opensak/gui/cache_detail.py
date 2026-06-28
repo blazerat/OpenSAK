@@ -507,6 +507,7 @@ class CacheDetailPanel(QWidget):
         self._wp_browser.setPlainText("")
         self._note_editor.setPlainText("")
         self._tabs.setTabText(3, tr("detail_tab_waypoints"))
+        self._tabs.setTabText(4, tr("filter_tab_attributes"))
         self._hint_plain = ""
         self._hint_cipher = ""
         self._hint_decoded = False
@@ -700,9 +701,12 @@ class CacheDetailPanel(QWidget):
 
     def _render_attributes(self, cache: Cache) -> None:
         attrs = sorted(cache.attributes, key=lambda a: (not a.is_on, a.name or ""))
+        tab_idx = 4
         if not attrs:
+            self._tabs.setTabText(tab_idx, tr("filter_tab_attributes"))
             self._attr_browser.setPlainText(tr("detail_no_attrs"))
             return
+        self._tabs.setTabText(tab_idx, tr("detail_tab_attrs_count", count=len(attrs)))
         html = []
         for attr in attrs:
             symbol = "✓" if attr.is_on else "✗"
