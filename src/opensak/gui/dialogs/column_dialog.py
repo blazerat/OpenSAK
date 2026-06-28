@@ -23,7 +23,7 @@ _ALL_COLUMNS_DEF = [
     ("user_flag",    "col_user_flag_label",    30,  True),
     ("gc_code",      "col_gc_code",      80,  True),
     ("name",         "col_name",        260,  True),
-    ("cache_type",   "col_type",          28,  True),   # ikon + tooltip, ingen tekst
+    ("cache_type",   "col_type",          40,  True),   # ikon + tooltip, ingen tekst
     ("container",    "col_container",    80,  True),   # størrelses-bar
     ("difficulty",   "col_difficulty",   36,  True),
     ("terrain",      "col_terrain",      36,  True),
