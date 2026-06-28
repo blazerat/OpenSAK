@@ -15,6 +15,7 @@ from opensak.gui import cache_table as ct
 from opensak.gui.cache_table import (
     CacheTableModel,
     CacheTableView,
+    CacheTypeDelegate,
     SizeBarDelegate,
     GcCodeDelegate,
     _bearing_deg,
@@ -114,6 +115,16 @@ class TestHelpers:
         assert _container_text("other", "EarthCache")    == "Earth"
         assert _container_text("other", "Lab Cache")     == "Virtual"
 
+    def test_type_text_passthrough(self):
+        from opensak.gui.cache_table import _type_text
+        assert _type_text("Traditional Cache") == "Traditional Cache"
+        assert _type_text("Multi-cache")       == "Multi-cache"
+        assert _type_text(None)                == ""
+
+    def test_type_text_normalises_unknown(self):
+        from opensak.gui.cache_table import _type_text
+        assert _type_text("Unknown Cache") == "Mystery Cache"
+
 
 # ── model basics ────────────────────────────────────────────────────────────────
 
@@ -182,6 +193,22 @@ class TestDisplayValues:
         # behind the first bar segment via super().paint().
         monkeypatch.setattr(ct, "get_container_display", lambda: "bar")
         assert model._decoration_value(_cache(container="micro"), "container") is None
+
+    def test_type_icon_mode_no_text(self, model, monkeypatch):
+        monkeypatch.setattr(ct, "get_type_display", lambda: "icon")
+        assert model._display_value(_cache(cache_type="Traditional Cache"), "cache_type") == ""
+
+    def test_type_text_mode_shows_text_no_icon(self, model, monkeypatch):
+        monkeypatch.setattr(ct, "get_type_display", lambda: "text")
+        assert model._display_value(_cache(cache_type="Traditional Cache"), "cache_type") == "Traditional Cache"
+        assert model._display_value(_cache(cache_type="Unknown Cache"),     "cache_type") == "Mystery Cache"
+        assert model._display_value(_cache(cache_type=None),                "cache_type") == ""
+        assert model._decoration_value(_cache(cache_type="Traditional Cache"), "cache_type") is None
+
+    def test_type_both_mode_shows_text_and_icon(self, model, monkeypatch):
+        monkeypatch.setattr(ct, "get_type_display", lambda: "both")
+        assert model._display_value(_cache(cache_type="Multi-cache"), "cache_type") == "Multi-cache"
+        assert model._decoration_value(_cache(cache_type="Multi-cache"), "cache_type") is not None
 
     def test_difficulty_terrain(self, model):
         assert model._display_value(_cache(difficulty=2.5), "difficulty") == "2.5"
@@ -544,6 +571,22 @@ class TestDelegates:
         delegate.paint(painter, opt, idx)
         painter.end()
 
+    def test_cache_type_delegate_paints_icon_mode(self, model, monkeypatch):
+        monkeypatch.setattr(ct, "get_type_display", lambda: "icon")
+        model.load([_cache(cache_type="Traditional Cache")])
+        self._paint(CacheTypeDelegate(), model, "cache_type")
+        self._paint(CacheTypeDelegate(), model, "cache_type", selected=True)
+
+    def test_cache_type_delegate_falls_back_in_text_mode(self, model, monkeypatch):
+        monkeypatch.setattr(ct, "get_type_display", lambda: "text")
+        model.load([_cache(cache_type="Traditional Cache")])
+        self._paint(CacheTypeDelegate(), model, "cache_type")
+
+    def test_cache_type_delegate_falls_back_in_both_mode(self, model, monkeypatch):
+        monkeypatch.setattr(ct, "get_type_display", lambda: "both")
+        model.load([_cache(cache_type="Traditional Cache")])
+        self._paint(CacheTypeDelegate(), model, "cache_type")
+
     def test_size_bar_delegate_paints_physical(self, model):
         model.load([_cache(container="small", cache_type="traditional cache")])
         d = SizeBarDelegate()
@@ -687,11 +730,13 @@ def view(monkeypatch, qtbot):
 
 class TestView:
     def test_construction_sets_delegates(self, view):
-        # container + gc_code columns get custom delegates
+        # container + gc_code + cache_type columns get custom delegates
         assert isinstance(view.itemDelegateForColumn(ALL_COLUMNS.index("container")),
                           SizeBarDelegate)
         assert isinstance(view.itemDelegateForColumn(ALL_COLUMNS.index("gc_code")),
                           GcCodeDelegate)
+        assert isinstance(view.itemDelegateForColumn(ALL_COLUMNS.index("cache_type")),
+                          CacheTypeDelegate)
 
     def test_load_and_counts(self, view):
         view.load_caches([_cache(gc_code="A"), _cache(gc_code="B", user_flag=True)])

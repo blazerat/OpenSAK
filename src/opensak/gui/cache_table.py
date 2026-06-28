@@ -22,7 +22,7 @@ from opensak.lang import tr
 from opensak.utils.types import DateFormat, GcCode, TEXT_SIZE_MAP, TextSize, norm_locale_date_fmt
 from opensak.utils.utils import normalize_geocacher_name
 from opensak.gui.icon_provider import get_cache_type_icon, get_flag_placeholder_icon
-from opensak.gui.dialogs.column_dialog import get_column_widths, set_column_widths, get_container_display
+from opensak.gui.dialogs.column_dialog import get_column_widths, set_column_widths, get_container_display, get_type_display
 import math
 
 
@@ -217,6 +217,10 @@ def _container_text(container: str | None, cache_type: str | None) -> str:
     return _CONTAINER_TEXT_LABELS.get(size_key, (container or "").title())
 
 
+def _type_text(cache_type: str | None) -> str:
+    return (cache_type or "").replace("Unknown", "Mystery")
+
+
 def _container_sort_key(container: str | None, cache_type: str | None = None) -> tuple:
     """Return sort key tuple for the Container column.
 
@@ -259,6 +263,41 @@ def _container_sort_key(container: str | None, cache_type: str | None = None) ->
 from PySide6.QtWidgets import QStyledItemDelegate, QApplication
 from PySide6.QtGui import QPainter, QColor
 from PySide6.QtCore import QRect
+
+
+class CacheTypeDelegate(QStyledItemDelegate):
+    """Centers the cache-type icon in the column (icon-only mode).
+
+    In 'text' and 'both' modes the default delegate handles rendering;
+    this delegate only kicks in for 'icon' mode where Qt's default would
+    left-align the decoration inside the content rect.
+    """
+
+    def paint(self, painter: QPainter, option, index) -> None:
+        if get_type_display() != "icon":
+            super().paint(painter, option, index)
+            return
+
+        raw = index.data(Qt.ItemDataRole.DecorationRole)
+        if not raw:
+            super().paint(painter, option, index)
+            return
+
+        from PySide6.QtWidgets import QStyle
+        from PySide6.QtGui import QIcon, QPixmap
+        if isinstance(raw, QPixmap):
+            icon = QIcon(raw)
+        elif isinstance(raw, QIcon):
+            icon = raw
+        else:
+            super().paint(painter, option, index)
+            return
+
+        painter.save()
+        style = option.widget.style() if option.widget else QApplication.style()
+        style.drawPrimitive(QStyle.PrimitiveElement.PE_PanelItemViewItem, option, painter, option.widget)
+        icon.paint(painter, option.rect, Qt.AlignmentFlag.AlignCenter)
+        painter.restore()
 
 
 class SizeBarDelegate(QStyledItemDelegate):
@@ -658,6 +697,8 @@ class CacheTableModel(QAbstractTableModel):
     def _decoration_value(self, cache: Cache, col: str):
         """Return QIcon for columns that show icons."""
         if col == "cache_type":
+            if get_type_display() == "text":
+                return None
             icon_size = TEXT_SIZE_MAP[get_settings().text_size]["grid_icon"]
             return get_cache_type_icon(self._type_icon_key(cache), size=icon_size)
         if col == "container":
@@ -690,7 +731,9 @@ class CacheTableModel(QAbstractTableModel):
         if col == "name":
             return cache.name or ""
         if col == "cache_type":
-            return ""   # ikon vises via DecorationRole — fuldt navn i tooltip
+            if get_type_display() in ("text", "both"):
+                return _type_text(cache.cache_type)
+            return ""  # icon-only: DecorationRole, full name in tooltip
         if col == "difficulty":
             return f"{cache.difficulty:.1f}" if cache.difficulty else "?"
         if col == "terrain":
@@ -966,6 +1009,9 @@ class CacheTableView(QTableView):
                         sizes = TEXT_SIZE_MAP[text_size]
                         self._size_bar_delegate.set_icon_size(sizes["icon"])
                         self.setItemDelegateForColumn(i, self._size_bar_delegate)
+                elif col_id == "cache_type":
+                    self._cache_type_delegate = CacheTypeDelegate(self)
+                    self.setItemDelegateForColumn(i, self._cache_type_delegate)
                 elif col_id == "gc_code":
                     self._gc_code_delegate = GcCodeDelegate(self)
                     self.setItemDelegateForColumn(i, self._gc_code_delegate)
