@@ -247,11 +247,18 @@ def _minimal_gpx(gsak_ext: str = "") -> str:
     """)
 
 
-def test_notes_tab_exists_at_index_4(monkeypatch, qapp):
-    # The Notes tab must be the fifth tab (index 4).
+def test_attrs_tab_exists_at_index_4(monkeypatch, qapp):
+    # Regression for #417: Attributes tab is the fifth tab (index 4).
     monkeypatch.setattr(cd, "get_settings", lambda: _fake_settings())
     panel = CacheDetailPanel()
-    assert panel._tabs.tabText(4) == tr("detail_tab_notes")
+    assert panel._tabs.tabText(4) == tr("filter_tab_attributes")
+
+
+def test_notes_tab_exists_at_index_5(monkeypatch, qapp):
+    # Notes tab shifted to index 5 when Attributes tab was added (#417).
+    monkeypatch.setattr(cd, "get_settings", lambda: _fake_settings())
+    panel = CacheDetailPanel()
+    assert panel._tabs.tabText(5) == tr("detail_tab_notes")
 
 
 def test_notes_tab_loads_existing_note(monkeypatch, tmp_path, qapp):
@@ -275,6 +282,7 @@ def test_notes_tab_loads_existing_note(monkeypatch, tmp_path, qapp):
                 joinedload(CacheModel.user_note),
                 joinedload(CacheModel.logs),
                 joinedload(CacheModel.waypoints),
+                joinedload(CacheModel.attributes),
             )
             .filter_by(gc_code="GCNOTES1")
             .one()
@@ -302,6 +310,7 @@ def test_notes_tab_save_roundtrip(monkeypatch, tmp_path, qapp):
                 joinedload(CacheModel.user_note),
                 joinedload(CacheModel.logs),
                 joinedload(CacheModel.waypoints),
+                joinedload(CacheModel.attributes),
             )
             .filter_by(gc_code="GCNOTES1")
             .one()
@@ -347,6 +356,7 @@ def _load_cache(tmp_path, db_suffix="icon"):
                 joinedload(CacheModel.user_note),
                 joinedload(CacheModel.logs),
                 joinedload(CacheModel.waypoints),
+                joinedload(CacheModel.attributes),
             )
             .filter_by(gc_code="GCNOTES1")
             .one()
@@ -379,3 +389,46 @@ def test_type_icon_resizes_on_refresh(monkeypatch, tmp_path, qapp):
     monkeypatch.setattr(cd, "get_settings", lambda: _fake_settings(text_size=TextSize.LARGE))
     panel.refresh_sizes()
     assert panel._type_icon_lbl.width() == TEXT_SIZE_MAP[TextSize.LARGE]["detail_icon"]
+
+
+# ── Attributes tab tests (issue #417) ────────────────────────────────────────
+
+def _fake_attr(name, is_on=True, attribute_id=1):
+    return SimpleNamespace(attribute_id=attribute_id, name=name, is_on=is_on)
+
+
+def test_attrs_tab_empty(monkeypatch, qapp):
+    # Regression for #417: cache with no attributes shows the empty message.
+    monkeypatch.setattr(cd, "get_settings", lambda: _fake_settings())
+    panel = CacheDetailPanel()
+    panel._render_attributes(SimpleNamespace(attributes=[]))
+    assert tr("detail_no_attrs") in panel._attr_browser.toPlainText()
+
+
+def test_attrs_tab_renders_yes_attribute(monkeypatch, qapp):
+    # Regression for #417: is_on=True attribute is shown with a check mark.
+    monkeypatch.setattr(cd, "get_settings", lambda: _fake_settings())
+    panel = CacheDetailPanel()
+    panel._render_attributes(SimpleNamespace(attributes=[_fake_attr("Dogs allowed", is_on=True)]))
+    html = panel._attr_browser.toHtml()
+    assert "Dogs allowed" in html
+    assert "✓" in html
+
+
+def test_attrs_tab_renders_no_attribute(monkeypatch, qapp):
+    # Regression for #417: is_on=False attribute is shown with a cross mark.
+    monkeypatch.setattr(cd, "get_settings", lambda: _fake_settings())
+    panel = CacheDetailPanel()
+    panel._render_attributes(SimpleNamespace(attributes=[_fake_attr("Dogs allowed", is_on=False)]))
+    html = panel._attr_browser.toHtml()
+    assert "Dogs allowed" in html
+    assert "✗" in html
+
+
+def test_attrs_tab_cleared_on_clear(monkeypatch, qapp):
+    # Regression for #417: clear() resets the attributes browser.
+    monkeypatch.setattr(cd, "get_settings", lambda: _fake_settings())
+    panel = CacheDetailPanel()
+    panel._render_attributes(SimpleNamespace(attributes=[_fake_attr("Dogs allowed")]))
+    panel.clear()
+    assert panel._attr_browser.toPlainText() == ""
