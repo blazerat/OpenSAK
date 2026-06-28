@@ -306,6 +306,34 @@ def test_import_zip_companion_detected_by_content_not_name(tmp_db, tmp_path):
         assert any(wp.prefix == "PK" for wp in cache.waypoints)
 
 
+def test_parse_extra_waypoints_handles_name_element(tmp_db, tmp_path):
+    # Real geocaching.com companion files use <name> not <n> for the waypoint
+    # code.  _parse_extra_waypoints must handle both.
+    wpts_name_fmt = """\
+<?xml version="1.0" encoding="utf-8"?>
+<gpx version="1.0" creator="Groundspeak, Inc."
+     xmlns="http://www.topografix.com/GPX/1/0">
+  <name>Waypoints</name>
+  <wpt lat="55.6762" lon="12.5680">
+    <name>PK2345</name>
+    <desc>Parking</desc>
+    <type>Waypoint|Parking Area</type>
+    <cmt>Park here.</cmt>
+  </wpt>
+</gpx>
+"""
+    gpx  = write_gpx(tmp_path, "main.gpx",  SAMPLE_GPX)
+    wpts = write_gpx(tmp_path, "wpts.gpx",  wpts_name_fmt)
+
+    with get_session() as s:
+        result = import_gpx(gpx, s, wpts_path=wpts)
+
+    assert result.waypoints == 1, "<name> element in companion file not parsed"
+    with get_session() as s:
+        cache = s.query(Cache).filter_by(gc_code="GC12345").one()
+        assert any(wp.prefix == "PK" for wp in cache.waypoints)
+
+
 def test_import_lb_lab_cache_codes(tmp_db, tmp_path):
     # lab2gpx exports Adventure Lab stages with LB* codes (Geocache|Lab Cache).
     # These were silently dropped because only GC and LC prefixes were accepted.

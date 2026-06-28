@@ -144,7 +144,10 @@ def _parse_extra_waypoints(tree) -> dict[str, list[dict]]:
     ns = {"gpx": root.nsmap.get(None, "http://www.topografix.com/GPX/1/0")}
 
     for wpt in root.findall("{%s}wpt" % ns["gpx"]):
-        name_el = wpt.find("{%s}n" % ns["gpx"])
+        name_el = (
+            wpt.find("{%s}n" % ns["gpx"]) or
+            wpt.find("{%s}name" % ns["gpx"])
+        )
         name = name_el.text.strip() if name_el is not None and name_el.text else ""
         if len(name) < 3:
             continue
