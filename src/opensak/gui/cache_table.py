@@ -70,7 +70,7 @@ def get_column_defs() -> dict:
     return {
         "gc_code":      (tr("col_gc_code"),           80),
         "name":         (tr("col_name"),             260),
-        "cache_type":   (tr("col_type"),              28),
+        "cache_type":   (tr("col_type"),              40),
         "difficulty":   (tr("col_difficulty"),        50),
         "terrain":      (tr("col_terrain"),           50),
         "container":    (tr("col_container"),         80),
