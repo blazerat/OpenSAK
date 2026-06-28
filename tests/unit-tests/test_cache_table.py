@@ -276,8 +276,9 @@ class TestDataRoles:
 
     def test_alignment_role(self, model):
         model.load([_cache()])
-        center_idx = model.index(0, ALL_COLUMNS.index("difficulty"))
-        assert model.data(center_idx, Qt.ItemDataRole.TextAlignmentRole) == Qt.AlignmentFlag.AlignCenter
+        for col in ("cache_type", "difficulty", "terrain", "distance", "found"):
+            idx = model.index(0, ALL_COLUMNS.index(col))
+            assert model.data(idx, Qt.ItemDataRole.TextAlignmentRole) == Qt.AlignmentFlag.AlignCenter, col
         left_idx = model.index(0, ALL_COLUMNS.index("name"))
         assert model.data(left_idx, Qt.ItemDataRole.TextAlignmentRole) != Qt.AlignmentFlag.AlignCenter
 
