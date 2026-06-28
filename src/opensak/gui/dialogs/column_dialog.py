@@ -210,7 +210,7 @@ class ColumnChooserDialog(QDialog):
         self._type_display_combo = QComboBox()
         for label, value in (
             (tr("type_display_icon"), "icon"),
-            (tr("type_display_text"), "text"),
+            (tr("container_display_text"), "text"),
             (tr("type_display_both"), "both"),
         ):
             self._type_display_combo.addItem(label, value)

@@ -509,7 +509,6 @@ STRINGS: dict[str, str] = {
     "container_display_text":       "Text",
     "type_display_label":           "Zobrazení typu:",
     "type_display_icon":            "Ikona",
-    "type_display_text":            "Text",
     "type_display_both":            "Ikona + Text",
 
     # ── Filter dialog ─────────────────────────────────────────────────────────

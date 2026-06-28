@@ -13,9 +13,11 @@ from opensak.gui.dialogs.column_dialog import (
     get_all_columns,
     get_column_widths,
     get_container_display,
+    get_type_display,
     get_visible_columns,
     set_column_widths,
     set_container_display,
+    set_type_display,
     set_visible_columns,
 )
 
@@ -77,6 +79,18 @@ class TestColumnHelpers:
         store.set("columns.container_display", "invalid")
         assert get_container_display() == "bar"
 
+    def test_type_display_defaults_to_icon(self, store):
+        assert get_type_display() == "icon"
+
+    def test_type_display_roundtrip(self, store):
+        for mode in ("icon", "text", "both"):
+            set_type_display(mode)
+            assert get_type_display() == mode
+
+    def test_type_display_invalid_falls_back_to_icon(self, store):
+        store.set("columns.type_display", "invalid")
+        assert get_type_display() == "icon"
+
 
 # ── ColumnChooserDialog ───────────────────────────────────────────────────────
 
@@ -137,6 +151,18 @@ class TestColumnChooserDialog:
         dlg._container_display_combo.setCurrentIndex(1)  # "text"
         dlg._save_and_accept()
         assert get_container_display() == "text"
+
+    def test_type_display_combo_saves_on_accept(self, qtbot, store):
+        dlg = ColumnChooserDialog()
+        qtbot.addWidget(dlg)
+        dlg._type_display_combo.setCurrentIndex(1)  # "text"
+        dlg._save_and_accept()
+        assert get_type_display() == "text"
+        dlg2 = ColumnChooserDialog()
+        qtbot.addWidget(dlg2)
+        dlg2._type_display_combo.setCurrentIndex(2)  # "both"
+        dlg2._save_and_accept()
+        assert get_type_display() == "both"
 
     def test_remove_col_preserves_order_of_remainder(self, qtbot, store):
         set_visible_columns(["name", "gc_code", "found", "difficulty", "terrain"])

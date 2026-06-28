@@ -114,6 +114,16 @@ class TestHelpers:
         assert _container_text("other", "EarthCache")    == "Earth"
         assert _container_text("other", "Lab Cache")     == "Virtual"
 
+    def test_type_text_passthrough(self):
+        from opensak.gui.cache_table import _type_text
+        assert _type_text("Traditional Cache") == "Traditional Cache"
+        assert _type_text("Multi-cache")       == "Multi-cache"
+        assert _type_text(None)                == ""
+
+    def test_type_text_normalises_unknown(self):
+        from opensak.gui.cache_table import _type_text
+        assert _type_text("Unknown Cache") == "Mystery Cache"
+
 
 # ── model basics ────────────────────────────────────────────────────────────────
 
@@ -182,6 +192,22 @@ class TestDisplayValues:
         # behind the first bar segment via super().paint().
         monkeypatch.setattr(ct, "get_container_display", lambda: "bar")
         assert model._decoration_value(_cache(container="micro"), "container") is None
+
+    def test_type_icon_mode_no_text(self, model, monkeypatch):
+        monkeypatch.setattr(ct, "get_type_display", lambda: "icon")
+        assert model._display_value(_cache(cache_type="Traditional Cache"), "cache_type") == ""
+
+    def test_type_text_mode_shows_text_no_icon(self, model, monkeypatch):
+        monkeypatch.setattr(ct, "get_type_display", lambda: "text")
+        assert model._display_value(_cache(cache_type="Traditional Cache"), "cache_type") == "Traditional Cache"
+        assert model._display_value(_cache(cache_type="Unknown Cache"),     "cache_type") == "Mystery Cache"
+        assert model._display_value(_cache(cache_type=None),                "cache_type") == ""
+        assert model._decoration_value(_cache(cache_type="Traditional Cache"), "cache_type") is None
+
+    def test_type_both_mode_shows_text_and_icon(self, model, monkeypatch):
+        monkeypatch.setattr(ct, "get_type_display", lambda: "both")
+        assert model._display_value(_cache(cache_type="Multi-cache"), "cache_type") == "Multi-cache"
+        assert model._decoration_value(_cache(cache_type="Multi-cache"), "cache_type") is not None
 
     def test_difficulty_terrain(self, model):
         assert model._display_value(_cache(difficulty=2.5), "difficulty") == "2.5"

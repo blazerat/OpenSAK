@@ -508,7 +508,6 @@ STRINGS: dict[str, str] = {
     "container_display_text":       "Text",
     "type_display_label":           "Cache type display:",
     "type_display_icon":            "Icon",
-    "type_display_text":            "Text",
     "type_display_both":            "Icon + Text",
 
     # ── Filter dialog ─────────────────────────────────────────────────────────

@@ -512,7 +512,6 @@ STRINGS: dict[str, str] = {
     "container_display_text":       "Tekst",
     "type_display_label":           "Type weergave:",
     "type_display_icon":            "Pictogram",
-    "type_display_text":            "Tekst",
     "type_display_both":            "Pictogram + Tekst",
 
     # ── Filter dialog ─────────────────────────────────────────────────────────
