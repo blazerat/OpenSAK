@@ -49,6 +49,10 @@ class TestColumnHelpers:
         assert "gc_code" in vis
         assert "country" not in vis  # not a default-visible column
 
+    def test_favorite_not_in_defaults(self, store):
+        # favorite requires the Geocaching API and will always be empty without it
+        assert "favorite" not in get_visible_columns()
+
     def test_visible_roundtrip(self, store):
         set_visible_columns(["gc_code", "name", "country"])
         assert get_visible_columns() == ["gc_code", "name", "country"]
