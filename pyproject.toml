@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "opensak"
-version = "1.14.0-beta.6"
+dynamic = ["version"]
 description = "OpenSAK — Open Source geocaching management tool (GSAK successor)"
 readme = "README.md"
 license = { text = "MIT" }
@@ -29,6 +29,9 @@ dev = [
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.dynamic]
+version = { attr = "opensak.__version__" }
 
 [tool.pytest.ini_options]
 testpaths = ["tests/unit-tests", "tests/e2e-tests"]
