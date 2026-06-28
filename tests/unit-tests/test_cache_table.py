@@ -15,6 +15,7 @@ from opensak.gui import cache_table as ct
 from opensak.gui.cache_table import (
     CacheTableModel,
     CacheTableView,
+    CacheTypeDelegate,
     SizeBarDelegate,
     GcCodeDelegate,
     _bearing_deg,
@@ -570,6 +571,22 @@ class TestDelegates:
         delegate.paint(painter, opt, idx)
         painter.end()
 
+    def test_cache_type_delegate_paints_icon_mode(self, model, monkeypatch):
+        monkeypatch.setattr(ct, "get_type_display", lambda: "icon")
+        model.load([_cache(cache_type="Traditional Cache")])
+        self._paint(CacheTypeDelegate(), model, "cache_type")
+        self._paint(CacheTypeDelegate(), model, "cache_type", selected=True)
+
+    def test_cache_type_delegate_falls_back_in_text_mode(self, model, monkeypatch):
+        monkeypatch.setattr(ct, "get_type_display", lambda: "text")
+        model.load([_cache(cache_type="Traditional Cache")])
+        self._paint(CacheTypeDelegate(), model, "cache_type")
+
+    def test_cache_type_delegate_falls_back_in_both_mode(self, model, monkeypatch):
+        monkeypatch.setattr(ct, "get_type_display", lambda: "both")
+        model.load([_cache(cache_type="Traditional Cache")])
+        self._paint(CacheTypeDelegate(), model, "cache_type")
+
     def test_size_bar_delegate_paints_physical(self, model):
         model.load([_cache(container="small", cache_type="traditional cache")])
         d = SizeBarDelegate()
@@ -713,11 +730,13 @@ def view(monkeypatch, qtbot):
 
 class TestView:
     def test_construction_sets_delegates(self, view):
-        # container + gc_code columns get custom delegates
+        # container + gc_code + cache_type columns get custom delegates
         assert isinstance(view.itemDelegateForColumn(ALL_COLUMNS.index("container")),
                           SizeBarDelegate)
         assert isinstance(view.itemDelegateForColumn(ALL_COLUMNS.index("gc_code")),
                           GcCodeDelegate)
+        assert isinstance(view.itemDelegateForColumn(ALL_COLUMNS.index("cache_type")),
+                          CacheTypeDelegate)
 
     def test_load_and_counts(self, view):
         view.load_caches([_cache(gc_code="A"), _cache(gc_code="B", user_flag=True)])

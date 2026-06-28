@@ -265,6 +265,41 @@ from PySide6.QtGui import QPainter, QColor
 from PySide6.QtCore import QRect
 
 
+class CacheTypeDelegate(QStyledItemDelegate):
+    """Centers the cache-type icon in the column (icon-only mode).
+
+    In 'text' and 'both' modes the default delegate handles rendering;
+    this delegate only kicks in for 'icon' mode where Qt's default would
+    left-align the decoration inside the content rect.
+    """
+
+    def paint(self, painter: QPainter, option, index) -> None:
+        if get_type_display() != "icon":
+            super().paint(painter, option, index)
+            return
+
+        raw = index.data(Qt.ItemDataRole.DecorationRole)
+        if not raw:
+            super().paint(painter, option, index)
+            return
+
+        from PySide6.QtWidgets import QStyle
+        from PySide6.QtGui import QIcon, QPixmap
+        if isinstance(raw, QPixmap):
+            icon = QIcon(raw)
+        elif isinstance(raw, QIcon):
+            icon = raw
+        else:
+            super().paint(painter, option, index)
+            return
+
+        painter.save()
+        style = option.widget.style() if option.widget else QApplication.style()
+        style.drawPrimitive(QStyle.PrimitiveElement.PE_PanelItemViewItem, option, painter, option.widget)
+        icon.paint(painter, option.rect, Qt.AlignmentFlag.AlignCenter)
+        painter.restore()
+
+
 class SizeBarDelegate(QStyledItemDelegate):
     """Tegner GSAK-stil segmenteret størrelsesindikator for container-kolonnen.
 
@@ -974,6 +1009,9 @@ class CacheTableView(QTableView):
                         sizes = TEXT_SIZE_MAP[text_size]
                         self._size_bar_delegate.set_icon_size(sizes["icon"])
                         self.setItemDelegateForColumn(i, self._size_bar_delegate)
+                elif col_id == "cache_type":
+                    self._cache_type_delegate = CacheTypeDelegate(self)
+                    self.setItemDelegateForColumn(i, self._cache_type_delegate)
                 elif col_id == "gc_code":
                     self._gc_code_delegate = GcCodeDelegate(self)
                     self.setItemDelegateForColumn(i, self._gc_code_delegate)
