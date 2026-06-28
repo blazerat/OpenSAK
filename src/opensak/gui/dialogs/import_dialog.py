@@ -199,8 +199,24 @@ class ImportDialog(QDialog):
 
     # ── File management ───────────────────────────────────────────────────────
 
+    def _filter_companion_wpts(self, new_paths: list[Path]) -> list[Path]:
+        # Drop any -wpts.gpx whose parent .gpx is already in the list or in
+        # the same batch — the parent will auto-detect and import the companion.
+        all_gpx_names = (
+            {p.name for p in self._selected_paths if p.suffix.lower() == ".gpx"}
+            | {p.name for p in new_paths if p.suffix.lower() == ".gpx"}
+        )
+        return [
+            p for p in new_paths
+            if not (
+                p.name.lower().endswith("-wpts.gpx")
+                and p.name[: -len("-wpts.gpx")] + ".gpx" in all_gpx_names
+            )
+        ]
+
     def add_files(self, paths: list[Path]) -> None:
         """Add files to the import list (used by drag & drop from MainWindow)."""
+        paths = self._filter_companion_wpts(paths)
         existing_names = {p.name for p in self._selected_paths}
         for p in paths:
             if p.name not in existing_names:
@@ -221,9 +237,9 @@ class ImportDialog(QDialog):
             tr("import_file_filter")
         )
         if paths:
+            filtered = self._filter_companion_wpts([Path(s) for s in paths])
             existing_names = {p.name for p in self._selected_paths}
-            for path_str in paths:
-                p = Path(path_str)
+            for p in filtered:
                 if p.name not in existing_names:
                     self._selected_paths.append(p)
                     item = QListWidgetItem(f"⏳  {p.name}")
