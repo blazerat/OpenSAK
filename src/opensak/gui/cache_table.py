@@ -565,7 +565,7 @@ class CacheTableModel(QAbstractTableModel):
             return self._display_value(cache, col)
 
         if role == Qt.ItemDataRole.TextAlignmentRole:
-            if col in ("difficulty", "terrain", "distance", "found",
+            if col in ("cache_type", "difficulty", "terrain", "distance", "found",
                        "dnf", "premium_only", "archived", "log_count",
                        "corrected", "first_to_find", "user_flag", "bearing",
                        "user_sort", "favorite_points",
