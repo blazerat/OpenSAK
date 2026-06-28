@@ -638,7 +638,7 @@ class CacheDetailPanel(QWidget):
     def _render_logs(self, cache: Cache) -> None:
         logs = sorted(
             cache.logs,
-            key=lambda l: l.log_date or 0,
+            key=lambda l: l.log_date or datetime.min,
             reverse=True
         )
         self._tabs.setTabText(2, tr("detail_tab_logs_count", count=len(logs)) if logs else tr("detail_tab_logs"))
