@@ -289,6 +289,13 @@ class CacheDetailPanel(QWidget):
         wp_layout.addWidget(self._wp_browser)
         self._tabs.addTab(wp_widget, tr("detail_tab_waypoints"))
 
+        attr_widget = QWidget()
+        attr_layout = QVBoxLayout(attr_widget)
+        attr_layout.setContentsMargins(0, 4, 0, 0)
+        self._attr_browser = QTextBrowser()
+        attr_layout.addWidget(self._attr_browser)
+        self._tabs.addTab(attr_widget, tr("filter_tab_attributes"))
+
         note_widget = QWidget()
         note_layout = QVBoxLayout(note_widget)
         note_layout.setContentsMargins(0, 4, 0, 0)
@@ -500,6 +507,7 @@ class CacheDetailPanel(QWidget):
         self._wp_browser.setPlainText("")
         self._note_editor.setPlainText("")
         self._tabs.setTabText(3, tr("detail_tab_waypoints"))
+        self._tabs.setTabText(4, tr("filter_tab_attributes"))
         self._hint_plain = ""
         self._hint_cipher = ""
         self._hint_decoded = False
@@ -508,7 +516,8 @@ class CacheDetailPanel(QWidget):
         self._corrected_frame.setVisible(False)
         self._add_corrected_btn.setVisible(False)
         self._current_waypoints: list = []
-        self._tabs.setTabVisible(4, False)
+        self._attr_browser.setPlainText("")
+        self._tabs.setTabVisible(5, False)
         self.waypoints_tab_hidden.emit()
 
     def show_cache(self, cache: Cache) -> None:
@@ -612,7 +621,7 @@ class CacheDetailPanel(QWidget):
         )
 
         # Personal note
-        self._tabs.setTabVisible(4, True)
+        self._tabs.setTabVisible(5, True)
         self._note_editor.setPlainText(
             (cache.user_note.note or "") if cache.user_note else ""
         )
@@ -622,6 +631,9 @@ class CacheDetailPanel(QWidget):
 
         # Child waypoints
         self._render_waypoints(cache)
+
+        # Attributes
+        self._render_attributes(cache)
 
     def _render_logs(self, cache: Cache) -> None:
         logs = sorted(
@@ -686,6 +698,24 @@ class CacheDetailPanel(QWidget):
         self._wp_browser.setHtml("".join(html))
         if self._tabs.currentIndex() == 3:
             self._emit_waypoint_markers()
+
+    def _render_attributes(self, cache: Cache) -> None:
+        attrs = sorted(cache.attributes, key=lambda a: (not a.is_on, a.name or ""))
+        tab_idx = 4
+        if not attrs:
+            self._tabs.setTabText(tab_idx, tr("filter_tab_attributes"))
+            self._attr_browser.setPlainText(tr("detail_no_attrs"))
+            return
+        self._tabs.setTabText(tab_idx, tr("detail_tab_attrs_count", count=len(attrs)))
+        html = []
+        for attr in attrs:
+            symbol = "✓" if attr.is_on else "✗"
+            colour = "#2e7d32" if attr.is_on else "#c62828"
+            name = attr.name or str(attr.attribute_id)
+            html.append(
+                f'<p><span style="color:{colour};font-weight:bold">{symbol}</span> {name}</p>'
+            )
+        self._attr_browser.setHtml("".join(html))
 
     def _on_tab_changed(self, idx: int) -> None:
         if idx == 3:

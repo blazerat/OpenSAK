@@ -574,6 +574,8 @@ STRINGS: dict[str, str] = {
     "detail_tab_waypoints":         "Waypointy",
     "detail_tab_waypoints_count":   "Waypointy ({count})",
     "detail_no_waypoints":          "(Žádné podřízené waypointy)",
+    "detail_tab_attrs_count":       "Atributy ({count})",
+    "detail_no_attrs":              "(Žádné atributy)",
     "detail_tab_notes":             "Poznámky",
     "detail_note_placeholder":      "Přidat osobní poznámku k tomuto cache…",
     "detail_wp_no_coords":          "(Žádné souřadnice)",
