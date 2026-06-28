@@ -88,6 +88,35 @@ def _parse_datetime(raw: Optional[str]) -> Optional[datetime]:
     return None
 
 
+# ── Companion file detector ───────────────────────────────────────────────────
+
+def _is_companion_gpx(path: Path) -> bool:
+    """Return True if the GPX contains only extra waypoints, not cache entries.
+
+    Reads up to the first <wpt> element only — fast enough to call at dialog
+    time without blocking the UI.  A companion file has wpt entries with
+    type "Waypoint|…"; a main cache GPX has type "Geocache|…" or a
+    Groundspeak cache extension block.
+    """
+    try:
+        for _, elem in etree.iterparse(str(path), events=("end",), tag=None):
+            if etree.QName(elem).localname != "wpt":
+                elem.clear()
+                continue
+            gpx_ns = {"gpx": etree.QName(elem).namespace or NS["gpx"]}
+            type_raw = _text(elem, "gpx:type", gpx_ns) or ""
+            if type_raw.startswith("Geocache"):
+                return False
+            for gs_uri in _GS_NAMESPACES:
+                if elem.find(f".//{{{gs_uri}}}cache") is not None:
+                    return False
+            # First wpt is not a cache entry — companion file
+            return True
+    except Exception:
+        pass
+    return False
+
+
 # ── Waypoint (extra) parser ───────────────────────────────────────────────────
 
 def _parse_extra_waypoints(tree) -> dict[str, list[dict]]:
