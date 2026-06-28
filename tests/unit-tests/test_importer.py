@@ -285,6 +285,27 @@ def test_import_zip_multiple_with_companion_wpts(tmp_db, tmp_path):
         assert any(wp.prefix == "PK" for wp in cache.waypoints)
 
 
+def test_import_zip_companion_detected_by_content_not_name(tmp_db, tmp_path):
+    # Companion file with a non-standard name (no -wpts suffix) must still be
+    # detected and linked when its content identifies it as waypoints-only.
+    with get_session() as s:
+        for cache in s.query(Cache).all():
+            s.delete(cache)
+
+    z = make_zip(tmp_path, "renamed_wpts.zip", {
+        "caches.gpx":    SAMPLE_GPX,
+        "extras.gpx":    SAMPLE_WPTS_GPX,   # no -wpts in the name
+    })
+
+    result = import_zip(z)
+
+    assert result.waypoints >= 1, "companion file should be linked by content, not name"
+    assert result.errors == []
+    with get_session() as s:
+        cache = s.query(Cache).filter_by(gc_code="GC12345").one()
+        assert any(wp.prefix == "PK" for wp in cache.waypoints)
+
+
 def test_import_lb_lab_cache_codes(tmp_db, tmp_path):
     # lab2gpx exports Adventure Lab stages with LB* codes (Geocache|Lab Cache).
     # These were silently dropped because only GC and LC prefixes were accepted.
