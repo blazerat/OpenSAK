@@ -8,6 +8,51 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [1.14.0-beta.18] — 2026-06-29
+
+> **Beta release** — continuing the 1.14.0 testing period.
+
+### Fixed
+
+- **Cache detail panel could crash when sorting logs where some entries have
+  no date** (fixes #429) — `_render_logs()` sorted by `log_date or 0`, and the
+  moment a cache had a mix of dated and undated logs, Python tried to compare
+  a `datetime` against the integer `0` and raised a `TypeError`, crashing the
+  panel as soon as such a cache was opened. The fallback value is now
+  `datetime.min` instead of `0`, so the sort key stays within a single type no
+  matter how many logs are missing a date. Regression-tested against a cache
+  with both dated and undated logs.
+
+- **Several columns weren't centered in the cache table, unlike their visual
+  peers** (fixes #431) — `container`, `favorite`, `hidden_date`, `last_log`,
+  `found_date`, `dnf_date` and `placed_by` were missing from the column's
+  center-alignment list, so they sat left-aligned right next to columns like
+  difficulty, terrain and distance that were already centered, giving the
+  table an inconsistent look. All seven now align center to match.
+
+### Notes
+
+- CI now runs in sequential stages instead of everything firing in parallel:
+  the quality gate runs first, unit tests wait on it (`needs: quality`), and
+  e2e tests wait on unit tests (`needs: unit-tests`) — a quality or unit
+  failure now short-circuits the pipeline instead of still burning Actions
+  minutes on the stages after it. Unit test coverage is also enforced at a
+  hard 80% floor (`--cov-fail-under=80`), with a Markdown coverage breakdown
+  posted straight to the job's GitHub Actions summary instead of being buried
+  in the console log. New tests for the settings-store helpers (`sync()`,
+  `invalidate_path_cache()`, the module-level singleton) were added to clear
+  the new threshold.
+- Issues linked in a PR body (`closes #N` / `fixes #N` / `resolves #N`) are
+  now commented on and automatically closed the moment that PR merges to
+  `beta` — a new `notify-linked-issues.yml` workflow tailors the comment by
+  the issue's label (bug / feature / improvement), @-mentions the original
+  reporter, and closes the issue with `state_reason: completed`. Previously
+  this was all done by hand on every merge.
+- Dependabot bumped `actions/github-script` from v7 to v9 (#437), keeping the
+  new linked-issues workflow above on a current major version.
+
+---
+
 ## [1.14.0-beta.17] — 2026-06-29
 
 > **Beta release** — continuing the 1.14.0 testing period. Supersedes both
