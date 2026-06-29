@@ -699,6 +699,8 @@ python run.py</code></pre>
     <h3>Columns</h3>
     <p>The cache list shows up to 17+ configurable columns. Choose which ones are visible via <strong>View → Choose columns…</strong> Click any column header to sort — click again to reverse the sort order. The sort is saved per database.</p>
 
+    <div class="callout note"><div class="callout-icon">ℹ️</div><div>Cache names appear in <strong>bold</strong> when the cache has child waypoints — see the Waypoints tab in the <a href="#detail-panel">Cache Detail Panel</a>.</div></div>
+
     <h3>Clicking a Cache</h3>
     <p>Clicking a row selects the cache: the detail panel updates to show its full information, and the map pans to its pin.</p>
 
@@ -709,6 +711,7 @@ python run.py</code></pre>
       <li><strong>Copy coordinates</strong> — copies coordinates to clipboard</li>
       <li><strong>Mark as found / unfound</strong></li>
       <li><strong>Toggle flag 🚩</strong> — flag caches for batch operations</li>
+      <li><strong>Lock cache / Unlock cache 🔒</strong> — protect against being overwritten by a later import</li>
       <li><strong>Edit cache…</strong> — opens the edit dialog</li>
       <li><strong>Add corrected coordinates…</strong> — enter solved coordinates for mystery caches</li>
       <li><strong>Edit corrected coordinates…</strong> / <strong>Clear corrected coordinates</strong></li>
@@ -720,9 +723,9 @@ python run.py</code></pre>
       <tbody>
         <tr><td>GC Code</td><td>Geocaching.com identifier</td></tr>
         <tr><td>Name</td><td>Cache name</td></tr>
-        <tr><td>Type</td><td>Traditional, Mystery, Multi, etc.</td></tr>
+        <tr><td>Type</td><td>Traditional, Mystery, Multi, etc. — icon, name as text, or both, via Choose columns…</td></tr>
         <tr><td>D / T</td><td>Difficulty and Terrain rating (1.0–5.0)</td></tr>
-        <tr><td>Distance</td><td>Distance from active home point</td></tr>
+        <tr><td>Distance</td><td>Distance from active home point (Haversine or Vincenty, see Settings → Advanced)</td></tr>
         <tr><td>Size</td><td>Nano/Micro/Small/Regular/Large</td></tr>
         <tr><td>Found</td><td>✓ if marked as found</td></tr>
         <tr><td>Hidden date</td><td>Date cache was placed</td></tr>
@@ -731,6 +734,7 @@ python run.py</code></pre>
         <tr><td>📍</td><td>Corrected coordinates set indicator</td></tr>
         <tr><td>FTF 🥇</td><td>First to Find indicator</td></tr>
         <tr><td>Flag 🚩</td><td>User flag for batch operations</td></tr>
+        <tr><td>🔒</td><td>Locked against import overwrites</td></tr>
       </tbody>
     </table>
   </section>
@@ -744,9 +748,13 @@ python run.py</code></pre>
     <ul>
       <li><strong>Description</strong> — full HTML cache description as published on geocaching.com</li>
       <li><strong>Hint</strong> — encrypted hint; click the <strong>Decode hint (ROT13)</strong> button to toggle decoding</li>
-      <li><strong>Logs</strong> — recent logs from all finders; includes a search box to find specific entries</li>
+      <li><strong>Logs</strong> — recent logs from all finders; includes a search box to find specific entries. Links in log text are clickable.</li>
       <li><strong>Attributes</strong> — all Groundspeak attributes set on the cache (dogs, parking, etc.)</li>
+      <li><strong>Notes</strong> — your own free-text notes for this cache, separate from the published description and logs. Round-trips with GSAK: a note survives export → GSAK → re-import.</li>
+      <li><strong>Waypoints</strong> — child waypoints belonging to this cache (e.g. parking, stages), with prefix, type, name, coordinates, description and comment for each. Caches with waypoints show their name in <strong>bold</strong> in the cache list, and the waypoints appear as separate markers on the map when the cache is selected.</li>
     </ul>
+
+    <p>The cache type icon is shown next to the title, and a 🔒 icon appears if the cache is locked.</p>
 
     <figure class="screenshot">
       <img src="assets/screenshots/cache-detail-hint.png" alt="Cache detail panel showing a decoded hint with the Encode hint (ROT13) button">
@@ -754,6 +762,9 @@ python run.py</code></pre>
     </figure>
 
     <div class="callout note"><div class="callout-icon">ℹ️</div><div>Some hints are stored as plain text rather than ROT13 — OpenSAK detects this automatically and shows the hint directly, without a decode step.</div></div>
+
+    <h3>Locking a Cache</h3>
+    <p>Right-click a cache → <strong>Lock cache</strong>, or check the box in <strong>Edit cache…</strong>. Locking freezes the cache's own fields — name, type, container, coordinates, D/T, owner, status, descriptions, hint, country/state/county — so a later GPX/PQ re-import can't overwrite them. Logs, attributes and waypoints still refresh normally on re-import. A 🔒 column in the cache list shows locked status at a glance, and you can filter on it (see <a href="#filter-types">All Filter Types</a>).</p>
 
     <h3>Clickable Elements</h3>
     <ul>
@@ -797,15 +808,18 @@ python run.py</code></pre>
       <thead><tr><th>Element</th><th>Meaning</th></tr></thead>
       <tbody>
         <tr><td>Filter: …</td><td>Name of the active filter profile, or <em>None</em></td></tr>
+        <tr><td>N filters active</td><td>Number of filter conditions currently applied (instead of a generic "Active" label)</td></tr>
         <tr><td>N caches in database</td><td>Total caches in the active database (ignoring filter)</td></tr>
         <tr><td>🚩 = N</td><td>Number of flagged caches in the current filter</td></tr>
         <tr><td>Centre point: …</td><td>Name of the active home point</td></tr>
-        <tr><td><span style="color:#186a3b;font-weight:bold">N</span></td><td>Found caches (green)</td></tr>
+        <tr><td><span style="background:#f9e79f;color:#000;font-weight:bold;padding:1px 6px;border-radius:3px;">N</span></td><td>Found caches — black text on yellow, matching the GC Code column's found color</td></tr>
         <tr><td>N</td><td>All caches in the current filter (white/default)</td></tr>
-        <tr><td><span style="color:#c62828;font-weight:bold">N</span></td><td>Inactive caches (archived + disabled, red)</td></tr>
-        <tr><td><span style="color:#d68910;font-weight:bold">N</span></td><td>Your own caches (orange)</td></tr>
+        <tr><td><span style="background:#f1948a;color:#000;font-weight:bold;padding:1px 6px;border-radius:3px;">N</span></td><td>Inactive caches (archived + disabled) — black text on red</td></tr>
+        <tr><td><span style="background:#7dcea0;color:#000;font-weight:bold;padding:1px 6px;border-radius:3px;">N</span></td><td>Your own caches — black text on green, matching the GC Code column's owned color</td></tr>
       </tbody>
     </table>
+
+    <div class="callout tip"><div class="callout-icon">💡</div><div>Click any of the colored counts to filter the list to that status — e.g. click <strong>Found</strong> to see only found caches, or <strong>All</strong> to clear the status filter again.</div></div>
   </section>
 
   <!-- ══════════════════════════════════════════════════════════ -->
@@ -892,11 +906,14 @@ python run.py</code></pre>
         <tr><td>Has trackable</td><td>Cache currently has ≥1 trackable</td></tr>
         <tr><td>Premium / Non-premium</td><td>Membership requirement</td></tr>
         <tr><td>Has corrected coords</td><td>Caches with solved coordinates set</td></tr>
+        <tr><td>No corrected coords</td><td>Caches without solved coordinates set</td></tr>
         <tr><td>User flag</td><td>🚩 flagged / not flagged</td></tr>
         <tr><td>DNF</td><td>Did Not Find flag set/not set</td></tr>
         <tr><td>FTF</td><td>First to Find flag set/not set</td></tr>
+        <tr><td>Locked</td><td>Cache is locked against import overwrites — yes/no</td></tr>
         <tr><td>Favorite points</td><td>Community favorites in a numeric range</td></tr>
         <tr><td>Found date</td><td>Date range filter for your found date</td></tr>
+        <tr><td>Text search</td><td>Searches cache descriptions, logs, and personal notes (hint text excluded by default)</td></tr>
         <tr><td>WHERE clause</td><td>Raw SQLite expression against the caches table</td></tr>
       </tbody>
     </table>
@@ -1237,19 +1254,14 @@ python run.py</code></pre>
       <tbody>
         <tr><td>User Locations</td><td>Add, edit, activate, and delete named home points</td></tr>
         <tr><td>Show distances in miles</td><td>Switch distance display from km to miles</td></tr>
-        <tr><td>Show archived caches</td><td>Include archived caches by default</td></tr>
-        <tr><td>Show found caches</td><td>Include found caches by default</td></tr>
         <tr><td>Map app</td><td>Google Maps or OpenStreetMap (used when clicking coordinates)</td></tr>
         <tr><td>Coordinate format</td><td>DMM, DMS, or Decimal Degrees — used throughout the interface</td></tr>
         <tr><td>Date format</td><td>OS locale, dd.mm.yyyy, mm/dd/yyyy, or yyyy-mm-dd</td></tr>
-        <tr><td>Text and icon size</td><td>Small, Medium, or Large — currently affects the cache header info next to the map</td></tr>
+        <tr><td>Text and icon size</td><td>Small, Medium, or Large — affects the cache list grid (font and row height), the detail panel, and the tab labels</td></tr>
         <tr><td>Theme</td><td>Automatic (follow OS), Light, or Dark</td></tr>
         <tr><td>Language</td><td>Choose UI language (restart required)</td></tr>
-        <tr><td>Check for updates automatically</td><td>Background update check at startup</td></tr>
       </tbody>
     </table>
-
-    <div class="callout warn"><div class="callout-icon">⚠️</div><div><strong>Text and icon size — known limitation:</strong> the new size only changes after you select a different cache in the grid, and the difference between Small and Large is currently subtle. Both are being looked at for a future beta.</div></div>
 
     <h3>Geocaching.com Tab</h3>
     <table>
@@ -1261,12 +1273,24 @@ python run.py</code></pre>
     </table>
 
     <h3>Advanced Tab</h3>
+
+    <h4>Folders</h4>
+    <p>Shows the current installation folder (read-only) and the database folder. The database folder can be changed directly here — no need to go through the setup wizard again.</p>
     <table>
       <thead><tr><th>Setting</th><th>Description</th></tr></thead>
       <tbody>
-        <tr><td>Enable online location refinement</td><td>Use OpenStreetMap Nominatim to improve county/state/country accuracy (slow, requires internet)</td></tr>
+        <tr><td>Database folder</td><td>Change where new and existing databases are stored. If existing databases are found in the old location, you're asked whether to move them along (keep originals, delete originals, or leave them and only use the new folder for future databases)</td></tr>
+        <tr><td>Run setup wizard again</td><td>Re-opens the first-run welcome wizard at any time, e.g. to change language or installation folder</td></tr>
+      </tbody>
+    </table>
+
+    <table>
+      <thead><tr><th>Setting</th><th>Description</th></tr></thead>
+      <tbody>
         <tr><td>Search min chars</td><td>Minimum characters before the search fires (0 = adaptive)</td></tr>
         <tr><td>Search debounce (ms)</td><td>Delay before search fires while typing (0 = adaptive)</td></tr>
+        <tr><td>Check for updates automatically</td><td>Background update check at startup</td></tr>
+        <tr><td>Distance calculation method</td><td>Haversine (default) or Vincenty (WGS84) — Vincenty is up to ~0.3% more accurate over long ranges, at a small performance cost</td></tr>
       </tbody>
     </table>
   </section>
@@ -1330,6 +1354,7 @@ python run.py</code></pre>
   <!-- ══════════════════════════════════════════════════════════ -->
   <section id="shortcuts">
     <h2><span class="section-num">34</span>Keyboard Shortcuts</h2>
+    <p>This reference is also available inside the app, with search — go to <strong>Help → Keyboard Shortcuts…</strong> Any shortcut you override there is remembered across restarts.</p>
 
     <h3>File &amp; Database</h3>
     <table>
