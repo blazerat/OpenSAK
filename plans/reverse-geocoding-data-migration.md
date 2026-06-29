@@ -7,7 +7,7 @@ The engine currently reads from a dev-only, git-ignored `data/` folder at the
 repo root ([`docs/reverse-geocoding-data.md`](../docs/reverse-geocoding-data.md)).
 That was deliberate: it let Phase 1 (the engine) land and be tested before the
 real dataset or its hosting existed. This plan retires that stand-in and points
-the engine at the **published `AgreeDK/OpenSAK-Data`** dataset instead.
+the engine at the **published `OpenSAK-Org/OpenSAK-Data`** dataset instead.
 
 The whole point of the `default_data_dir()` + `BoundaryStore` seam is that this
 migration touches **data plumbing only** — `TerritoryResolver` and the two-stage
@@ -26,7 +26,7 @@ here as one migration story so the cut-over from `data/` is explicit.
    arrive, run the `tools/boundaries/` pipeline to emit `boundaries.db`, the
    baseline GeoJSON (`countries/`, `states/`), the per-country county packs and
    `manifest.json`. Publish them as **GitHub Release assets** on
-   `AgreeDK/OpenSAK-Data` (public, ODbL `LICENSE` + attribution). The artefacts
+   `OpenSAK-Org/OpenSAK-Data` (public, ODbL `LICENSE` + attribution). The artefacts
    must match the contract in [`docs/reverse-geocoding-data.md`](../docs/reverse-geocoding-data.md)
    so the engine reads them unchanged.
 

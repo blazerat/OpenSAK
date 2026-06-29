@@ -6,7 +6,7 @@ Thank you for your interest in contributing! Here is how to get involved.
 
 ## Reporting Bugs
 
-Please use [GitHub Issues](https://github.com/AgreeDK/opensak/issues) and include:
+Please use [GitHub Issues](https://github.com/OpenSAK-Org/opensak/issues) and include:
 
 - Platform and version (e.g. "Linux Mint 21.3" or "Windows 11")
 - Python version (`python3 --version`)
@@ -40,7 +40,7 @@ Please keep pull requests focused — one feature or fix per PR makes review muc
 ## Development Setup
 
 ```bash
-git clone https://github.com/AgreeDK/opensak.git
+git clone https://github.com/OpenSAK-Org/opensak.git
 cd opensak
 python3 -m venv .venv
 source .venv/bin/activate          # Linux / macOS
@@ -103,7 +103,7 @@ The repository belongs to the maintainer — nobody else has write access. The c
 
 **Step by step:**
 
-1. Go to https://github.com/AgreeDK/opensak and click **Fork** (top-right corner). GitHub creates a copy at `https://github.com/YOUR_USERNAME/opensak`.
+1. Go to https://github.com/OpenSAK-Org/opensak and click **Fork** (top-right corner). GitHub creates a copy at `https://github.com/YOUR_USERNAME/opensak`.
 
 2. Clone your fork:
    ```bash
@@ -113,7 +113,7 @@ The repository belongs to the maintainer — nobody else has write access. The c
 
 3. (Optional but recommended) Add the original as `upstream` so you can sync later:
    ```bash
-   git remote add upstream https://github.com/AgreeDK/opensak.git
+   git remote add upstream https://github.com/OpenSAK-Org/opensak.git
    ```
 
 4. Create a branch:

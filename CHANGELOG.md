@@ -163,7 +163,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   JSON settings store — existing corrupted values repair automatically on
   startup.
 
-For planned features and known issues see the [GitHub Issues list](https://github.com/AgreeDK/opensak/issues).
+For planned features and known issues see the [GitHub Issues list](https://github.com/OpenSAK-Org/opensak/issues).
 
 ---
 
@@ -197,7 +197,7 @@ For planned features and known issues see the [GitHub Issues list](https://githu
   `requirements.txt` is removed, the bundles ship the libraries' data files (GeoNames CSV, ISO
   tables), and a smoke test exercises the real lookup so a missing dependency fails CI.
 
-For planned features and known issues see the [GitHub Issues list](https://github.com/AgreeDK/opensak/issues).
+For planned features and known issues see the [GitHub Issues list](https://github.com/OpenSAK-Org/opensak/issues).
 
 ## [1.13.11] — 2026-05-29
 

@@ -17,7 +17,7 @@ This plan turns the architecture document into shippable work. It is ordered **b
 ## Prerequisites
 
 - [x] Receive the full polygon-file set from Mike (*Lignumaqua*) — full `bb.db3` + all country/state/county zips are now in the worktree (gitignored). Phase 0 is unblocked and done.
-- [ ] Create the data repository **`AgreeDK/OpenSAK-Data`** (public) with its own `LICENSE` + attribution file (the polygons are ODbL, not public domain).
+- [ ] Create the data repository **`OpenSAK-Org/OpenSAK-Data`** (public) with its own `LICENSE` + attribution file (the polygons are ODbL, not public domain).
 
 ## Out of scope (follow-ups)
 
@@ -41,7 +41,7 @@ This plan turns the architecture document into shippable work. It is ordered **b
 
 **Remaining tasks (deferred to when `OpenSAK-Data` repo exists):**
 - [ ] Geometry simplification (Douglas–Peucker) for the baseline layer.
-- [ ] `manifest.json` generation and publishing as Release assets to `AgreeDK/OpenSAK-Data`.
+- [ ] `manifest.json` generation and publishing as Release assets to `OpenSAK-Org/OpenSAK-Data`.
 - [ ] Keep `tools/` out of the PyInstaller bundle.
 
 **Acceptance:** ✓ pipeline runs reproducibly; `BoundaryStore` + `TerritoryResolver` resolve correctly against real data. `OpenSAK-Data` Release not yet created (blocked on repo creation).
@@ -67,7 +67,7 @@ This plan turns the architecture document into shippable work. It is ordered **b
 
 **What was built:** `geo/packs.py` — `fetch_manifest`, `fetch_pack` (atomic temp+rename), `fetch_all` (downloads all missing packs with progress callback), `check_update` (throttled weekly by manifest.json mtime, bypass with `force=True`), `apply_update` (only re-downloads locally-cached packs that changed; skips uncached packs; saves manifest). `BoundaryStore._load_pack` now triggers `fetch_pack` on a county pack miss; `TerritoryResolver` skips a candidate gracefully when its pack cannot be fetched (returns `None` for county rather than crashing). Two new Waypoint menu actions under the `update_location` flag guard: "Download boundary packs…" and "Check for boundary data updates…", backed by `BoundaryDownloadDialog` and `BoundaryCheckDialog` workers. 19 i18n keys added to all 8 lang files. 23 unit tests with mocked network covering all code paths.
 
-**Remaining (blocked on AgreeDK/OpenSAK-Data repo):**
+**Remaining (blocked on OpenSAK-Org/OpenSAK-Data repo):**
 - [ ] Verify release asset URL pattern once the repo and its first release exist.
 - [ ] Build pipeline step to publish `data/` as GitHub Release assets.
 
@@ -111,7 +111,7 @@ This plan turns the architecture document into shippable work. It is ordered **b
 - `tests/unit-tests/test_geo_deps.py` — 5 smoke tests: shapely importable, `_HAS_SHAPELY` is True, point-in-polygon (Polygon + MultiPolygon) via shapely path.
 - ODbL attribution added to `about_text` in all 8 lang files.
 
-**Remaining (blocked on AgreeDK/OpenSAK-Data repo):**
+**Remaining (blocked on OpenSAK-Org/OpenSAK-Data repo):**
 - [ ] Build pipeline step to fetch/generate `data/` before `pyinstaller opensak.spec` runs (currently converter must be run manually with the GSAK source files).
 - [ ] Verify install/footprint delta stays within Phase 0 budget.
 

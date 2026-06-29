@@ -27,12 +27,12 @@
 ## 1. Installation
 
 ### Windows
-1. Download the latest `.exe` installer from the [Releases page](https://github.com/AgreeDK/opensak/releases)
+1. Download the latest `.exe` installer from the [Releases page](https://github.com/OpenSAK-Org/opensak/releases)
 2. Run the installer — Windows SmartScreen may warn you the first time; click **More info → Run anyway**
 3. OpenSAK will appear in your Start menu
 
 ### Linux
-1. Download the latest `.AppImage` from the [Releases page](https://github.com/AgreeDK/opensak/releases)
+1. Download the latest `.AppImage` from the [Releases page](https://github.com/OpenSAK-Org/opensak/releases)
 2. Make it executable:
    ```bash
    chmod +x OpenSAK-*.AppImage
@@ -43,11 +43,11 @@
    ```
 
 ### macOS
-1. Download the latest `.dmg` from the [Releases page](https://github.com/AgreeDK/opensak/releases)
+1. Download the latest `.dmg` from the [Releases page](https://github.com/OpenSAK-Org/opensak/releases)
 2. Open the `.dmg` and drag OpenSAK to your Applications folder
 3. On first launch, right-click the app and choose **Open** to bypass Gatekeeper
 
-> **Note:** If you see a warning about an unidentified developer, this is expected for a community project without a paid Apple certificate. The source code is fully open at [github.com/AgreeDK/opensak](https://github.com/AgreeDK/opensak).
+> **Note:** If you see a warning about an unidentified developer, this is expected for a community project without a paid Apple certificate. The source code is fully open at [github.com/OpenSAK-Org/opensak](https://github.com/OpenSAK-Org/opensak).
 
 ---
 
@@ -275,26 +275,26 @@ Each database has its own:
 
 Currently supported: **Danish (da)**, **English (en)**, **French (fr)**, **Dutch (nl)**, **Portuguese (pt)**, **German (de)**, **Czech (cs)**, **Swedish (se)**
 
-Want to add a new language? See [CONTRIBUTING.md](https://github.com/AgreeDK/opensak/blob/main/CONTRIBUTING.md) for the step-by-step guide — it only requires translating one file.
+Want to add a new language? See [CONTRIBUTING.md](https://github.com/OpenSAK-Org/opensak/blob/main/CONTRIBUTING.md) for the step-by-step guide — it only requires translating one file.
 
 ---
 
 ## 13. Getting Help
 
 **Found a bug or have a feature request?**
-→ [github.com/AgreeDK/opensak/issues](https://github.com/AgreeDK/opensak/issues)
+→ [github.com/OpenSAK-Org/opensak/issues](https://github.com/OpenSAK-Org/opensak/issues)
 
 **Questions and community discussion?**
 → [OpenSAK Facebook Group](https://www.facebook.com/groups/opensak)
 
 **Latest releases and downloads?**
-→ [github.com/AgreeDK/opensak/releases](https://github.com/AgreeDK/opensak/releases)
+→ [github.com/OpenSAK-Org/opensak/releases](https://github.com/OpenSAK-Org/opensak/releases)
 
 **Full changelog?**
-→ [CHANGELOG.md](https://github.com/AgreeDK/opensak/blob/main/CHANGELOG.md)
+→ [CHANGELOG.md](https://github.com/OpenSAK-Org/opensak/blob/main/CHANGELOG.md)
 
 ---
 
-*OpenSAK is free and open-source software, released under the MIT licence. Contributions are welcome — see [CONTRIBUTING.md](https://github.com/AgreeDK/opensak/blob/main/CONTRIBUTING.md) for details.*
+*OpenSAK is free and open-source software, released under the MIT licence. Contributions are welcome — see [CONTRIBUTING.md](https://github.com/OpenSAK-Org/opensak/blob/main/CONTRIBUTING.md) for details.*
 
 *Last updated for v1.14.0-beta.*

@@ -3,7 +3,7 @@
 The offline boundary engine (`src/opensak/geo/`, issue #60) reads its dataset
 from a **local `data/` folder at the repo root**. That folder is a *dev-only
 stand-in*: it is **git-ignored** (see `.gitignore`) and exists only until the
-real dataset is published to the **`AgreeDK/OpenSAK-Data`** repository and
+real dataset is published to the **`OpenSAK-Org/OpenSAK-Data`** repository and
 seeded into the per-user app-data directory. The switch-over is described in
 [`plans/reverse-geocoding-data-migration.md`](../plans/reverse-geocoding-data-migration.md).
 

@@ -3,7 +3,7 @@
 # Generates the OpenSAK boundary dataset from public geodata and uploads the
 # result as a GitHub Release.
 #
-# Intended to move to the AgreeDK/OpenSAK-Data repo once that repo exists.
+# Intended to move to the OpenSAK-Org/OpenSAK-Data repo once that repo exists.
 # Running here on the beta branch lets us test the full pipeline first.
 #
 # Triggers:

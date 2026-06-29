@@ -2045,7 +2045,7 @@ class MainWindow(QMainWindow):
         # the `beta` branch and aren't merged to `main` until they go stable,
         # so a hardcoded main link showed the wrong (older) changelog entry
         # for anyone running a beta.
-        changelog_url = f"https://github.com/AgreeDK/opensak/blob/{latest_tag}/CHANGELOG.md"
+        changelog_url = f"https://github.com/OpenSAK-Org/opensak/blob/{latest_tag}/CHANGELOG.md"
 
         msg = QMessageBox(self)
         if is_prerelease:

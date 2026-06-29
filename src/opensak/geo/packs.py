@@ -18,7 +18,7 @@ log = get_logger("geo.packs")
 
 # GitHub Releases base URL for the boundary dataset repository.
 # County packs and boundaries.db are published as flat release assets here.
-DATA_REPO_URL = "https://github.com/AgreeDK/OpenSAK-Data/releases/latest/download"
+DATA_REPO_URL = "https://github.com/OpenSAK-Org/OpenSAK-Data/releases/latest/download"
 MANIFEST_FILENAME = "manifest.json"
 # Re-check remote at most once per week; override with force=True for manual checks.
 THROTTLE_SECONDS = 7 * 24 * 3600
