@@ -8,637 +8,162 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
-## [1.14.0-beta.20] — 2026-06-29
+## [1.14.0] — 2026-06-29
 
-> **Beta release** — continuing the 1.14.0 testing period.
-
-### Changed
-
-- **Favourite column header no longer repeats the ★ marker** — the cell
-  itself already shows ★ for caches with a favourite point, so having it in
-  the header too was redundant and just ate column width for no reason. The
-  header now reads "Favourite" (and its translated equivalents) without the
-  star, in all 8 supported languages. The waypoint dialog's "Favorite ★"
-  checkbox label is unrelated and unchanged — that star carries the same
-  meaning as the icon next to it, not column-header decoration.
-
----
-
-## [1.14.0-beta.19] — 2026-06-29
-
-> **Beta release** — continuing the 1.14.0 testing period.
-
-### Fixed
-
-- **Cache detail panel could crash when sorting logs where some entries have
-  no date** (fixes #429) — `_render_logs()` sorted by `log_date or 0`, and the
-  moment a cache had a mix of dated and undated logs, Python tried to compare
-  a `datetime` against the integer `0` and raised a `TypeError`, crashing the
-  panel as soon as such a cache was opened. The fallback value is now
-  `datetime.min` instead of `0`, so the sort key stays within a single type no
-  matter how many logs are missing a date. Regression-tested against a cache
-  with both dated and undated logs.
-
-- **Several columns weren't centered in the cache table, unlike their visual
-  peers** (fixes #431) — `container`, `favorite`, `hidden_date`, `last_log`,
-  `found_date`, `dnf_date` and `placed_by` were missing from the column's
-  center-alignment list, so they sat left-aligned right next to columns like
-  difficulty, terrain and distance that were already centered, giving the
-  table an inconsistent look. All seven now align center to match.
-
-### Notes
-
-- The `v1.14.0-beta.18` tag should be treated as void. `src/opensak/__init__.py`
-  and `CHANGELOG.md` were bumped, but `site/user-guide.html`'s hardcoded
-  version label — five places: `<title>`, the sidebar nav, the hero
-  meta line, the pinned changelog link, and the footer — was not, which is
-  exactly the bug class fixed in beta.17. `test_user_guide_changelog_link_pins_to_release_tag`
-  caught it immediately and failed CI on both the regular `beta` push and the
-  tag-triggered release build, so `build.yml` never got past the test gate —
-  no Windows/Linux/macOS builds ran and no GitHub Release was published for
-  beta.18. All five places are now updated on `beta`; this entry (beta.19) is
-  the one that actually ships.
-- CI now runs in sequential stages instead of everything firing in parallel:
-  the quality gate runs first, unit tests wait on it (`needs: quality`), and
-  e2e tests wait on unit tests (`needs: unit-tests`) — a quality or unit
-  failure now short-circuits the pipeline instead of still burning Actions
-  minutes on the stages after it. Unit test coverage is also enforced at a
-  hard 80% floor (`--cov-fail-under=80`), with a Markdown coverage breakdown
-  posted straight to the job's GitHub Actions summary instead of being buried
-  in the console log. New tests for the settings-store helpers (`sync()`,
-  `invalidate_path_cache()`, the module-level singleton) were added to clear
-  the new threshold.
-- Issues linked in a PR body (`closes #N` / `fixes #N` / `resolves #N`) are
-  now commented on and automatically closed the moment that PR merges to
-  `beta` — a new `notify-linked-issues.yml` workflow tailors the comment by
-  the issue's label (bug / feature / improvement), @-mentions the original
-  reporter, and closes the issue with `state_reason: completed`. Previously
-  this was all done by hand on every merge.
-- Dependabot bumped `actions/github-script` from v7 to v9 (#437), keeping the
-  new linked-issues workflow above on a current major version.
-
----
-
-## [1.14.0-beta.17] — 2026-06-29
-
-> **Beta release** — continuing the 1.14.0 testing period. Supersedes both
-> `v1.14.0-beta.15` and `v1.14.0-beta.16`, neither of which got a published
-> release (see Notes for why).
+> First stable release of the 1.14.0 cycle. Replaces the run of
+> `1.14.0-beta.1` … `1.14.0-beta.20` builds — see git history for the
+> detailed beta-by-beta log if needed.
 
 ### Added
 
 - **Lock a cache against import overwrites** (closes #202) — a long-requested
-  GSAK feature. Locking a cache (via the new 🔒 column, or the checkbox in
-  "Edit cache…") freezes its scalar fields — name, type, container,
-  coordinates, D/T, owner, status, descriptions, hint, country/state/county —
-  exactly as they are, so a later PQ/GPX re-import (e.g. after the listing
-  gets a difficulty rerate) can't silently change data your stats already
-  depend on. Logs, attributes and waypoints still refresh normally on
-  re-import — locking only protects the cache record itself. Filterable via
-  a new "Locked" Yes/No group in the filter dialog, sortable like any other
-  column.
+  GSAK feature. Locking a cache freezes its scalar fields (name, type,
+  container, coordinates, D/T, owner, status, descriptions, hint,
+  country/state/county) so a later PQ/GPX re-import can't silently change
+  data your stats depend on. Logs, attributes and waypoints still refresh
+  normally. Filterable and sortable like any other column.
 
-- **Personal notes, round-trippable with GSAK** (closes #389, #390, #391, #392) —
-  the cache detail panel has a new "Notes" tab for your own free-text notes per
-  cache, separate from the geocaching.com description and logs. Notes are
-  parsed in on import from GSAK-exported GPX (`gsak:UserNote` in the
-  `wptExtension` block) without ever overwriting an existing non-empty note on
-  re-import, and are written back out the same way on export, so a note
-  survives an export → GSAK → re-import round-trip. The tab is hidden when no
-  cache is selected instead of showing an empty, clickable-looking editor.
-  Closes another piece of the GSAK field-parity goal from issue #33.
+- **Personal notes, round-trippable with GSAK** (closes #389, #390, #391, #392)
+  — a new "Notes" tab on the cache detail panel for free-text notes per
+  cache, separate from the geocaching.com description and logs. Imported
+  from and exported back to GSAK's `gsak:UserNote` extension, so a note
+  survives an export → GSAK → re-import round trip.
 
-- **Child waypoints are finally visible in the UI** (closes #376, #377, #378,
-  #393) — waypoints were already imported and stored, but invisible unless you
-  knew to look on the map. Cache names with waypoints now show in **bold** in
-  the list, the detail panel has a new "Waypoints" tab (count shown in the tab
-  title) listing each waypoint's prefix, type, name, coordinates, description
-  and comment, and selecting it shows the waypoint markers on the map. Closes
-  the "child waypoint gaps" item from the backlog.
+- **Child waypoints are now visible in the UI** (closes #376, #377, #378,
+  #393) — cache names with waypoints show in bold in the list, a new
+  "Waypoints" tab lists each one's prefix, type, name, coordinates and
+  description, and selecting it shows the markers on the map.
 
-- **Attributes tab in the cache detail panel** (closes #417) — a new tab lists
-  every cache attribute with a green ✓ or red ✗ marker and the attribute name,
-  with a "(No attributes)" placeholder when there are none. Tab title shows
-  the attribute count, matching the pattern used for Waypoints and Notes.
+- **Attributes tab in the cache detail panel** (closes #417) — lists every
+  cache attribute with a green ✓ or red ✗ marker.
 
-- **Keyboard Shortcuts dialog** (closes #205) — Help → "Keyboard Shortcuts…"
-  opens a searchable reference of every shortcut in the app. Shortcuts are now
-  managed through a central registry, with any user overrides persisted in
-  QSettings and reapplied on startup.
+- **Keyboard Shortcuts dialog** (closes #205) — Help → "Keyboard
+  Shortcuts…" opens a searchable reference of every shortcut. Shortcuts are
+  managed through a central registry; user overrides persist across
+  restarts.
 
 - **Full-text search filter** (closes #294) — a new "Text Search" tab in the
-  filter dialog searches cache descriptions (short + long), logs, and personal
-  notes (hint text off by default). Uses SQL `EXISTS`/`LIKE` pushdown rather
-  than loading every cache into Python to search it, so it stays fast on large
+  filter dialog searches cache descriptions, logs, and personal notes
+  (hint text off by default), pushed down to SQL so it stays fast on large
   databases.
 
-- **Cache type icon in the detail panel** (closes #286) — the cache title in
-  the detail panel now shows its type icon to the left, scaling with the
-  Small/Medium/Large text-size setting. While building this, the found/DNF
-  smiley overlays on map pins were also corrected — found caches always get
-  the gold smiley and DNF caches the dark-blue one, independent of cache type,
-  matching GSAK's convention.
-
-- **Type column display options, plus assorted visual fixes** (closes #413,
-  #414, #415, #416) — the cache-type column can now show an icon only (default),
-  the type name as text, or both, via a new setting in the column dialog.
-  Alongside that: the column's default width was too narrow to show a type
-  name comfortably (now 40px), its content wasn't centred, and in bar-mode
-  (size bars) the old circular type badge briefly peeked out from behind the
-  bar segments — all three fixed.
-
-- **Distance calculation reworked: computed once per centre-point change
-  instead of on every refresh** (closes #60) — distance and bearing used to be
-  recalculated from scratch on every filter change, sort, search keystroke and
-  import, which got noticeably slow on large databases. They're now stored on
-  the cache row and recomputed only when the centre point actually changes, with
-  sorting pushed into SQL. A new **Vincenty (WGS84)** method is also available
-  alongside the existing Haversine default in Settings → Advanced → Distance
-  Calculation, for up to ~0.3% more accurate distances over long ranges.
-
-- **Active filter count in the info bar** (closes #373) — the info bar now
-  shows e.g. "3 filters active" instead of a generic "Active" label, so you can
-  tell at a glance how many filter conditions are currently applied without
-  opening the dialog.
-
-### Fixed
-
-- **A companion `-wpts.gpx` file could be imported as a second, duplicate set
-  of caches** (fixes #410) — GSAK and others export a cache's child waypoints
-  to a separate file alongside the main GPX. Detection used to key off the
-  `-wpts` filename suffix, so a renamed companion file slipped through and got
-  imported as if it were its own set of caches. Detection now inspects the
-  file's actual content instead of its name, so renaming doesn't fool it.
-
-- **Container/size column sorted alphabetically instead of logically**
-  (fixes #412) — a Virtual Cache (`container = "Other"`) sorted under "O", and
-  physical sizes sorted as text ("Large" before "Micro") rather than by actual
-  size. Container sort now follows the same micro→small→regular→large
-  ordering already used for the on-screen size bars.
-
-- **Favorites column showing on new databases despite always being empty**
-  (fixes #418) — favourite point counts can only be populated via the
-  Geocaching.com Live API, which OpenSAK doesn't have yet, so the column was
-  guaranteed to be blank. It's now off by default for newly created databases.
-
-- **Adventure Lab stages with `LB*` codes were silently dropped on import**
-  (fixes #359) — `lab2gpx` exports Adventure Lab stages under several prefixes
-  (`LB`, `LA`, …), but the importer only recognized `GC` and `LC`. Any other
-  prefix fell through to the "extra waypoint" path and vanished with no error.
-  The importer now also accepts any code whose `<type>` field identifies it as
-  a Geocache, regardless of prefix.
-
-- **Newly imported caches showed no distance or bearing until restart**
-  (fixes #359) — `recalculate_distances()` only ran at startup and on
-  centre-point change, so freshly imported caches sat with `NULL` distance
-  until one of those happened to fire. Import now triggers a recalculation
-  too, when a home point is configured.
-
-- **GC Code text could be unreadable in dark mode** (fixes #366) — text colour
-  in the GC Code column was hardcoded to black; it's now computed per
-  background pastel using WCAG relative luminance, so it stays readable in
-  both themes. The archived-cache strikethrough line follows the same rule.
-
-- **Unset flag column had no visual indicator** (fixes #290) — clicking the
-  flag column to set a flag had no affordance beyond a tooltip; a faint
-  outlined flag icon now shows when the flag is unset.
-
-- **Locale-aware dates weren't zero-padded consistently** (fixes #369) — a few
-  call sites formatted dates manually instead of going through the shared
-  locale-date helper, producing inconsistent day/month padding depending on
-  where the date was shown. All call sites now go through one function.
-
-- **Enter key in the filter dialog opened "Save profile" instead of applying
-  the filter** (fixes #370) — the Apply button looked bold but wasn't Qt's
-  actual default button, so Enter triggered Save instead. Apply is now wired
-  as the real default.
-
-- **Text/icon size setting didn't take effect until you reselected a cache**
-  (fixes #371) — refreshing the cache list cleared the table selection as a
-  side effect, so the code path that re-applies the new size never ran until
-  you clicked a cache again. The previously-selected cache is now restored
-  after refresh, and the empty-state placeholder picks up the new size too.
-
-- **Import progress bar was indeterminate** (fixes #372) — GPX imports now
-  pre-scan the waypoint count so the progress bar can show real progress
-  instead of just spinning.
-
-- **Small/Large text size options looked almost identical to Medium**
-  (fixes #374, #375) — the size range has been widened so the difference is
-  actually visible, and the setting now also applies to the cache grid's font
-  and row height, not just the detail panel.
-
-### Notes
-
-- The `v1.14.0-beta.15` tag should be treated as void. It was cut from a
-  commit where `src/opensak/__init__.py` still read `1.14.0-beta.14` — a local
-  version bump that was never actually committed — while `CHANGELOG.md` and
-  `site/user-guide.html` already claimed beta.15. That mismatch is what made
-  `test_user_guide_changelog_link_pins_to_release_tag` fail across every CI
-  matrix leg. `__init__.py` has since been corrected on `beta`, the full
-  pipeline is green.
-- The `v1.14.0-beta.16` tag is *also* void, for the same class of bug in a
-  different spot: `site/user-guide.html` hardcodes its version label in five
-  places, and the beta.16 release commit bumped `__init__.py` without
-  updating them, so they still said beta.15. Same test, same failure mode,
-  second occurrence. Fixed on `beta`; this entry (beta.17) is the one that
-  actually ships. No public GitHub Release was published for either dead
-  tag, so nothing user-facing needs correcting.
-- 11 unused translation keys were removed (#397) after a new CI test started
-  detecting language keys with no remaining source reference — this should
-  keep the language files from quietly accumulating dead entries going forward.
-- All 8 language files were updated for the new Waypoints, Notes, Attributes,
-  Keyboard Shortcuts and Locked strings.
-- `pyproject.toml`'s version field is now sourced dynamically from
-  `src/opensak/__init__.py` instead of being maintained by hand in two places
-  — this had silently drifted (`pyproject.toml` still said beta.6 while the
-  app reported beta.14).
-
----
-
-## [1.14.0-beta.14] — 2026-06-27
-
-> **Beta release** — continuing the 1.14.0 testing period.
-
-### Fixed
-
-- **Website never actually redeployed on a beta release** — `deploy-site.yml`
-  listened for `release: published`, but `build.yml` creates that release
-  using `secrets.GITHUB_TOKEN` (via `softprops/action-gh-release`), and
-  GitHub's anti-recursion rule means events produced *by* `GITHUB_TOKEN`
-  never trigger other workflows in the same repo. So that trigger had
-  silently never fired for a single beta release — the June 25 fix to pin
-  the checkout ref corrected *what* would be deployed if it ran, but not
-  *whether* it ran at all. This is why opensak.com was still showing
-  beta.12 after beta.13 shipped. The workflow now also triggers directly
-  on the release tag push (`push: tags: ["v*"]`), which is a normal,
-  non-`GITHUB_TOKEN` push and fires like any other.
-
-- **Two copies of the User Guide could silently drift apart** (root cause
-  of the beta.12 Facebook report, and the reason beta.13's fix needed a
-  second pass) — `docs/opensak-user-guide.html`, `docs/CNAME`, and
-  `docs/assets/screenshots/` were leftover duplicates from when GitHub
-  Pages deployed from the `/docs` folder on `main`, before the switch to
-  Actions-based deployment from `site/`. Nothing referenced them — not
-  code, not the build, not even README — so they only ever got updated by
-  hand, and were forgotten as often as not. All three are now removed;
-  `site/user-guide.html` is the single source of truth, and a regression
-  test (`test_no_duplicate_user_guide_copy`) fails loudly if a synced
-  `docs/` copy ever reappears.
-
-### Notes
-
-- No app-facing change for end users — this release exists purely to fix
-  opensak.com and the release pipeline behind it.
-
----
-
-## [1.14.0-beta.13] — 2026-06-27
-
-> **Beta release** — continuing the 1.14.0 testing period.
-
-### Fixed
-
-- **No way to actually run the setup wizard again** (fixes #358) — Settings →
-  Advanced told users to "run the setup wizard again" to change the
-  installation folder, but there was no way to actually do that — the
-  wizard only ever opened automatically on first launch. A "Run setup
-  wizard again" button has been added right below that note. While
-  building it, a related latent bug was also fixed: the wizard's
-  database-folder step defaulted to the installation folder instead of the
-  actual current database folder, which would otherwise have silently
-  suggested moving an already-configured database folder back on a re-run.
-
-- **User Guide "Changelog" link pointed to `main` instead of the release
-  tag** — a beta tester reported via Facebook that the Changelog link on
-  the opensak.com User Guide page opened the stable changelog instead of
-  the beta one the page actually documents. The link (present in both
-  `site/user-guide.html` and `docs/opensak-user-guide.html`) now pins to
-  the exact release tag instead of a branch name — the same fix already
-  applied to the in-app update popup in beta.10. A regression test now
-  checks both files on every CI run so this can't silently resurface
-  somewhere else.
-
-### Notes
-
-- All 8 language files updated with the new wizard button label and
-  related strings.
-
----
-
-## [1.14.0-beta.12] — 2026-06-25
-
-> **Beta release** — continuing the 1.14.0 testing period.
-
-### Added
-
-- **Regression test locking the update-popup changelog link to the release
-  tag** — the link was previously fixed (beta.10) to point at
-  `blob/<tag>/CHANGELOG.md` instead of a hardcoded branch, but nothing
-  enforced that in code. Testers on older betas (≤beta.9) were still seeing
-  the stale hardcoded link until they upgraded, which understandably read
-  as a fresh bug report on Facebook. A test now fails immediately if a
-  future change reintroduces a literal `main` or `beta` branch name in
-  that link, so this can't silently regress again.
-
-### Notes
-
-- No functional change for anyone already on beta.10 or later — the
-  changelog and download links in the update popup were already correct.
-  This release exists to get everyone still on an older beta onto a build
-  where both links are guaranteed right.
-
----
-
-## [1.14.0-beta.11] — 2026-06-24
-
-> **Beta release** — continuing the 1.14.0 testing period.
-
-### Fixed
-
-- **Beta update check could offer an older beta instead of the latest one** —
-  `fetch_latest_prerelease()` picked the first pre-release entry returned by
-  GitHub's releases list, assuming it was always the newest. GitHub actually
-  sorts that list by the commit date behind each tag, not by when the
-  release was created, so the order doesn't always match version order
-  (observed in practice: beta.9 listed ahead of beta.10). The function now
-  compares every pre-release in the list and picks the genuinely highest
-  version, regardless of the order GitHub returns them in.
-
----
-
-## [1.14.0-beta.10] — 2026-06-24
-
-> **Beta release** — continuing the 1.14.0 testing period.
-
-### Fixed
-
-- **"See changelog" link in the update popup always pointed to `main`** —
-  beta releases live on the `beta` branch and aren't merged into `main`
-  until they go stable, so anyone notified about a new beta and clicking
-  "See changelog" saw an older changelog that didn't mention what had
-  actually changed. The link now points at the specific release tag
-  instead of always `main`, so it always shows the right entry.
-
----
-
-## [1.14.0-beta.9] — 2026-06-24
-
-> **Beta release** — continuing the 1.14.0 testing period.
-
-### Added
-
-- **User Guide link in the Help menu** — a new "User Guide" item, between
-  "About OpenSAK…" and "Check for updates…", opens the online User Guide
-  (opensak.com/user-guide.html) directly in your default browser. No more
-  hunting for the link on GitHub or the website — help is one click away
-  from inside the app. Translated into all 8 supported languages.
-
----
-
-## [1.14.0-beta.8] — 2026-06-22
-
-> **Beta release** — continuing the 1.14.0 testing period.
-
-### Fixed
-
-- **Hint encoding detection reversed** (fixes #329) — geocaching.com Pocket Query
-  GPX files deliver hints as **plaintext** in the `<groundspeak:encoded_hints>`
-  tag, but OpenSAK assumed the field always contained ROT13-ciphertext. The
-  display logic was backwards: OpenSAK would show plaintext hints as gibberish
-  and vice versa. A new heuristic `split_hint()` function analyzes vowel
-  density to detect whether the hint is human-readable plaintext or encrypted
-  ROT13, and displays accordingly. Default display is always **obscured**
-  (ciphertext); pressing "Decode hint" reveals the plaintext. The same fix
-  was applied to KML export. Regression tested against 24 real Danish hints.
-
-- **Google Maps link didn't open** (fixes #321) — the cache detail pane has an
-  option to open a cache's coordinates in an external map app (Google Maps or
-  OpenStreetMap). The settings dialog stored the choice as `"google"`, but
-  the code checked for `"googlemaps"`, so the condition never matched and
-  clicking the link did nothing. Fixed by aligning the constant.
-
-- **Cache detail panel custom delegate segfault** (related to #286/#287) —
-  when implementing text/icon size scaling, the `SizeBarDelegate` (which
-  renders the size bar in the cache list) was calling `get_settings()` during
-  every `paint()` event, which occurs hundreds of times per second as rows
-  are rendered. This caused a segmentation fault in the test suite. Fixed by
-  caching the icon size in the delegate and updating it only when settings
-  actually change.
-
-### Changed
-
-- **UI text and icon sizes are now adjustable** (fixes #286, #287, #290) —
-  a new dropdown in Settings → Display: "Text and icon size" offers three
-  choices: Small, Medium (default), and Large. Affects the cache type icon
-  size in the list view, the cache detail panel title and metadata labels,
-  and the tab labels. Useful for users with reduced visual acuity. The
-  setting persists across restarts and is per-database.
-
-### Added
-
-- **Debug logging for reverse geocoding module** (closes #232) — the `geo`
-  module (boundaries, packs, store) now supports the same debug-flag system
-  as the other modules. Enable via `debug_flags.py` to see logs of when the
-  boundary database opens, packs are loaded, and coordinates are resolved to
-  country/state/county. Logs appear in `opensak.log` when the flag is active.
-
----
-
-## [1.14.0-beta.7] — 2026-06-19
-
-> **Beta release** — continuing the 1.14.0 testing period.
-
-### Fixed
-
-- **Filter ignored the "no corrected coordinates" case** (fixes #274) — the
-  filter engine only had a `HasCorrectedFilter`; with no negative
-  counterpart, unchecking "has corrected coordinates" while leaving only
-  "no corrected coordinates" checked in the filter dialog silently produced
-  no filter at all, so unsolved mystery caches weren't excluded as expected.
-  A new `NoCorrectedFilter` was added, mirroring the existing
-  Premium/Non-Premium filter pair.
-
-- **Some owner-placed caches weren't colored or counted correctly**
-  (fixes #272) — caches whose `owner` field came from a GSAK "statistics
-  macro" export (e.g. `Cheminer Will (F=1361 H=54)`) failed to match the
-  configured GC username, because the trailing `(F=N H=N)`-style suffix —
-  and irregular whitespace, including non-breaking spaces — was never
-  stripped before comparing. A new `normalize_geocacher_name()` helper now
-  handles both cases, and is used consistently for the GC Code coloring,
-  the info-bar owned count, and the "owned" filter.
+- **Cache type icon in the detail panel** (closes #286) — shown next to the
+  cache title, scaling with the text-size setting. Found/DNF map-pin
+  smileys now correctly use gold/dark-blue regardless of cache type,
+  matching GSAK.
+
+- **Type column display options** (closes #413, #414, #415, #416) — show
+  icon only (default), name as text, or both, via a new column-dialog
+  setting.
+
+- **Distance calculation reworked** (closes #60) — now computed once per
+  centre-point change instead of on every refresh, which kept large
+  databases noticeably faster. A new Vincenty (WGS84) method is available
+  alongside the existing Haversine default in Settings → Advanced.
+
+- **Active filter count in the info bar** (closes #373) — shows e.g. "3
+  filters active" instead of a generic label.
+
+- **Welcome wizard for first-run setup** (closes #210) — walks new
+  installations through language, installation folder, database folder,
+  optional Geocaching.com profile, and a confirmation screen. A new "Run
+  setup wizard again" button in Settings → Advanced (fixes #358) lets you
+  re-run it later, e.g. to change folders.
+
+- **JSON-based settings store** (closes #209) — replaces QSettings and the
+  old `preferences.json` with a single `opensak.json` file. Existing
+  installations migrate automatically and transparently on first launch of
+  this version.
+
+- **Database and installation folders manageable from Settings → Advanced**
+  — view both folders, and move existing databases to a new folder (with
+  the option to keep or delete the originals) without going through the
+  setup wizard again.
+
+- **Per-database column views with drag-to-reorder** (closes #199) — visible
+  columns and widths are remembered separately per database; drag column
+  headers to reorder them.
+
+- **UI text and icon size is now adjustable** (closes #286, #287, #290) — a
+  new Settings → Display option offers Small, Medium (default), and Large,
+  affecting the cache list, detail panel, and tab labels.
+
+- **GC Code colors and clickable status counts now match GSAK** (issue
+  #270) — found caches show yellow, your own caches show green, and
+  clicking a colored count in the info bar (Found / My caches / Inactive /
+  All) filters the list to that status.
+
+- **GSAK personal/user fields are now imported** (closes #269) — `UserFlag`,
+  `IsPremium`, `UserSort`, `UserData`/`User2`/`User3`/`User4` and
+  `FavPoints` from GSAK-exported GPX are imported without overwriting data
+  on a later plain Pocket Query re-import.
+
+- **Full log text shown without truncation** (fixes #218), and **links in
+  logs are now clickable** (fixes #219), matching the existing behaviour of
+  the cache description tab.
+
+- **User Guide link in the Help menu** — opens the online User Guide
+  directly in your default browser.
+
+- **Debug logging system** — writes to `opensak.log` in the install
+  directory (resets on startup, rotates at 1 MB). "Open log file" was added
+  to the Help menu, making it easy to attach when reporting issues.
+
+- **New "no corrected coordinates" filter** (fixes #274) — mirrors the
+  existing Premium/Non-Premium filter pair; previously unchecking "has
+  corrected coordinates" alone produced no filter at all.
 
 ### Changed
 
 - **Owned-cache counting and coloring now use the `owner` field instead of
-  `placed_by`** (issue #270) — matches GSAK's behavior, where an adopted
-  cache (placed by one person, currently owned by another) is attributed to
-  its current owner rather than the original placer. Clicking the
-  "My caches" tile in the info bar now filters by owner as well.
-
-### Added
-
-- **Full log text is now shown without truncation** (fixes #218) — the Logs
-  tab previously cut log text off at a fixed length with "…"; since the log
-  viewer already scrolls, the full text is now always shown.
-
-- **Links in logs are now clickable** (fixes #219) — Markdown-style links
-  (`[text](url)`), as used in Geocaching.com Pocket Query exports, are now
-  converted to real clickable links that open in your system's default
-  browser, matching the existing behavior of the cache description tab.
-  Plain `[square brackets]` not followed by `(url)` are left untouched, and
-  search highlighting in logs continues to work correctly alongside links.
-
----
-
-## [1.14.0-beta.6] — 2026-06-18
-
-> **Beta release** — continuing the 1.14.0 testing period.
-
-### Added
-
-- **GSAK personal/user fields are now imported** (closes #269) — GPX files
-  exported from GSAK itself (not standard Geocaching.com Pocket Queries) now
-  have their `UserFlag`, `IsPremium`, `UserSort`, `UserData`/`User2`/`User3`/
-  `User4`, and `FavPoints` fields imported into the matching `Cache` columns
-  (added back in #33, previously left unused). A field is only overwritten
-  when GSAK actually supplies a value, so a later plain Pocket Query
-  re-import won't wipe data carried in from a GSAK-sourced import.
-  `gsak:County` was not added separately, since `county` is already
-  populated from the standard Groundspeak `gs:county` field.
+  `placed_by`** (issue #270) — an adopted cache is now attributed to its
+  current owner, matching GSAK.
 
 ### Fixed
 
-- **GSAK GPX logs were capped at 20 entries** (fixes #266) —
-  `_render_log_html()` had a hardcoded `[:20]` slice that silently dropped
-  any logs beyond the first 20 (and any matching logs beyond 20 when
-  searching), even though the importer itself had no such limit. All logs —
-  and all matching logs when searching — are now shown. An outdated comment
-  referencing "show up to 10 most recent" was also corrected to match the
-  actual behavior.
-
----
-
-## [1.14.0-beta.5] — 2026-06-17
-
-> **Beta release** — continuing the 1.14.0 testing period.
-
-### Changed
-
-- **GC Code colors now match GSAK** (issue #270) — found caches now show on
-  a yellow background (previously green), and your own caches show on a
-  green background (previously yellow), matching the colors long-time GSAK
-  users already know. Disabled caches now use black text on the red
-  background instead of orange-on-red, which was nearly unreadable.
-- **The count panel in the info bar now uses the same colors as the GC Code
-  column** — black text on a colored background instead of colored numbers
-  on a plain background.
-
-### Added
-
-- **Clicking a colored count in the info bar filters the cache list** to
-  that status — click "Found" to see only found caches, "My caches" for
-  your own, "Inactive" for archived/disabled caches, or "All" to clear the
-  filter. Mirrors GSAK's clickable status counts.
-
----
-
-## [1.14.0-beta.4] — 2026-06-17
-
-> **Beta release** — continuing the 1.14.0 testing period.
-
-### Fixed
-
+- **Hint encoding detection was reversed** (fixes #329) — geocaching.com PQ
+  exports deliver hints as plaintext, not ROT13 ciphertext as previously
+  assumed; OpenSAK was showing plaintext hints as gibberish and vice versa.
+  Display defaults to obscured either way; "Decode hint" reveals it.
+- **Google Maps link in the cache detail pane didn't open** (fixes #321).
+- **GSAK GPX logs were capped at 20 entries** (fixes #266) — all logs are
+  now shown.
+- **A companion `-wpts.gpx` file could import as a duplicate set of caches**
+  (fixes #410) — detection now inspects file content instead of filename.
+- **Container/size column sorted alphabetically instead of by actual size**
+  (fixes #412).
+- **Favorites column showed on new databases despite always being empty**
+  (fixes #418) — off by default now, since populating it requires the
+  Geocaching.com Live API, which OpenSAK doesn't have yet.
+- **Adventure Lab stages with non-`GC`/`LC` prefixes were silently dropped
+  on import** (fixes #359).
+- **Newly imported caches showed no distance or bearing until restart**
+  (fixes #359).
+- **GC Code text could be unreadable in dark mode** (fixes #366).
+- **Unset flag column had no visual indicator** (fixes #290).
+- **Locale-aware dates weren't zero-padded consistently** (fixes #369).
+- **Enter key in the filter dialog triggered "Save profile" instead of
+  Apply** (fixes #370).
+- **Text/icon size setting didn't take effect until reselecting a cache**
+  (fixes #371).
+- **Import progress bar was indeterminate** (fixes #372) — now shows real
+  progress based on a waypoint pre-scan.
+- **Small/Large text size options looked almost identical to Medium**
+  (fixes #374, #375) — range widened, and the setting now also applies to
+  the cache grid's font and row height.
+- **Cache detail panel could crash when sorting logs with some entries
+  missing a date** (fixes #429).
+- **Several cache-table columns weren't center-aligned like their
+  neighbours** (fixes #431).
 - **Update checker failed with SSL certificate errors on Windows** — the
-  bundled `.exe` could not verify HTTPS connections to the GitHub API
-  (`CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate`),
-  because `certifi`'s root certificate bundle was not included in the
-  PyInstaller build and the code relied on the system's certificate store,
-  which isn't always reliably accessible from a bundled executable. The
-  updater now explicitly uses `certifi`'s certificate bundle via a
-  dedicated SSL context, and the bundle is packaged with the build.
+  bundled `.exe` now explicitly uses `certifi`'s certificate bundle.
+- **Setup wizard's database-folder step defaulted to the install folder
+  instead of the actual database folder** on re-run.
+- **Boolean settings could silently corrupt to base64 strings** in the new
+  JSON settings store — existing corrupted values repair automatically on
+  startup.
 
----
-
-## [1.14.0-beta.3] — 2026-06-17
-
-> **Beta release** — continuing the 1.14.0 testing period.
-
-### Added
-
-- **Database and installation folders are now visible in Settings → Advanced**
-  — a new "Folders" section shows the current installation folder
-  (read-only) and the database folder. The database folder can be changed
-  directly from Settings, not just during the initial setup wizard.
-
-- **Moving existing databases to a new folder** — when changing the database
-  folder in Settings, if existing databases are found, you're now asked
-  whether to move them along: "Move and keep originals", "Move and delete
-  originals", or leave them where they are (only new databases will use the
-  new folder). Moving correctly handles SQLite WAL/SHM sidecar files and
-  protects against accidentally overwriting an existing file at the
-  destination.
-
----
-
-## [1.14.0-beta.2] — 2026-06-17
-
-> **Beta release** — continuing the 1.14.0 testing period.
-
-### Added
-
-- **Beta-aware update notifications** — users running a beta version are now
-  checked against the full GitHub releases list to find a newer beta, and see
-  a distinct "new beta version available" message instead of the normal
-  update prompt. Users running a stable (main) release are unaffected and
-  continue to only ever be offered stable updates, as before.
-
----
-
-## [1.14.0-beta.1] — 2026-06-17
-
-> **Beta release** — testing the new 1.14.0 settings/database architecture before
-> it becomes the stable release. Please report any issues found while testing.
-
-### Added
-
-- **JSON-based settings store** (closes #209) — replaces QSettings and the old
-  `preferences.json` with a single `opensak.json` file in the install directory.
-  A small `bootstrap.json` on the platform-standard config path points to the
-  install directory. Existing installations are migrated automatically and
-  transparently on first launch of this version.
-
-- **Welcome wizard for first-run setup** (closes #210) — new installations now
-  walk through a 5-step wizard: language, installation folder (settings/logs),
-  database folder, optional Geocaching.com profile, and a final confirmation
-  screen. Existing installations skip the wizard automatically.
-
-- **Per-database column views with drag-to-reorder** (closes #199) — visible
-  columns and their widths are now remembered separately for each database.
-  Column headers can be dragged to reorder them, and the new order is saved
-  and restored automatically, including across restarts.
-
-- **Debug logging system** (closes #232) — a lightweight, always-on logging
-  system writes to `opensak.log` in the install directory. The log resets on
-  every startup and rotates at 1 MB. Per-module debug flags (currently only
-  the update checker) can be toggled in `debug_flags.py` without touching the
-  calling code. "Open log file" was added to the Help menu so the file is easy
-  to find and attach when reporting issues.
-
-### Fixed
-
-- **Boolean settings could silently corrupt to base64 strings** — a bug in the
-  new JSON settings store caused `True`/`False` values (e.g. "automatically
-  check for updates") to occasionally be written as base64-encoded byte
-  strings instead of real booleans, because `bool` is an `int` subclass and
-  was caught by a `bytes()` coercion meant only for Qt's `QByteArray`. Existing
-  corrupted values are repaired automatically on startup.
-
-- **Update checker mishandled pre-release version tags** — `_parse_version`
-  previously fell back to a sentinel value for any tag with a `-beta.N` /
-  `-alpha.N` / `-rc.N` suffix, which would have made this very beta appear
-  older than any released version. Pre-release tags now compare correctly
-  against both stable releases and other pre-releases of the same version.
+For planned features and known issues see the [GitHub Issues list](https://github.com/AgreeDK/opensak/issues).
 
 ---
 
