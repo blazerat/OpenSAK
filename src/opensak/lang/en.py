@@ -608,7 +608,7 @@ STRINGS: dict[str, str] = {
     "col_dnf":          "DNF",
     "col_premium":      "Premium",
     "col_archived":     "Archived",
-    "col_favorite":     "Favourite ★",
+    "col_favorite":     "Favourite",
     "col_latitude":               "Latitude",
     "col_longitude":              "Longitude",
     "col_coord_tooltip_original": "Original coordinates",

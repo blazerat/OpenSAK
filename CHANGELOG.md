@@ -8,6 +8,22 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [1.14.0-beta.20] — 2026-06-29
+
+> **Beta release** — continuing the 1.14.0 testing period.
+
+### Changed
+
+- **Favourite column header no longer repeats the ★ marker** — the cell
+  itself already shows ★ for caches with a favourite point, so having it in
+  the header too was redundant and just ate column width for no reason. The
+  header now reads "Favourite" (and its translated equivalents) without the
+  star, in all 8 supported languages. The waypoint dialog's "Favorite ★"
+  checkbox label is unrelated and unchanged — that star carries the same
+  meaning as the icon next to it, not column-header decoration.
+
+---
+
 ## [1.14.0-beta.19] — 2026-06-29
 
 > **Beta release** — continuing the 1.14.0 testing period.

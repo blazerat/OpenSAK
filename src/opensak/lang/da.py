@@ -609,7 +609,7 @@ STRINGS: dict[str, str] = {
     "col_dnf":          "DNF",
     "col_premium":      "Premium",
     "col_archived":     "Arkiveret",
-    "col_favorite":     "Favorit ★",
+    "col_favorite":     "Favorit",
     "col_latitude":               "Bredde",
     "col_longitude":              "Længde",
     "col_coord_tooltip_original": "Originale koordinater",

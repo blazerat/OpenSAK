@@ -611,7 +611,7 @@ STRINGS: dict[str, str] = {
     "col_dnf":          "DNF",
     "col_premium":      "Premium",
     "col_archived":     "Gearchiveerd",
-    "col_favorite":     "Favoriet ★",
+    "col_favorite":     "Favoriet",
     "col_latitude":               "Breedtegraad",
     "col_longitude":              "Lengtegraad",
     "col_coord_tooltip_original": "Originele coördinaten",
