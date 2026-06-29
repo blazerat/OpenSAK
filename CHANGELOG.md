@@ -8,7 +8,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
-## [1.14.0-beta.18] — 2026-06-29
+## [1.14.0-beta.19] — 2026-06-29
 
 > **Beta release** — continuing the 1.14.0 testing period.
 
@@ -32,6 +32,16 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Notes
 
+- The `v1.14.0-beta.18` tag should be treated as void. `src/opensak/__init__.py`
+  and `CHANGELOG.md` were bumped, but `site/user-guide.html`'s hardcoded
+  version label — five places: `<title>`, the sidebar nav, the hero
+  meta line, the pinned changelog link, and the footer — was not, which is
+  exactly the bug class fixed in beta.17. `test_user_guide_changelog_link_pins_to_release_tag`
+  caught it immediately and failed CI on both the regular `beta` push and the
+  tag-triggered release build, so `build.yml` never got past the test gate —
+  no Windows/Linux/macOS builds ran and no GitHub Release was published for
+  beta.18. All five places are now updated on `beta`; this entry (beta.19) is
+  the one that actually ships.
 - CI now runs in sequential stages instead of everything firing in parallel:
   the quality gate runs first, unit tests wait on it (`needs: quality`), and
   e2e tests wait on unit tests (`needs: unit-tests`) — a quality or unit
