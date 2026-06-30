@@ -596,3 +596,29 @@ def get_flag_placeholder_icon(size: int = 16) -> QIcon:
 def get_lock_placeholder_icon(size: int = 16) -> QIcon:
     """Faint outlined open-padlock QIcon shown in the locked column when unset (issue #202)."""
     return QIcon(_svg_to_pixmap(_LOCK_PLACEHOLDER_SVG, size))
+
+
+# ── Corrected-coordinates warning icon (issue #354) ────────────────────────────
+#
+# A generic amber warning-triangle with "!" — the universal caution symbol used
+# across road signage, operating systems and web standards. It is not unique to
+# any single application, so it carries no third-party IP concerns.
+#
+# Replaces the plain "📍" emoji previously used in the "corrected" table column,
+# which rendered too small / low-contrast on some platforms (missing or
+# monochrome emoji fonts on certain Linux distros in particular).
+
+_CORRECTED_COORDS_SVG = (
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16">'
+    '<polygon points="8,1.3 15.3,14.5 0.7,14.5" '
+    'fill="#ffc107" stroke="#7a5200" stroke-width="1" stroke-linejoin="round"/>'
+    '<rect x="7.25" y="5.4" width="1.5" height="5.1" rx="0.65" fill="#3a2600"/>'
+    '<rect x="7.25" y="11.4" width="1.5" height="1.5" rx="0.65" fill="#3a2600"/>'
+    '</svg>'
+)
+
+
+@lru_cache(maxsize=8)
+def get_corrected_coords_icon(size: int = 16) -> QIcon:
+    """Amber warning-triangle QIcon shown in the 'corrected' column when set (issue #354)."""
+    return QIcon(_svg_to_pixmap(_CORRECTED_COORDS_SVG, size))

@@ -23,7 +23,7 @@ from opensak.db.models import Cache
 from opensak.lang import tr
 from opensak.coords import format_coords
 from opensak.gui.settings import get_settings
-from opensak.gui.icon_provider import get_cache_type_pixmap_composite
+from opensak.gui.icon_provider import get_cache_type_pixmap_composite, get_corrected_coords_icon
 from opensak.utils.types import DateFormat, TEXT_SIZE_MAP, norm_locale_date_fmt
 from opensak.hint_detect import split_hint
 
@@ -164,8 +164,10 @@ class CacheDetailPanel(QWidget):
         corrected_layout.setContentsMargins(8, 4, 8, 4)
         corrected_layout.setSpacing(8)
 
-        # 📍 ikon + label
-        pin_lbl = QLabel("📍")
+        # Issue #354: samme advarselstrekant-ikon som i cache_table-kolonnen
+        # (i stedet for "📍"-emoji, som varierer i udseende mellem platforme)
+        pin_lbl = QLabel()
+        pin_lbl.setPixmap(get_corrected_coords_icon(18).pixmap(18, 18))
         pin_lbl.setStyleSheet("border: none; background: transparent;")
         corrected_layout.addWidget(pin_lbl)
 
@@ -211,7 +213,8 @@ class CacheDetailPanel(QWidget):
 
         # Tilføj-knap til corrected coords (vises når der IKKE er korrigerede koordinater)
         self._add_corrected_row = QHBoxLayout()
-        self._add_corrected_btn = QPushButton("📍  " + tr("detail_corrected_add_btn"))
+        self._add_corrected_btn = QPushButton(tr("detail_corrected_add_btn"))
+        self._add_corrected_btn.setIcon(get_corrected_coords_icon(14))
         self._add_corrected_btn.setStyleSheet("color: #e65100; font-size: 10px;")
         self._add_corrected_btn.setFlat(True)
         self._add_corrected_btn.setMaximumHeight(22)

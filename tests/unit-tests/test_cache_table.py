@@ -276,12 +276,17 @@ class TestDisplayValues:
         assert model._display_value(_cache(user_data_4="z"), "user_data_4") == "z"
 
     def test_corrected_marker(self, model):
+        # Issue #354: "corrected" col is icon-only — _display_value always
+        # returns "" and the marker is rendered via _decoration_value instead.
         plain = _cache()
         plain.user_note = None
         assert model._display_value(plain, "corrected") == ""
+        assert model._decoration_value(plain, "corrected") is None
+
         corr = _cache()
         corr.user_note = _note()
-        assert model._display_value(corr, "corrected") == "📍"
+        assert model._display_value(corr, "corrected") == ""
+        assert model._decoration_value(corr, "corrected") is not None
 
     def test_lat_lon_uses_corrected(self, model):
         c = _cache(latitude=55.0, longitude=12.0)

@@ -21,7 +21,12 @@ from opensak.coords import format_coords, format_lat, format_lon, format_lat, fo
 from opensak.lang import tr
 from opensak.utils.types import DateFormat, GcCode, TEXT_SIZE_MAP, TextSize, norm_locale_date_fmt
 from opensak.utils.utils import normalize_geocacher_name
-from opensak.gui.icon_provider import get_cache_type_icon, get_flag_placeholder_icon, get_lock_placeholder_icon
+from opensak.gui.icon_provider import (
+    get_cache_type_icon,
+    get_flag_placeholder_icon,
+    get_lock_placeholder_icon,
+    get_corrected_coords_icon,
+)
 from opensak.gui.dialogs.column_dialog import get_column_widths, set_column_widths, get_container_display, get_type_display
 import math
 
@@ -592,6 +597,15 @@ class CacheTableModel(QAbstractTableModel):
         if orientation == Qt.Orientation.Horizontal:
             if role == Qt.ItemDataRole.DisplayRole:
                 col_id = self._columns[section]
+                if col_id == "corrected":
+                    # Issue #354: ikon-only header (DecorationRole nedenfor).
+                    # "CC"-teksten fra sprogfilerne bruges IKKE her — den ville
+                    # blive klemt sammen med Qt's indbyggede sorterings-pil i
+                    # den smalle 40px kolonne. col_corrected-nøglen holdes
+                    # ikke-tom i sprogfilerne udelukkende for at bestå
+                    # test_no_empty_values; den reelle tekst til Column Chooser
+                    # kommer fra col_corrected_label.
+                    return ""
                 return get_column_defs().get(col_id, (col_id, 80))[0]
             if role == Qt.ItemDataRole.ToolTipRole:
                 col_id = self._columns[section]
@@ -603,6 +617,11 @@ class CacheTableModel(QAbstractTableModel):
                     return tr("col_locked_header_tooltip")
             if role == Qt.ItemDataRole.TextAlignmentRole:
                 return Qt.AlignmentFlag.AlignCenter
+            if role == Qt.ItemDataRole.DecorationRole:
+                col_id = self._columns[section]
+                if col_id == "corrected":
+                    # Issue #354: ikon-only header, samme SVG-trekant som kolonnens celler
+                    return get_corrected_coords_icon(14)
         return None
 
     def data(self, index: QModelIndex | QPersistentModelIndex, role=Qt.ItemDataRole.DisplayRole):
@@ -726,6 +745,11 @@ class CacheTableModel(QAbstractTableModel):
             return get_flag_placeholder_icon(16)
         if col == "locked" and not cache.locked:
             return get_lock_placeholder_icon(16)
+        if col == "corrected":
+            note = cache.user_note
+            if note and note.is_corrected:
+                return get_corrected_coords_icon(16)
+            return None
         return None
 
     @staticmethod
@@ -799,8 +823,9 @@ class CacheTableModel(QAbstractTableModel):
         if col == "favorite":
             return "★" if cache.favorite_point else ""
         if col == "corrected":
-            note = cache.user_note
-            return "📍" if (note and note.is_corrected) else ""
+            # Issue #354: icon-only (DecorationRole) — the old "📍" emoji
+            # rendered too small / low-contrast on some platforms.
+            return ""
         # ── Issue #84: Latitude og Longitude (i brugerens valgte format) ──────
         if col == "latitude":
             lat, _ = self._effective_coords(cache)
@@ -1203,6 +1228,7 @@ class CacheTableView(QTableView):
             act_edit_corrected = menu.addAction(tr("ctx_edit_corrected"))
         else:
             act_edit_corrected = menu.addAction(tr("ctx_add_corrected"))
+        act_edit_corrected.setIcon(get_corrected_coords_icon(16))
         act_edit_corrected.triggered.connect(
             lambda checked=False, c=cache: self._edit_corrected(c)
         )

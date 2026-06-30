@@ -373,8 +373,8 @@ STRINGS: dict[str, str] = {
         "<p>Gebouwd met Python en PySide6.</p>"
         "<p>Boundary data &copy; OpenStreetMap contributors and GSAK, "
         "licensed <a href='https://opendatacommons.org/licenses/odbl/'>ODbL</a>.</p>"
-        "<p><a href='https://github.com/OpenSAK-Org/opensak'>"
-        "github.com/OpenSAK-Org/opensak</a></p>",
+        "<p><a href='https://github.com/AgreeDK/opensak'>"
+        "github.com/AgreeDK/opensak</a></p>",
     # ── Waypoint dialog — validation ──────────────────────────────────────────
     "wp_tab_basic":                 "Basis",
     "wp_tab_status":                "Status",
@@ -730,13 +730,13 @@ STRINGS: dict[str, str] = {
     "detail_corrected_clear_tooltip":"Gecorrigeerde coördinaten wissen",
     "detail_corrected_add_btn":     "Gecorrigeerde coördinaten toevoegen…",
 
-    "col_corrected":                "📍",
+    "col_corrected":                "CC",
     "col_corrected_label":          "📍 Gecorrigeerde coördinaten",
     "col_corrected_header_tooltip": "Gecorrigeerde coördinaten — dubbelklik om te bewerken",
     "col_corrected_tooltip":        "Gecorrigeerde coördinaten: {coords}",
 
-    "ctx_add_corrected":            "📍  Gecorrigeerde coördinaten toevoegen…",
-    "ctx_edit_corrected":           "📍  Gecorrigeerde coördinaten bewerken…",
+    "ctx_add_corrected":            "Gecorrigeerde coördinaten toevoegen…",
+    "ctx_edit_corrected":           "Gecorrigeerde coördinaten bewerken…",
     "ctx_clear_corrected":          "✕  Gecorrigeerde coördinaten wissen",
 
     "corrected_dialog_title":       "Gecorrigeerde coördinaten",

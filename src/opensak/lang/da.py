@@ -370,8 +370,8 @@ STRINGS: dict[str, str] = {
         "<p>Bygget med Python og PySide6.</p>"
         "<p>Boundary data &copy; OpenStreetMap contributors and GSAK, "
         "licensed <a href='https://opendatacommons.org/licenses/odbl/'>ODbL</a>.</p>"
-        "<p><a href='https://github.com/OpenSAK-Org/opensak'>"
-        "github.com/OpenSAK-Org/opensak</a></p>",
+        "<p><a href='https://github.com/AgreeDK/opensak'>"
+        "github.com/AgreeDK/opensak</a></p>",
     # ── Waypoint dialog — validering ──────────────────────────────────────────
     "wp_tab_basic":                 "Grundlæggende",
     "wp_tab_status":                "Status",
@@ -728,13 +728,13 @@ STRINGS: dict[str, str] = {
     "detail_corrected_clear_tooltip":"Slet korrigerede koordinater",
     "detail_corrected_add_btn":     "Tilføj korrigerede koordinater…",
 
-    "col_corrected":                "📍",
+    "col_corrected":                "CC",
     "col_corrected_label":          "📍 Korrigerede koordinater",
     "col_corrected_header_tooltip": "Korrigerede koordinater — dobbeltklik for at redigere",
     "col_corrected_tooltip":        "Korrigerede koordinater: {coords}",
 
-    "ctx_add_corrected":            "📍  Tilføj korrigerede koordinater…",
-    "ctx_edit_corrected":           "📍  Rediger korrigerede koordinater…",
+    "ctx_add_corrected":            "Tilføj korrigerede koordinater…",
+    "ctx_edit_corrected":           "Rediger korrigerede koordinater…",
     "ctx_clear_corrected":          "✕  Slet korrigerede koordinater",
 
     "corrected_dialog_title":       "Korrigerede koordinater",

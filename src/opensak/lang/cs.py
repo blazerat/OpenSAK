@@ -370,8 +370,8 @@ STRINGS: dict[str, str] = {
         "<p>Postaveno na Pythonu a PySide6.</p>"
         "<p>Boundary data &copy; OpenStreetMap contributors and GSAK, "
         "licensed <a href='https://opendatacommons.org/licenses/odbl/'>ODbL</a>.</p>"
-        "<p><a href='https://github.com/OpenSAK-Org/opensak'>"
-        "github.com/OpenSAK-Org/opensak</a></p>",
+        "<p><a href='https://github.com/AgreeDK/opensak'>"
+        "github.com/AgreeDK/opensak</a></p>",
     # ── Waypoint dialog — validation ──────────────────────────────────────────
     "wp_tab_basic":                 "Základní",
     "wp_tab_status":                "Stav",
@@ -729,13 +729,13 @@ STRINGS: dict[str, str] = {
     "detail_corrected_clear_tooltip":"Vymazat opravené souřadnice",
     "detail_corrected_add_btn":     "Přidat opravené souřadnice…",
 
-    "col_corrected":                "📍",
+    "col_corrected":                "CC",
     "col_corrected_label":          "📍 Opravené souřadnice",
     "col_corrected_header_tooltip": "Opravené souřadnice — poklepejte pro úpravu",
     "col_corrected_tooltip":        "Opravené souřadnice: {coords}",
 
-    "ctx_add_corrected":            "📍  Přidat opravené souřadnice…",
-    "ctx_edit_corrected":           "📍  Upravit opravené souřadnice…",
+    "ctx_add_corrected":            "Přidat opravené souřadnice…",
+    "ctx_edit_corrected":           "Upravit opravené souřadnice…",
     "ctx_clear_corrected":          "✕  Vymazat opravené souřadnice",
 
     "corrected_dialog_title":       "Opravené souřadnice",

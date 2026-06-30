@@ -370,8 +370,8 @@ STRINGS: dict[str, str] = {
         "<p>Construído com Python e PySide6.</p>"
         "<p>Boundary data &copy; OpenStreetMap contributors and GSAK, "
         "licensed <a href='https://opendatacommons.org/licenses/odbl/'>ODbL</a>.</p>"
-        "<p><a href='https://github.com/OpenSAK-Org/opensak'>"
-        "github.com/OpenSAK-Org/opensak</a></p>",
+        "<p><a href='https://github.com/AgreeDK/opensak'>"
+        "github.com/AgreeDK/opensak</a></p>",
     # ── Waypoint dialog — validation ──────────────────────────────────────────
     "wp_tab_basic":                 "Básico",
     "wp_tab_status":                "Estado",
@@ -729,13 +729,13 @@ STRINGS: dict[str, str] = {
     "detail_corrected_clear_tooltip":"Limpar coordenadas corrigidas",
     "detail_corrected_add_btn":     "Adicionar coordenadas corrigidas…",
 
-    "col_corrected":                "📍",
+    "col_corrected":                "CC",
     "col_corrected_label":          "📍 Coordenadas corrigidas",
     "col_corrected_header_tooltip": "Coordenadas corrigidas — clique duplo para editar",
     "col_corrected_tooltip":        "Coordenadas corrigidas: {coords}",
 
-    "ctx_add_corrected":            "📍  Adicionar coordenadas corrigidas…",
-    "ctx_edit_corrected":           "📍  Editar coordenadas corrigidas…",
+    "ctx_add_corrected":            "Adicionar coordenadas corrigidas…",
+    "ctx_edit_corrected":           "Editar coordenadas corrigidas…",
     "ctx_clear_corrected":          "✕  Limpar coordenadas corrigidas",
 
     "corrected_dialog_title":       "Coordenadas Corrigidas",
