@@ -647,6 +647,64 @@ def generate_ggz(caches: list, filename: str = "opensak_export", progress_cb=Non
     return buf.getvalue()
 
 
+def export_ggz_to_device(
+    caches: list,
+    device_root: Path,
+    filename: str = "opensak",
+    progress_cb=None,
+) -> ExportResult:
+    """
+    Eksportér caches som GGZ fil direkte til en Garmin GPS enhed.
+    GGZ-filen skrives til Garmin/GPX mappen på enheden.
+    """
+    result = ExportResult()
+    result.device = device_root
+
+    try:
+        gpx_dir = get_garmin_gpx_path(device_root)
+        gpx_dir.mkdir(parents=True, exist_ok=True)
+
+        ggz_content = generate_ggz(caches, filename, progress_cb=progress_cb)
+
+        output_path = gpx_dir / f"{filename}.ggz"
+        output_path.write_bytes(ggz_content)
+
+        result.file_path   = output_path
+        result.cache_count = len([c for c in caches if c.latitude is not None])
+
+    except PermissionError:
+        result.error = "Adgang nægtet — er GPS enheden skrivebeskyttet?"
+    except OSError as e:
+        result.error = f"Fil fejl: {e}"
+    except Exception as e:
+        result.error = f"Uventet fejl: {e}"
+
+    return result
+
+
+def export_ggz_to_file(
+    caches: list,
+    output_path: Path,
+    progress_cb=None,
+) -> ExportResult:
+    """
+    Eksportér caches som GGZ fil til en valgfri placering.
+    Bruges når GPS ikke er tilsluttet direkte.
+    """
+    result = ExportResult()
+
+    try:
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        ggz_content = generate_ggz(caches, output_path.stem, progress_cb=progress_cb)
+        output_path.write_bytes(ggz_content)
+        result.file_path   = output_path
+        result.cache_count = len([c for c in caches if c.latitude is not None])
+    except Exception as e:
+        result.error = str(e)
+
+    return result
+
+
 # ── Slet GPX filer fra enhed ──────────────────────────────────────────────────
 
 class DeleteResult:
