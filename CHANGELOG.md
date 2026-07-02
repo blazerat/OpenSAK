@@ -8,6 +8,43 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [1.15.0-beta.2] — 2026-07-02
+
+> **Beta release** — fixes for issues reported by the community while
+> testing GGZ export in beta.1. Please keep testing, especially with
+> larger databases.
+
+### Fixed
+
+- **GGZ export crash on databases with mixed dated/undated logs** (#348)
+  — exporting a database where at least one cache had a log without a
+  date crashed with `'<' not supported between instances of
+  'datetime.datetime' and 'int'`. Logs are now sorted safely regardless
+  of missing dates.
+
+- **GGZ files written to the wrong folder on the device** (#348) — GGZ
+  exports landed in `Garmin/GPX` instead of `Garmin/GGZ`, unlike GSAK's
+  GarminExport macro and what Garmin devices expect.
+
+- **Wrong dates inside exported .ggz files** (#348) — the ZIP directory
+  entries (`data/`, `index/`, etc.) always showed 1980-01-01 due to a
+  Python zipfile default; they now show the actual export time.
+
+- **Severe slowdown on large GGZ exports** (#466) — exporting several
+  thousand caches could take 50+ minutes and make the app unresponsive.
+  The byte-offset calculation for Garmin's index was accidentally O(n²);
+  it's now a single linear pass — 200–1000× faster depending on cache
+  count, with the gap widening for larger databases.
+
+- **Corrected Coordinates column icon inconsistency** (follow-up to
+  #354) — the "Choose columns" dialog still showed the old red pin
+  emoji instead of the warning-triangle icon used everywhere else in
+  the app. The column header's icon and sort arrow are now centered
+  together as a pair regardless of column width, and the per-row icon
+  in the column itself is centered instead of left-aligned.
+
+---
+
 ## [1.15.0-beta.1] — 2026-07-01
 
 > **Beta release** — start of the 1.15.0 testing period. Feedback especially
