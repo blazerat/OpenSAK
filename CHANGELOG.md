@@ -8,6 +8,32 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [1.15.0-beta.3] — 2026-07-02
+
+> **Beta release** — fixes two found-status bugs reported by the community
+> while testing beta.2.
+
+### Fixed
+
+- **Found date missing for webcam caches and events on import** (#457) —
+  `found_date` was derived only from "Found it" logs, so caches whose find
+  is logged under a different log type ended up with no found date on
+  import: webcam caches use "Webcam Photo Taken" and events use "Attended".
+  Reproduced with a real My Finds PQ. The cross-database found-status sync
+  tool had the same bug and is fixed too.
+
+- **FTF detection flagged logs that only mentioned "first to find" in
+  passing** (#458) — FTF was matched on free-text phrases (`ftf`,
+  `first to find`, `first finder`, `første til at finde`) anywhere in the
+  user's own found-log text, a heuristic introduced in 1.13.2. That flagged
+  logs which merely mentioned the concept without claiming it, e.g. a log
+  describing a *failed* attempt at being first finder. FTF is now matched
+  exclusively against ProjectGC's official tags — `{FTF}`, `{*FTF*}`,
+  `[FTF]` — the same tags most geocachers already use and that ProjectGC
+  itself requires. A tooltip on the FTF column header explains this.
+
+---
+
 ## [1.15.0-beta.2] — 2026-07-02
 
 > **Beta release** — fixes for issues reported by the community while
