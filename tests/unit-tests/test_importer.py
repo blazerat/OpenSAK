@@ -543,3 +543,150 @@ def test_is_companion_gpx_returns_false_for_empty_file(tmp_path):
 
 def test_is_companion_gpx_returns_false_for_nonexistent_file(tmp_path):
     assert _is_companion_gpx(tmp_path / "ghost.gpx") is False
+
+
+# ── found_date derivation from logs (issue #457) ──────────────────────────────
+# found_date was previously only derived from "Found it" logs, so caches whose
+# find is logged with a different log_type (webcam caches, events) silently
+# ended up with no found_date, even though found=True was set correctly from
+# the GPX <sym>Geocache Found</sym> flag. Reproduced with a real My Finds PQ.
+
+def test_import_found_date_webcam_cache(tmp_db, tmp_path):
+    # Webcam Caches log a find as "Webcam Photo Taken", not "Found it".
+    gpx = build_gpx(cache_wpt(
+        "GCWEBCAM", cache_type="Webcam Cache", sym="Geocache Found", gs_id=45701,
+        logs=[{"id": "45701001", "type": "Webcam Photo Taken", "date": "2013-12-26T20:00:00Z"}],
+    ))
+    f = write_gpx(tmp_path, "webcam.gpx", gpx)
+    with get_session() as s:
+        import_gpx(f, s)
+        cache = s.query(Cache).filter_by(gc_code="GCWEBCAM").one()
+        assert cache.found is True
+        assert cache.found_date is not None
+        assert cache.found_date.year == 2013
+
+
+def test_import_found_date_event_attended(tmp_db, tmp_path):
+    # Events log a find as "Attended", not "Found it".
+    gpx = build_gpx(cache_wpt(
+        "GCEVENT1", cache_type="Event Cache", sym="Geocache Found", gs_id=45702,
+        logs=[{"id": "45702001", "type": "Attended", "date": "2010-07-31T19:00:00Z"}],
+    ))
+    f = write_gpx(tmp_path, "event.gpx", gpx)
+    with get_session() as s:
+        import_gpx(f, s)
+        cache = s.query(Cache).filter_by(gc_code="GCEVENT1").one()
+        assert cache.found is True
+        assert cache.found_date is not None
+        assert cache.found_date.year == 2010
+
+
+def test_import_found_date_still_works_for_found_it(tmp_db, tmp_path):
+    # Regression guard: the common "Found it" case must keep working.
+    gpx = build_gpx(cache_wpt(
+        "GCTRAD1", cache_type="Traditional Cache", sym="Geocache Found", gs_id=45703,
+        logs=[{"id": "45703001", "type": "Found it", "date": "2022-06-15T00:00:00Z"}],
+    ))
+    f = write_gpx(tmp_path, "trad.gpx", gpx)
+    with get_session() as s:
+        import_gpx(f, s)
+        cache = s.query(Cache).filter_by(gc_code="GCTRAD1").one()
+        assert cache.found is True
+        assert cache.found_date is not None
+        assert cache.found_date.year == 2022
+
+
+def test_import_found_date_ignores_other_log_types(tmp_db, tmp_path):
+    # A "Write note" or "Didn't find it" log must NOT be picked up as a found
+    # date, even when the cache is otherwise marked found (sym=Geocache Found)
+    # — that combination shouldn't normally occur, but the derivation must
+    # stay type-specific rather than "any log with a date".
+    gpx = build_gpx(cache_wpt(
+        "GCNODATE", cache_type="Traditional Cache", sym="Geocache Found", gs_id=45704,
+        logs=[
+            {"id": "45704001", "type": "Write note", "date": "2021-01-01T00:00:00Z"},
+            {"id": "45704002", "type": "Didn't find it", "date": "2021-02-01T00:00:00Z"},
+        ],
+    ))
+    f = write_gpx(tmp_path, "nodate.gpx", gpx)
+    with get_session() as s:
+        import_gpx(f, s)
+        cache = s.query(Cache).filter_by(gc_code="GCNODATE").one()
+        assert cache.found is True
+        assert cache.found_date is None
+
+
+def test_import_found_date_picks_oldest_among_found_log_types(tmp_db, tmp_path):
+    # With multiple candidate "found" logs (mixed types), the oldest one wins —
+    # same fallback behaviour as before, just across the full FOUND_LOG_TYPES set.
+    gpx = build_gpx(cache_wpt(
+        "GCMULTI1", cache_type="Webcam Cache", sym="Geocache Found", gs_id=45705,
+        logs=[
+            {"id": "45705001", "type": "Webcam Photo Taken", "date": "2015-05-05T00:00:00Z"},
+            {"id": "45705002", "type": "Found it", "date": "2023-01-01T00:00:00Z"},
+        ],
+    ))
+    f = write_gpx(tmp_path, "multi.gpx", gpx)
+    with get_session() as s:
+        import_gpx(f, s)
+        cache = s.query(Cache).filter_by(gc_code="GCMULTI1").one()
+        assert cache.found_date is not None
+        assert cache.found_date.year == 2015
+
+
+# ── FTF tag-based detection (issue: false positives from free-text match) ────
+# The old FTF detection matched free-text phrases ("ftf", "first to find",
+# "first finder", ...) anywhere in the user's own found-log text, which
+# flagged logs that merely mention the concept without claiming an FTF —
+# e.g. a "Thanks For The Cache" (TFTC) log describing a *failed* attempt at
+# being first finder. ProjectGC (the de-facto FTF stats source) only credits
+# an FTF when the log contains one of {FTF}, {*FTF*} or [FTF], so that's now
+# the only thing OpenSAK matches on too.
+
+def _ftf_gpx(gc_code: str, gs_id: int, log_id: str, log_text: str) -> str:
+    return build_gpx(cache_wpt(
+        gc_code, cache_type="Traditional Cache", sym="Geocache Found", gs_id=gs_id,
+        logs=[{
+            "id": log_id, "type": "Found it", "date": "2024-01-01T00:00:00Z",
+            "finder": "AB Green", "finder_id": "12345", "text": log_text,
+        }],
+    ))
+
+
+@pytest.fixture
+def ftf_username(monkeypatch):
+    # FTF detection requires a configured gc_username/gc_finder_id to identify
+    # the user's own logs among the (possibly several) logs on a cache.
+    from opensak.gui.settings import get_settings
+    get_settings().gc_username = "AB Green"
+
+
+@pytest.mark.parametrize("log_text", [
+    "Great cache! {FTF}",
+    "Great cache! {ftf}",       # case-insensitive
+    "Great cache! {*FTF*}",
+    "Great cache! [FTF]",
+    "[ftf] nice one",
+])
+def test_import_ftf_detected_for_official_pgc_tags(tmp_db, tmp_path, ftf_username, log_text):
+    gpx = _ftf_gpx("GCFTFOK1", 45801, "45801001", log_text)
+    f = write_gpx(tmp_path, "ftf_ok.gpx", gpx)
+    with get_session() as s:
+        import_gpx(f, s)
+        cache = s.query(Cache).filter_by(gc_code="GCFTFOK1").one()
+        assert cache.first_to_find is True
+
+
+@pytest.mark.parametrize("log_text", [
+    "Fundet på vej hjem efter et forgæves forsøg på at blive first finder på Sort [:)] TFTC",
+    "TFTC",
+    "I was first to find since the cache was relocated",
+    "Congrats to the actual FTF finder!",
+])
+def test_import_ftf_not_detected_for_free_text_mentions(tmp_db, tmp_path, ftf_username, log_text):
+    gpx = _ftf_gpx("GCFTFNO1", 45802, "45802001", log_text)
+    f = write_gpx(tmp_path, "ftf_no.gpx", gpx)
+    with get_session() as s:
+        import_gpx(f, s)
+        cache = s.query(Cache).filter_by(gc_code="GCFTFNO1").one()
+        assert cache.first_to_find is False

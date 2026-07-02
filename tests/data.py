@@ -179,9 +179,12 @@ def cache_wpt(
     hint: str | None = None,
     logs: list[dict] | None = None,
     attributes: list[dict] | None = None,
+    sym: str | None = None,
 ) -> str:
     """One Groundspeak ``<wpt>`` block. logs keys: id/type/finder/finder_id/date/text;
-    attributes keys: id/inc/name. Wrap with build_gpx() for a full document."""
+    attributes keys: id/inc/name. sym: <sym> value — pass "Geocache Found" to mark
+    the cache as found by the PQ owner (see importer found_by_me detection).
+    Wrap with build_gpx() for a full document."""
     name = name or gc_code
     log_xml = "".join(
         f'<groundspeak:log id="{lg.get("id", i + 1)}">'
@@ -200,10 +203,12 @@ def cache_wpt(
     hint_xml = (
         f"<groundspeak:encoded_hints>{hint}</groundspeak:encoded_hints>" if hint else ""
     )
+    sym_xml = f"<sym>{sym}</sym>" if sym else ""
     return (
         f'<wpt lat="{lat}" lon="{lon}">'
         f"<n>{gc_code}</n>"
         f"<urlname>{name}</urlname>"
+        f"{sym_xml}"
         f"<type>Geocache|{cache_type}</type>"
         f'<groundspeak:cache id="{gs_id}" archived="{archived}" available="{available}" '
         'xmlns:groundspeak="http://www.groundspeak.com/cache/1/0/1">'
