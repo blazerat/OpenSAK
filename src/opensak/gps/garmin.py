@@ -20,9 +20,10 @@ from pathlib import Path
 from typing import Optional
 
 
-# ── Garmin GPX mappe på enheden ───────────────────────────────────────────────
+# ── Garmin GPX/GGZ mapper på enheden ──────────────────────────────────────────
 
 GARMIN_GPX_SUBPATH = Path("Garmin") / "GPX"
+GARMIN_GGZ_SUBPATH = Path("Garmin") / "GGZ"
 GARMIN_MARKERS = [
     Path("Garmin") / "GarminDevice.xml",
     Path("Garmin") / "GPX",
@@ -195,6 +196,11 @@ def get_garmin_gpx_path(device_root: Path) -> Path:
     return device_root / GARMIN_GPX_SUBPATH
 
 
+def get_garmin_ggz_path(device_root: Path) -> Path:
+    """Returner stien til GGZ mappen på en Garmin enhed."""
+    return device_root / GARMIN_GGZ_SUBPATH
+
+
 # ── Debug hjælper ─────────────────────────────────────────────────────────────
 
 def debug_scan() -> str:
@@ -341,9 +347,10 @@ def generate_gpx(caches: list, filename: str = "opensak_export", progress_cb=Non
         # Logs (max 5)
         if cache.logs:
             gs_logs = SubElement(gs_cache, "groundspeak:logs")
+            _min_dt = datetime.min.replace(tzinfo=timezone.utc)
             for log in sorted(
                 cache.logs,
-                key=lambda l: l.log_date or 0,
+                key=lambda l: l.log_date or _min_dt,
                 reverse=True,
             )[:5]:
                 gs_log = SubElement(gs_logs, "groundspeak:log")
@@ -630,17 +637,40 @@ def generate_ggz(caches: list, filename: str = "opensak_export", progress_cb=Non
     )
 
     # ── Pack into ZIP ─────────────────────────────────────────────────────────
+    # zipfile.ZipFile.mkdir() with a plain string defaults date_time to
+    # (1980, 1, 1, 0, 0, 0) — the earliest date the ZIP format supports —
+    # unlike writestr(), which defaults to the current time. That made every
+    # directory entry in the .ggz show up as "1980-01-01" / "1979-12-31 23:00"
+    # depending on timezone. Build explicit ZipInfo objects with the current
+    # time so directories get a sensible date too.
     buf = io.BytesIO()
+    _zip_date_time = datetime.now().timetuple()[:6]
+
+    def _dir_zipinfo(name: str) -> "zipfile.ZipInfo":
+        if not name.endswith("/"):
+            name += "/"
+        zi = zipfile.ZipInfo(name, date_time=_zip_date_time)
+        zi.compress_size = 0
+        zi.CRC = 0
+        zi.file_size = 0
+        zi.external_attr = (0o777 << 16) | 0x10
+        return zi
+
+    def _file_zipinfo(name: str) -> "zipfile.ZipInfo":
+        zi = zipfile.ZipInfo(name, date_time=_zip_date_time)
+        zi.compress_type = zipfile.ZIP_DEFLATED
+        return zi
+
     with zipfile.ZipFile(buf, "w", compression=zipfile.ZIP_DEFLATED) as zf:
-        zf.mkdir("data/")
-        zf.writestr(f"data/{gpx_filename}", gpx_content)
-        zf.mkdir("index/")
-        zf.mkdir("index/com/")
-        zf.mkdir("index/com/garmin/")
-        zf.mkdir("index/com/garmin/geocaches/")
-        zf.mkdir("index/com/garmin/geocaches/v0/")
+        zf.mkdir(_dir_zipinfo("data/"))
+        zf.writestr(_file_zipinfo(f"data/{gpx_filename}"), gpx_content)
+        zf.mkdir(_dir_zipinfo("index/"))
+        zf.mkdir(_dir_zipinfo("index/com/"))
+        zf.mkdir(_dir_zipinfo("index/com/garmin/"))
+        zf.mkdir(_dir_zipinfo("index/com/garmin/geocaches/"))
+        zf.mkdir(_dir_zipinfo("index/com/garmin/geocaches/v0/"))
         zf.writestr(
-            "index/com/garmin/geocaches/v0/index.xml",
+            _file_zipinfo("index/com/garmin/geocaches/v0/index.xml"),
             index_xml.encode("utf-8"),
         )
 
@@ -655,18 +685,18 @@ def export_ggz_to_device(
 ) -> ExportResult:
     """
     Eksportér caches som GGZ fil direkte til en Garmin GPS enhed.
-    GGZ-filen skrives til Garmin/GPX mappen på enheden.
+    GGZ-filen skrives til Garmin/GGZ mappen på enheden.
     """
     result = ExportResult()
     result.device = device_root
 
     try:
-        gpx_dir = get_garmin_gpx_path(device_root)
-        gpx_dir.mkdir(parents=True, exist_ok=True)
+        ggz_dir = get_garmin_ggz_path(device_root)
+        ggz_dir.mkdir(parents=True, exist_ok=True)
 
         ggz_content = generate_ggz(caches, filename, progress_cb=progress_cb)
 
-        output_path = gpx_dir / f"{filename}.ggz"
+        output_path = ggz_dir / f"{filename}.ggz"
         output_path.write_bytes(ggz_content)
 
         result.file_path   = output_path
