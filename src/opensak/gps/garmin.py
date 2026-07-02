@@ -555,6 +555,33 @@ def generate_ggz(caches: list, filename: str = "opensak_export", progress_cb=Non
     # Track byte offset into the GPX for each cache entry
     gpx_text = gpx_content.decode("utf-8")
 
+    # ── Precompute byte offsets for every waypoint in ONE linear pass ──────────
+    # Previously this ran a fresh `re.search()` over the ENTIRE gpx_text for
+    # EVERY cache, which is O(n²): with thousands of caches, each search had
+    # to scan further and further into the text, causing exports to start
+    # fast and then slow down dramatically (see #466). Instead, walk the text
+    # once with finditer() and build a gc_code -> (file_pos, file_len) map.
+    import re
+    _wpt_pattern  = re.compile(r'<wpt\b[^>]*>.*?</wpt>', re.DOTALL)
+    _name_pattern = re.compile(r'<name>([^<]*)</name>')
+
+    offsets_by_gc_code: dict = {}
+    _byte_pos  = 0
+    _prev_end  = 0
+    for _m in _wpt_pattern.finditer(gpx_text):
+        # Advance by the byte length of the gap since the previous match,
+        # so we never re-encode text we've already accounted for.
+        _byte_pos += len(gpx_text[_prev_end:_m.start()].encode("utf-8"))
+        _wpt_text  = _m.group(0)
+        _wpt_len   = len(_wpt_text.encode("utf-8"))
+        _name_m    = _name_pattern.search(_wpt_text)
+        if _name_m:
+            # First occurrence wins, matching the old re.search() behaviour
+            # for the (unlikely) case of a duplicate GC code in the export.
+            offsets_by_gc_code.setdefault(_name_m.group(1), (_byte_pos, _wpt_len))
+        _byte_pos += _wpt_len
+        _prev_end  = _m.end()
+
     total = len(caches)
     for i, cache in enumerate(caches, 1):
         if progress_cb:
@@ -565,22 +592,7 @@ def generate_ggz(caches: list, filename: str = "opensak_export", progress_cb=Non
         export_lat, export_lon = _effective_coords(cache)
         gc_code = cache.gc_code or ""
 
-        # Find byte offset of this waypoint in the GPX
-        search_str = f'<name>{gc_code}</name>'
-        # Look for the <wpt ...> tag that contains this GC code
-        import re
-        pattern = rf'(<wpt\b[^>]*>(?:(?!</wpt>).)*?<name>{re.escape(gc_code)}</name>)'
-        m = re.search(pattern, gpx_text, re.DOTALL)
-        if m:
-            file_pos = gpx_text[:m.start()].encode("utf-8").__len__()
-            file_len = len(m.group(0).encode("utf-8"))
-            # Approximate: include the closing </wpt> tag
-            wpt_end = gpx_text.find("</wpt>", m.start())
-            if wpt_end >= 0:
-                file_len = len(gpx_text[m.start():wpt_end + 6].encode("utf-8"))
-        else:
-            file_pos = 0
-            file_len = 0
+        file_pos, file_len = offsets_by_gc_code.get(gc_code, (0, 0))
 
         gch_el = SubElement(file_el, "gch")
 

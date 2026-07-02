@@ -1,6 +1,7 @@
 # tests/unit-tests/test_garmin.py — Garmin GPX/LOC/GGZ generation/export (no device needed).
 
 import io
+import time
 import xml.etree.ElementTree as ET
 import zipfile
 from datetime import datetime, timezone
@@ -619,6 +620,41 @@ class TestGenerateGgz:
         index_info = zf.getinfo("index/com/garmin/geocaches/v0/index.xml")
         assert gpx_info.compress_type == zipfile.ZIP_DEFLATED
         assert index_info.compress_type == zipfile.ZIP_DEFLATED
+
+    def test_file_pos_and_file_len_point_at_correct_wpt(self):
+        # Regression test for #466: byte-offset computation used to run a
+        # fresh regex search over the whole GPX text per cache (O(n²)). This
+        # confirms the single-pass replacement still points file_pos/file_len
+        # at the correct <wpt>...</wpt> block for each cache, in order.
+        caches = [_cache(gc_code=f"GC{i:03d}", cache_id=i) for i in range(5)]
+        entries = _ggz_entries(generate_ggz(caches))
+        gpx_bytes = entries["data/opensak_export.gpx"]
+        index_xml = entries["index/com/garmin/geocaches/v0/index.xml"].decode("utf-8")
+
+        root = ET.fromstring(index_xml)
+        for gch in root.iter("gch"):
+            code = gch.find("code").text
+            file_pos = int(gch.find("file_pos").text)
+            file_len = int(gch.find("file_len").text)
+            wpt_bytes = gpx_bytes[file_pos:file_pos + file_len]
+            assert wpt_bytes.startswith(b"<wpt")
+            assert wpt_bytes.endswith(b"</wpt>")
+            assert f"<name>{code}</name>".encode("utf-8") in wpt_bytes
+
+    def test_large_export_scales_linearly_not_quadratically(self):
+        # Regression test for #466: with the old O(n²) per-cache regex scan,
+        # 1500 caches took several seconds; the O(n) single-pass version
+        # should comfortably finish in well under a second. A generous
+        # threshold is used to avoid CI flakiness while still catching an
+        # accidental reintroduction of the quadratic behaviour.
+        caches = [_cache(gc_code=f"GC{i:05d}", cache_id=i) for i in range(1500)]
+        start = time.perf_counter()
+        generate_ggz(caches)
+        elapsed = time.perf_counter() - start
+        assert elapsed < 5.0, (
+            f"generate_ggz took {elapsed:.2f}s for 1500 caches — "
+            "possible reintroduction of O(n²) byte-offset lookup"
+        )
 
 
 # ── device scanning ───────────────────────────────────────────────────────────
