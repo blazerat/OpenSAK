@@ -174,6 +174,7 @@ def _atomic_write(dest_dir: Path, filename: str, data: bytes) -> bool:
 
 
 def _fetch_file_atomic(filename: str, dest_dir: Path) -> bool:
+    dest_dir.mkdir(parents=True, exist_ok=True)
     try:
         with urllib.request.urlopen(_asset_url(filename), timeout=DOWNLOAD_TIMEOUT) as resp:
             data = resp.read()
