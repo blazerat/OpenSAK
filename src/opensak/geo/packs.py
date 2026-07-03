@@ -8,6 +8,7 @@ import sqlite3
 import tempfile
 import time
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Callable
 from urllib.error import URLError
@@ -24,6 +25,10 @@ MANIFEST_FILENAME = "manifest.json"
 THROTTLE_SECONDS = 7 * 24 * 3600
 REQUEST_TIMEOUT = 30
 DOWNLOAD_TIMEOUT = 60
+# Baseline downloads are I/O-bound (network round-trip, not CPU) — urllib
+# releases the GIL during the actual socket wait, so a higher worker count
+# than a CPU-bound pool (e.g. the resolver's min(4, cpu_count)) is fine here.
+BASELINE_FETCH_WORKERS = 16
 
 
 def _asset_url(filename: str) -> str:
@@ -92,9 +97,17 @@ def fetch_baseline(data_dir: Path, manifest: dict | None = None) -> bool:
         return False
     if not _fetch_file_atomic("boundaries.db", data_dir):
         return False
-    for filename in manifest.get("baseline", {}):
+
+    baseline = list(manifest.get("baseline", {}))
+    if not baseline:
+        return True
+
+    def _fetch_one(filename: str) -> None:
         dest_dir = data_dir / ("countries" if filename == "world.geojson" else "states")
         fetch_pack(filename, dest_dir)
+
+    with ThreadPoolExecutor(max_workers=min(BASELINE_FETCH_WORKERS, len(baseline))) as executor:
+        list(executor.map(_fetch_one, baseline))
     return True
 
 
