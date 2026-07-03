@@ -155,6 +155,18 @@ class TestFetchAll:
 # ── fetch_baseline ────────────────────────────────────────────────────────────
 
 class TestFetchBaseline:
+    def test_creates_dest_dir_when_it_does_not_exist_yet(self, tmp_path: Path, monkeypatch):
+        # Real first-run scenario: the app-data boundaries/ dir doesn't exist
+        # at all yet. _fetch_file_atomic used to assume its caller already
+        # created dest_dir (true for apply_update, called on an
+        # already-initialized dir) — fetch_baseline is the first caller that
+        # can hit a genuinely nonexistent directory.
+        fresh_dir = tmp_path / "does" / "not" / "exist" / "yet"
+        monkeypatch.setattr("urllib.request.urlopen", lambda *_a, **_k: _FakeResp(b"{}"))
+        manifest = _manifest("1", baseline_names=["world.geojson"])
+        assert packs.fetch_baseline(fresh_dir, manifest=manifest) is True
+        assert (fresh_dir / "boundaries.db").is_file()
+
     def test_downloads_boundaries_db_and_baseline_packs(self, tmp_path: Path, monkeypatch):
         calls: list[str] = []
 
