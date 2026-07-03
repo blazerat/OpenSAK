@@ -14,7 +14,9 @@
 #          <gsak-dir>/counties/<cc>/<pack>[_vN].zip
 #
 # Writes: <out-dir>/boundaries.db              (OpenSAK schema)
-#          <out-dir>/manifest.json              (dataset + per-pack versions)
+#          <out-dir>/manifest.json              (dataset version; "baseline" = world.geojson
+#                                                + state packs, fetched wholesale on first run;
+#                                                "packs" = county packs, fetched on demand)
 #          <out-dir>/countries/world.geojson         simplified baseline (--simplify-tolerance)
 #          <out-dir>/states/<cc>.geojson             simplified baseline, one per country code
 #          <out-dir>/counties/<cc>_<pack>.geojson    full-resolution, on-demand (one per pack, flat)
@@ -322,7 +324,7 @@ def _convert_states(
     conn: sqlite3.Connection,
     versions: dict[tuple[str, str, str], int],
     simplify_tolerance: float = 0.0,
-) -> None:
+) -> dict[str, int]:
     rows = bb.execute(
         "SELECT rowid, Country, File, MaxLat, MinLat, MaxLon, MinLon, Sname FROM bb_state"
     ).fetchall()
@@ -332,6 +334,7 @@ def _convert_states(
     for row in rows:
         by_cc.setdefault(str(row[1]), []).append(row)
 
+    pack_versions: dict[str, int] = {}
     total = 0
     missing = 0
     for cc in sorted(by_cc):
@@ -372,8 +375,10 @@ def _convert_states(
                 encoding="utf-8",
             )
             total += len(features)
+            pack_versions[pack_name] = version
 
     print(f"  → {total} states across {len(by_cc)} codes ({missing} zip(s) missing)")
+    return pack_versions
 
 
 def _convert_counties(
@@ -446,9 +451,18 @@ def _convert_counties(
     return pack_versions
 
 
-def _write_manifest(out_dir: Path, dataset_version: int, pack_versions: dict[str, int]) -> None:
+def _write_manifest(
+    out_dir: Path,
+    dataset_version: int,
+    baseline_versions: dict[str, int],
+    pack_versions: dict[str, int],
+) -> None:
+    # "baseline" (world.geojson + state packs) is bundled in every install and
+    # fetched wholesale on first run when not bundled (see geo/packs.py
+    # fetch_baseline). "packs" (county-level) stays on-demand, per-country.
     manifest = {
         "dataset_version": str(dataset_version),
+        "baseline": {name: {"version": str(v)} for name, v in sorted(baseline_versions.items())},
         "packs": {name: {"version": str(v)} for name, v in sorted(pack_versions.items())},
     }
     (out_dir / "manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
@@ -525,8 +539,9 @@ def main() -> None:
     conn.commit()
 
     print("Converting states…")
-    _convert_states(bb, gsak_dir, out_dir, conn, versions, simplify_tolerance)
+    state_versions = _convert_states(bb, gsak_dir, out_dir, conn, versions, simplify_tolerance)
     conn.commit()
+    baseline_versions = {"world.geojson": country_version, **state_versions}
 
     print("Converting counties…")
     pack_versions = _convert_counties(bb, gsak_dir, out_dir, conn, versions)
@@ -541,7 +556,7 @@ def main() -> None:
     bb.close()
     conn.close()
 
-    _write_manifest(out_dir, country_version, pack_versions)
+    _write_manifest(out_dir, country_version, baseline_versions, pack_versions)
 
     print(f"\nDone → {out_dir}")
     print(f"  boundaries.db   {out_db.stat().st_size // 1024} KB")

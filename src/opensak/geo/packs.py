@@ -1,4 +1,4 @@
-# src/opensak/geo/packs.py — on-demand county pack fetching from OpenSAK-Data.
+# src/opensak/geo/packs.py — baseline + on-demand county pack fetching from OpenSAK-Data.
 
 from __future__ import annotations
 
@@ -78,6 +78,26 @@ def fetch_all(
     return downloaded
 
 
+def fetch_baseline(data_dir: Path, manifest: dict | None = None) -> bool:
+    """
+    Download boundaries.db + the country/state baseline (manifest["baseline"])
+    into data_dir. Used on first run when no bundled baseline is present —
+    e.g. a pip install, or a build where data/ wasn't available at package
+    time. Returns True if boundaries.db was fetched (baseline usable); an
+    individual state-pack failure is skipped rather than failing the whole
+    call, since country-level resolution still works without every state.
+    """
+    manifest = manifest or fetch_manifest()
+    if manifest is None:
+        return False
+    if not _fetch_file_atomic("boundaries.db", data_dir):
+        return False
+    for filename in manifest.get("baseline", {}):
+        dest_dir = data_dir / ("countries" if filename == "world.geojson" else "states")
+        fetch_pack(filename, dest_dir)
+    return True
+
+
 def check_update(data_dir: Path, force: bool = False) -> tuple[bool, dict | None]:
     """
     Return (newer_available, manifest).
@@ -154,6 +174,7 @@ def _atomic_write(dest_dir: Path, filename: str, data: bytes) -> bool:
 
 
 def _fetch_file_atomic(filename: str, dest_dir: Path) -> bool:
+    dest_dir.mkdir(parents=True, exist_ok=True)
     try:
         with urllib.request.urlopen(_asset_url(filename), timeout=DOWNLOAD_TIMEOUT) as resp:
             data = resp.read()

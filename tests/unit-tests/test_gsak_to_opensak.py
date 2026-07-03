@@ -21,9 +21,13 @@ def _write_bb_db3(path: Path) -> None:
         """
     )
     db.execute("INSERT INTO Version VALUES ('c', '', '', 1)")
+    db.execute("INSERT INTO Version VALUES ('s', 'usa', '', 2)")
     db.execute("INSERT INTO Version VALUES ('y', 'usa', 'california', 3)")
     db.execute("INSERT INTO Version VALUES ('y', 'usa', 'texas', 5)")
     db.execute("INSERT INTO bb_country VALUES ('1', 'United States', 2.0, 1.0, 2.0, 1.0)")
+    db.execute(
+        "INSERT INTO bb_state VALUES ('usa', '1', 2.0, 1.0, 2.0, 1.0, 'California')"
+    )
     db.execute(
         "INSERT INTO bb_county VALUES ('usa', 'california', '1', 2.0, 1.0, 2.0, 1.0, 'Alpha County')"
     )
@@ -45,10 +49,17 @@ def _write_country_zip(path: Path, file_id: str, name: str) -> None:
         zf.writestr(file_id, f"# GsakName={name}\n{_SQUARE}")
 
 
+def _write_state_zip(path: Path, file_id: str, name: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with zipfile.ZipFile(path, "w") as zf:
+        zf.writestr(f"{file_id}.txt", f"# GsakName={name}\n{_SQUARE}")
+
+
 def test_county_packs_are_flat_and_manifest_matches_real_versions(tmp_path: Path) -> None:
     bb_path = tmp_path / "bb.db3"
     _write_bb_db3(bb_path)
     _write_country_zip(tmp_path / "country_v1.zip", "1", "United States")
+    _write_state_zip(tmp_path / "states" / "usa_v2.zip", "1", "California")
     _write_county_zip(tmp_path / "counties" / "usa" / "california_v3.zip", "1", "Alpha County")
     _write_county_zip(tmp_path / "counties" / "usa" / "texas_v5.zip", "2", "Beta County")
 
@@ -70,6 +81,8 @@ def test_county_packs_are_flat_and_manifest_matches_real_versions(tmp_path: Path
 
     manifest = json.loads((out_dir / "manifest.json").read_text())
     assert manifest["dataset_version"] == "1"
+    assert manifest["baseline"]["world.geojson"]["version"] == "1"
+    assert manifest["baseline"]["usa.geojson"]["version"] == "2"
     assert manifest["packs"]["usa_california.geojson"]["version"] == "3"
     assert manifest["packs"]["usa_texas.geojson"]["version"] == "5"
 
