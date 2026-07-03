@@ -9,6 +9,7 @@ from typing import Any
 import pytest
 
 from opensak.geo import BoundaryStore, GeoLocation, TerritoryResolver
+from opensak.geo import store as geo_store
 
 # Synthetic dataset (lon/lat squares & triangles), mirroring the real layout:
 #   county layer — two same-bbox triangles (force Stage-2 PIP) + one far square
@@ -121,6 +122,72 @@ class TestStore:
         assert region is not None
         geom = store.geometry("county", region)
         assert geom["type"] == "Polygon"
+
+
+class TestDefaultDataDir:
+    def test_env_override_wins(self, tmp_path: Path, monkeypatch):
+        monkeypatch.setenv("OPENSAK_BOUNDARIES_DIR", str(tmp_path))
+        assert geo_store.default_data_dir() == tmp_path
+
+    def test_falls_back_to_app_data_dir(self, tmp_path: Path, monkeypatch):
+        monkeypatch.delenv("OPENSAK_BOUNDARIES_DIR", raising=False)
+        monkeypatch.setattr("opensak.config.get_app_data_dir", lambda: tmp_path)
+        assert geo_store.default_data_dir() == tmp_path / "boundaries"
+
+
+class TestFrozenBundleDir:
+    def test_none_when_not_frozen(self, monkeypatch):
+        monkeypatch.delattr(geo_store.sys, "frozen", raising=False)
+        assert geo_store._frozen_bundle_dir() is None
+
+    def test_none_when_frozen_but_no_boundaries_db(self, tmp_path: Path, monkeypatch):
+        monkeypatch.setattr(geo_store.sys, "frozen", True, raising=False)
+        monkeypatch.setattr(geo_store.sys, "_MEIPASS", str(tmp_path), raising=False)
+        assert geo_store._frozen_bundle_dir() is None
+
+    def test_returns_bundle_dir_when_present(self, tmp_path: Path, monkeypatch):
+        (tmp_path / "data").mkdir()
+        (tmp_path / "data" / "boundaries.db").write_bytes(b"")
+        monkeypatch.setattr(geo_store.sys, "frozen", True, raising=False)
+        monkeypatch.setattr(geo_store.sys, "_MEIPASS", str(tmp_path), raising=False)
+        assert geo_store._frozen_bundle_dir() == tmp_path / "data"
+
+
+class TestEnsureBaselineSeeded:
+    def test_noop_when_already_present(self, tmp_path: Path, monkeypatch):
+        (tmp_path / "boundaries.db").write_bytes(b"existing")
+        monkeypatch.setattr(geo_store, "_frozen_bundle_dir", lambda: (_ for _ in ()).throw(AssertionError))
+        geo_store.ensure_baseline_seeded(tmp_path)  # must not touch either fallback
+        assert (tmp_path / "boundaries.db").read_bytes() == b"existing"
+
+    def test_copies_from_frozen_bundle_when_present(self, tmp_path: Path, monkeypatch):
+        bundle = tmp_path / "bundle"
+        (bundle / "countries").mkdir(parents=True)
+        (bundle / "states").mkdir(parents=True)
+        (bundle / "boundaries.db").write_bytes(b"db")
+        (bundle / "countries" / "world.geojson").write_bytes(b"world")
+        (bundle / "states" / "prt.geojson").write_bytes(b"prt")
+
+        dest = tmp_path / "dest"
+        monkeypatch.setattr(geo_store, "_frozen_bundle_dir", lambda: bundle)
+        geo_store.ensure_baseline_seeded(dest)
+
+        assert (dest / "boundaries.db").read_bytes() == b"db"
+        assert (dest / "countries" / "world.geojson").read_bytes() == b"world"
+        assert (dest / "states" / "prt.geojson").read_bytes() == b"prt"
+
+    def test_falls_back_to_network_when_not_bundled(self, tmp_path: Path, monkeypatch):
+        calls: list[Path] = []
+        monkeypatch.setattr(geo_store, "_frozen_bundle_dir", lambda: None)
+
+        def _fake_fetch_baseline(data_dir: Path, manifest: dict | None = None) -> bool:
+            calls.append(data_dir)
+            return True
+
+        import opensak.geo.packs as packs
+        monkeypatch.setattr(packs, "fetch_baseline", _fake_fetch_baseline)
+        geo_store.ensure_baseline_seeded(tmp_path)
+        assert calls == [tmp_path]
 
 
 # ── TerritoryResolver ─────────────────────────────────────────────────────────
