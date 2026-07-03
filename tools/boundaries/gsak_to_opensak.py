@@ -10,9 +10,10 @@
 #          <gsak-dir>/counties/<cc>/<pack>[_vN].zip
 #
 # Writes: <out-dir>/boundaries.db              (OpenSAK schema)
+#          <out-dir>/manifest.json              (dataset + per-pack versions)
 #          <out-dir>/countries/world.geojson
 #          <out-dir>/states/<cc>.geojson        (one per country code)
-#          <out-dir>/counties/<cc>/<pack>.geojson (one per pack, mirrors GSAK zips)
+#          <out-dir>/counties/<cc>_<pack>.geojson (one per pack, flat — release-asset name)
 #
 # After this script finishes, BoundaryStore(Path("<out-dir>")) resolves
 # coordinates offline using the engine in src/opensak/geo/.
@@ -172,13 +173,13 @@ def _geometry(polygons: list[list[list[list[float]]]]) -> dict[str, object]:
     return {"type": "MultiPolygon", "coordinates": all_polys}
 
 
-def _feature(name: str, parent: str | None, geom: dict[str, object]) -> dict[str, object]:
+def _feature(name: str, parent: str | None, geom: dict[str, object], version: int) -> dict[str, object]:
     return {
         "type": "Feature",
         "properties": {
             "name": name,
             "parent": parent,
-            "version": 1,
+            "version": version,
             "source": "gsak",
             "licence": "ODbL",
         },
@@ -263,7 +264,7 @@ def _convert_countries(
 
             geom = _geometry(_parse_gsak_txt(content))
             feature_index = len(features)
-            features.append(_feature(country_name, None, geom))
+            features.append(_feature(country_name, None, geom, version))
 
             conn.execute(
                 "INSERT INTO rtree_country VALUES (?, ?, ?, ?, ?)",
@@ -320,7 +321,7 @@ def _convert_states(
 
                 geom = _geometry(_parse_gsak_txt(content))
                 feature_index = len(features)
-                features.append(_feature(sname, cc, geom))
+                features.append(_feature(sname, cc, geom, version))
 
                 conn.execute(
                     "INSERT INTO rtree_state VALUES (?, ?, ?, ?, ?)",
@@ -349,7 +350,7 @@ def _convert_counties(
     out_dir: Path,
     conn: sqlite3.Connection,
     versions: dict[tuple[str, str, str], int],
-) -> None:
+) -> dict[str, int]:
     rows = bb.execute(
         "SELECT rowid, Country, State, File, MaxLat, MinLat, MaxLon, MinLon, Cname FROM bb_county"
     ).fetchall()
@@ -361,11 +362,7 @@ def _convert_counties(
         key = (str(row[1]), str(row[2]))
         by_cc_pack.setdefault(key, []).append(row)
 
-    # track next feature_index per country (counties from different packs go
-    # into the same country GeoJSON, so indices must not restart)
-    country_feature_index: dict[str, int] = {}
-    country_features: dict[str, list] = {}
-
+    pack_versions: dict[str, int] = {}
     total = 0
     missing = 0
     for (cc, pack_name) in sorted(by_cc_pack):
@@ -375,11 +372,12 @@ def _convert_counties(
             missing += 1
             continue
 
-        # Counties from the same pack go into counties/<cc>/<pack_name>.geojson
-        # This mirrors the GSAK zip structure and keeps individual files small.
+        # Counties from the same pack are flattened into a single release-asset
+        # filename (cc_pack.geojson) — GitHub Release assets can't hold subdirectories,
+        # and packs.py fetches them by this exact flat name.
         pack_features: list[dict[str, object]] = []
         pack_region_rows: list[tuple] = []
-        out_pack = f"{cc}/{pack_name}.geojson"
+        out_pack = f"{cc}_{pack_name}.geojson"
 
         with zipfile.ZipFile(zip_path) as zf:
             for row in by_cc_pack[(cc, pack_name)]:
@@ -390,7 +388,7 @@ def _convert_counties(
 
                 geom = _geometry(_parse_gsak_txt(content))
                 feature_index = len(pack_features)
-                pack_features.append(_feature(cname, cc, geom))
+                pack_features.append(_feature(cname, cc, geom, version))
 
                 conn.execute(
                     "INSERT INTO rtree_county VALUES (?, ?, ?, ?, ?)",
@@ -402,15 +400,25 @@ def _convert_counties(
                 )
 
         if pack_features:
-            out_path = out_dir / "counties" / cc / f"{pack_name}.geojson"
+            out_path = out_dir / "counties" / out_pack
             out_path.parent.mkdir(parents=True, exist_ok=True)
             out_path.write_text(
                 json.dumps({"type": "FeatureCollection", "features": pack_features}, ensure_ascii=False),
                 encoding="utf-8",
             )
             total += len(pack_features)
+            pack_versions[out_pack] = version
 
     print(f"  → {total} counties ({missing} zip(s) missing)")
+    return pack_versions
+
+
+def _write_manifest(out_dir: Path, dataset_version: int, pack_versions: dict[str, int]) -> None:
+    manifest = {
+        "dataset_version": str(dataset_version),
+        "packs": {name: {"version": str(v)} for name, v in sorted(pack_versions.items())},
+    }
+    (out_dir / "manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
 
 
 # ── Entry point ───────────────────────────────────────────────────────────────
@@ -477,7 +485,7 @@ def main() -> None:
     conn.commit()
 
     print("Converting counties…")
-    _convert_counties(bb, gsak_dir, out_dir, conn, versions)
+    pack_versions = _convert_counties(bb, gsak_dir, out_dir, conn, versions)
     conn.commit()
 
     conn.execute(
@@ -488,6 +496,9 @@ def main() -> None:
 
     bb.close()
     conn.close()
+
+    _write_manifest(out_dir, country_version, pack_versions)
+
     print(f"\nDone → {out_dir}")
     print(f"  boundaries.db   {out_db.stat().st_size // 1024} KB")
 
