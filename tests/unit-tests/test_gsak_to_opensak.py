@@ -74,6 +74,34 @@ def test_county_packs_are_flat_and_manifest_matches_real_versions(tmp_path: Path
     assert manifest["packs"]["usa_texas.geojson"]["version"] == "5"
 
 
+def test_simplify_noop_when_tolerance_is_zero() -> None:
+    geom: dict[str, object] = {"type": "Polygon", "coordinates": [[[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]]]}
+    assert conv._simplify(geom, 0.0) == geom
+
+
+def test_simplify_repairs_self_intersection_from_preserve_topology(monkeypatch) -> None:
+    # preserve_topology=True doesn't fully guarantee validity on complex
+    # multi-ring geometries (see gsak_to_opensak.py's _simplify comment) — force
+    # that failure mode with a bowtie (classic self-intersecting polygon) to
+    # confirm the buffer(0) repair kicks in and always yields valid output.
+    from shapely.geometry import Polygon
+
+    bowtie = Polygon([(0, 0), (10, 10), (10, 0), (0, 10), (0, 0)])
+    assert not bowtie.is_valid
+
+    class _FakeShape:
+        def simplify(self, tolerance: float, preserve_topology: bool) -> Polygon:
+            return bowtie
+
+    monkeypatch.setattr(conv, "_shp_shape", lambda geom: _FakeShape())
+
+    fake_geom: dict[str, object] = {"type": "Polygon", "coordinates": [[[0, 0]]]}
+    result = conv._simplify(fake_geom, 1.0)
+    from shapely.geometry import shape
+
+    assert shape(result).is_valid
+
+
 def _run(bb_path: Path, gsak_dir: Path, out_dir: Path) -> None:
     import sys
 
