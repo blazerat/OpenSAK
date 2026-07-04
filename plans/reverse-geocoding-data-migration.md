@@ -62,7 +62,7 @@ here as one migration story so the cut-over from `data/` is explicit.
    consuming the release; nothing previously verified that what's actually
    published stays intact. `tools/boundaries/verify_release.py` validates
    manifest checksums, `boundaries.db` structure, GeoJSON/geometry validity,
-   and a resolver smoke test — run on a weekly schedule
+   and a resolver smoke test — run every 2 days
    (`.github/workflows/data-integrity.yml`) against the live release, filing
    a GitHub issue on failure. See
    [`docs/reverse-geocoding-data.md`](../docs/reverse-geocoding-data.md#verifying-a-release).

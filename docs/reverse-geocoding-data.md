@@ -114,4 +114,4 @@ real-world coordinates. Run it against the published release
 (`python tools/boundaries/verify_release.py`) or against a local pre-publish
 directory before cutting a new release (`--data-dir <out-dir>`). A scheduled
 run (`.github/workflows/data-integrity.yml`) verifies the published release
-weekly and files a GitHub issue if it fails.
+every 2 days and files a GitHub issue if it fails.

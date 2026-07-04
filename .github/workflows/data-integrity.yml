@@ -5,7 +5,9 @@ name: Data integrity
 # and the resolver actually returns a result for known real-world coordinates.
 on:
   schedule:
-    - cron: '0 6 * * 1'  # weekly, Monday 06:00 UTC
+    # every 2 days, 06:00 UTC (cron has no exact "every N days" — day-of-month
+    # */2 drifts by a day across some month boundaries, close enough here)
+    - cron: '0 6 */2 * *'
   workflow_dispatch:
 
 jobs:
