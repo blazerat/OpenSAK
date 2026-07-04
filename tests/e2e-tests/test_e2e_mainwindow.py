@@ -600,7 +600,7 @@ class TestSort:
         assert seeded_window._active_filter_name == "MyProfile"
 
     def test_load_sort_unknown_field_falls_back(self, seeded_window, iso_settings):
-        # Regression for #501: opensak.json deles på tværs af alle installerede
+        # Regression for #498: opensak.json deles på tværs af alle installerede
         # versioner. Hvis en nyere version har gemt et sort-felt denne version
         # ikke kender (fx "trackables"), må opstart IKKE crashe — den skal
         # falde tilbage til "name" og rette den gemte værdi.

@@ -17,7 +17,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Fixed
 
 - **Unknown sort field in shared settings crashed the app on startup**
-  (closes #501) — `opensak.json` (which stores UI state such as the active
+  (closes #498) — `opensak.json` (which stores UI state such as the active
   sort column) is shared across every OpenSAK version installed on a
   machine, not just the one currently running. If a newer version saved a
   sort field this version doesn't know yet (e.g. `trackables`, added for

@@ -1622,7 +1622,7 @@ class MainWindow(QMainWindow):
             # Ukendt sort-felt — kan opstå hvis opensak.json (delt på tværs af
             # installerede versioner) er blevet skrevet af en nyere version med
             # et sort-felt denne version ikke kender endnu (fixes crash on
-            # startup, se #501). Falder tilbage til default og retter den
+            # startup, se #498). Falder tilbage til default og retter den
             # gemte værdi, så det ikke gentager sig ved næste opstart.
             print(f"DEBUG load: ukendt sort-felt {field!r} ignoreret ({e}); bruger 'name'")
             field = "name"
