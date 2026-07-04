@@ -881,6 +881,12 @@ def _upsert_cache(
     for tb in data.get("trackables", []):
         session.add(Trackable(cache=cache, ref=tb["ref"], name=tb["name"]))
 
+    # ── Issue #489/#491: Cache trackable count for fast UI display ──────────
+    # Mirrors log_count above: old trackables were deleted at the start of
+    # this function (re-import), so the length of the list we just added
+    # from the GPX equals the new total trackable count for this cache.
+    cache.trackable_count = len(data.get("trackables", []))
+
     # ── Found by me (sym=Geocache Found) + found_date fra brugerens log ────────
     # Vi sætter kun found=True hvis GPX'en eksplicit markerer cachen som fundet
     # (sym="Geocache Found"). found=False sætter vi IKKE ved re-import — det ville

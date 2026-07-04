@@ -23,6 +23,7 @@ from opensak.gui.cache_table import (
     _bearing_deg_batch,
     _bearing_compass,
     _gc_sort_key,
+    _CacheTableHeaderView,
 )
 from opensak.db.models import Cache, UserNote
 from opensak.utils.types import CoordFormat, DateFormat, TextSize, TEXT_SIZE_MAP
@@ -34,6 +35,7 @@ ALL_COLUMNS = [
     "corrected", "latitude", "longitude", "found_date", "dnf_date",
     "first_to_find", "favorite_points", "user_flag", "locked", "bearing", "user_sort",
     "user_data_1", "user_data_2", "user_data_3", "user_data_4",
+    "trackables",
 ]
 
 
@@ -174,6 +176,20 @@ class TestModelBasics:
         assert align == Qt.AlignmentFlag.AlignCenter
         assert model.headerData(0, Qt.Orientation.Vertical) is None
 
+    def test_icon_only_headers_blank_text_with_icon_and_tooltip(self, model):
+        # Issue #489: Found/Premium/Fav.points/Trackables (and the older
+        # Corrected, #354) use icon-only headers — blank DisplayRole text,
+        # a DecorationRole icon, and the full name moved to ToolTipRole so
+        # the column stays identifiable.
+        for col_id in ("found", "premium_only", "favorite_points", "trackables", "corrected"):
+            section = ALL_COLUMNS.index(col_id)
+            display = model.headerData(section, Qt.Orientation.Horizontal, Qt.ItemDataRole.DisplayRole)
+            icon = model.headerData(section, Qt.Orientation.Horizontal, Qt.ItemDataRole.DecorationRole)
+            tooltip = model.headerData(section, Qt.Orientation.Horizontal, Qt.ItemDataRole.ToolTipRole)
+            assert display == "", col_id
+            assert icon is not None, col_id
+            assert isinstance(tooltip, str) and tooltip, col_id
+
     def test_data_invalid_index(self, model):
         assert model.data(QModelIndex()) is None
 
@@ -260,13 +276,24 @@ class TestDisplayValues:
         assert model._display_value(_cache(), "bearing") == "?"
 
     def test_boolean_markers(self, model):
-        assert model._display_value(_cache(found=True), "found") == "✓"
+        # Issue #489: found/premium_only became icon-only (DecorationRole) —
+        # DisplayRole is now always blank for these two, regardless of value.
+        assert model._display_value(_cache(found=True), "found") == ""
         assert model._display_value(_cache(found=False), "found") == ""
         assert model._display_value(_cache(dnf=True), "dnf") == "DNF"
-        assert model._display_value(_cache(premium_only=True), "premium_only") == "P"
+        assert model._display_value(_cache(premium_only=True), "premium_only") == ""
         assert model._display_value(_cache(archived=True), "archived") == "✓"
         assert model._display_value(_cache(first_to_find=True), "first_to_find") == "FTF"
         assert model._display_value(_cache(user_flag=True), "user_flag") == "🚩"
+
+    def test_boolean_marker_icons(self, model):
+        # Issue #489: found/premium_only show a GSAK-style icon (via
+        # DecorationRole) instead of the old plain-text markers, only when
+        # the flag is set.
+        assert model._decoration_value(_cache(found=True), "found") is not None
+        assert model._decoration_value(_cache(found=False), "found") is None
+        assert model._decoration_value(_cache(premium_only=True), "premium_only") is not None
+        assert model._decoration_value(_cache(premium_only=False), "premium_only") is None
 
     def test_dates(self, model, fake_settings):
         d = datetime(2024, 3, 1)
@@ -295,6 +322,13 @@ class TestDisplayValues:
         assert model._display_value(_cache(user_sort=3), "user_sort") == "3"
         assert model._display_value(_cache(user_data_1="x"), "user_data_1") == "x"
         assert model._display_value(_cache(user_data_4="z"), "user_data_4") == "z"
+
+    def test_trackables_count(self, model):
+        # Issue #489/#491: blank when 0/None (most caches have none — a
+        # column full of zeroes would be noise), count shown otherwise.
+        assert model._display_value(_cache(trackable_count=3), "trackables") == "3"
+        assert model._display_value(_cache(trackable_count=0), "trackables") == ""
+        assert model._display_value(_cache(trackable_count=None), "trackables") == ""
 
     def test_corrected_marker(self, model):
         # Issue #354: "corrected" col is icon-only — _display_value always
@@ -505,6 +539,7 @@ class TestSort:
         d = datetime(2024, 1, 1)
         caches = [
             _cache(gc_code="A", terrain=2.0, found=True, log_count=3, favorite_points=1,
+                   trackable_count=2,
                    user_sort=2, first_to_find=True, user_flag=True, container="micro",
                    hidden_date=d, last_log_date=d, found_date=d, dnf_date=d,
                    latitude=55.0, longitude=12.0, country="DK"),
@@ -515,7 +550,7 @@ class TestSort:
         m = self._loaded(model, caches)
         for col in ("terrain", "found", "corrected", "log_count", "last_log",
                     "hidden_date", "found_date", "dnf_date", "first_to_find",
-                    "user_flag", "user_sort", "favorite_points", "container",
+                    "user_flag", "user_sort", "favorite_points", "trackables", "container",
                     "latitude", "longitude", "country"):
             m.sort(ALL_COLUMNS.index(col), Qt.SortOrder.AscendingOrder)
             m.sort(ALL_COLUMNS.index(col), Qt.SortOrder.DescendingOrder)
@@ -774,6 +809,50 @@ class TestDelegates:
         model.load([_cache(gc_code="GCPLAIN")])
         self._paint(CorrectedCoordsDelegate(), model, "corrected")
 
+    def test_icon_only_delegate_centers_found_and_premium_icons(self, model):
+        # Issue #489: the same generic centering delegate is now reused for
+        # found/premium_only's per-row GSAK-style icons, not just "corrected".
+        model.load([_cache(gc_code="GCFIX2", found=True, premium_only=True)])
+        self._paint(CorrectedCoordsDelegate(), model, "found")
+        self._paint(CorrectedCoordsDelegate(), model, "premium_only")
+
+
+class TestIconOnlyHeaderView:
+    # Issue #489: Found/Premium/Fav.points/Trackables get the same
+    # icon+sort-arrow centering treatment as "corrected" (#354) — verify the
+    # data driving _CacheTableHeaderView.paintSection() directly rather than
+    # rendering pixels, since the painting logic itself is shared/unchanged.
+
+    def test_all_four_new_columns_are_icon_only(self):
+        for col_id in ("found", "premium_only", "favorite_points", "trackables", "corrected"):
+            assert col_id in _CacheTableHeaderView._ICON_ONLY_COLUMNS
+
+    def test_each_icon_only_column_has_a_distinct_icon_getter(self):
+        getters = _CacheTableHeaderView._HEADER_ICON_GETTERS
+        for col_id in ("found", "premium_only", "favorite_points", "trackables", "corrected"):
+            assert col_id in getters
+        # Each column's getter must actually be a different function — a
+        # copy-paste mistake mapping two columns to the same getter would
+        # otherwise pass "has an icon" checks while showing the wrong icon.
+        assert len(set(getters.values())) == len(getters)
+
+    def test_header_view_paints_icon_only_sections_without_crashing(self, qtbot):
+        # Smoke-test the real paintSection() path (not just the lookup
+        # tables above) for every icon-only column, at a couple of widths.
+        from PySide6.QtGui import QPixmap, QPainter
+        from PySide6.QtCore import QRect
+
+        columns = ["gc_code", "found", "premium_only", "favorite_points",
+                   "trackables", "corrected", "name"]
+        header = _CacheTableHeaderView(lambda: columns)
+        canvas = QPixmap(400, 24)
+        canvas.fill()
+        painter = QPainter(canvas)
+        for width in (20, 40, 80):
+            for i, col_id in enumerate(columns):
+                header.paintSection(painter, QRect(0, 0, width, 24), i)
+        painter.end()
+
 
 # ── view ────────────────────────────────────────────────────────────────────────
 
@@ -797,6 +876,11 @@ class TestView:
         assert isinstance(view.itemDelegateForColumn(ALL_COLUMNS.index("cache_type")),
                           CacheTypeDelegate)
         assert isinstance(view.itemDelegateForColumn(ALL_COLUMNS.index("corrected")),
+                          CorrectedCoordsDelegate)
+        # Issue #489: found/premium_only reuse the same centering delegate.
+        assert isinstance(view.itemDelegateForColumn(ALL_COLUMNS.index("found")),
+                          CorrectedCoordsDelegate)
+        assert isinstance(view.itemDelegateForColumn(ALL_COLUMNS.index("premium_only")),
                           CorrectedCoordsDelegate)
 
     def test_header_sections_remain_clickable_for_sorting(self, view):

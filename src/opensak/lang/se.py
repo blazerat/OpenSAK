@@ -637,6 +637,7 @@ STRINGS: dict[str, str] = {
     "col_user_data_3":       "Användardata 3",
     "col_user_data_4":       "Användardata 4",
     "col_favorite_points":   "Fav.-poäng",
+    "col_trackables":        "Trackables",
 
     # ── Right-click context menu ──────────────────────────────────────────────
     "ctx_open_geocaching":  "🌐  Öppna hos geocaching.com",

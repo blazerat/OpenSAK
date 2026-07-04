@@ -622,3 +622,81 @@ _CORRECTED_COORDS_SVG = (
 def get_corrected_coords_icon(size: int = 16) -> QIcon:
     """Amber warning-triangle QIcon shown in the 'corrected' column when set (issue #354)."""
     return QIcon(_svg_to_pixmap(_CORRECTED_COORDS_SVG, size))
+
+
+# ── Issue #489: GSAK-style icons for Found / Premium / Fav. points / Trackables columns ──
+#
+# All four are icon-only column headers (matching the existing "corrected"
+# column pattern) with per-cell icons for Found/Premium (boolean toggles)
+# and plain numeric text for Fav. points/Trackables (counts) — see
+# cache_table.py's headerData()/_decoration_value() for how each is used.
+#
+# The Premium and Trackable icons below are original, generic designs (a
+# checkered circle and a ladybug-style insect silhouette respectively) —
+# they do not reproduce Geocaching.com's actual trademarked Premium badge
+# or Travel Bug dog-tag artwork.
+
+@lru_cache(maxsize=8)
+def get_found_icon(size: int = 16) -> QIcon:
+    """Gold smiley QIcon for the 'found' column — reuses the same smiley
+    asset already used for the map pin found-overlay, instead of a plain
+    checkmark (issue #489)."""
+    return QIcon(_svg_to_pixmap(_get_found_overlay_svg(), size))
+
+
+_PREMIUM_SVG = (
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16">'
+    '<circle cx="8" cy="8" r="7" fill="#ffffff" stroke="#333333" stroke-width="1"/>'
+    '<path d="M 8 8 L 8 1 A 7 7 0 0 1 15 8 Z" fill="#222222"/>'
+    '<path d="M 8 8 L 8 15 A 7 7 0 0 1 1 8 Z" fill="#222222"/>'
+    '<rect x="4.7" y="6.2" width="6.6" height="4.6" rx="0.7" '
+    'fill="#c8860d" stroke="#5c3d00" stroke-width="0.6"/>'
+    '<rect x="4.7" y="5.2" width="6.6" height="1.9" rx="0.6" fill="#5c3d00"/>'
+    '</svg>'
+)
+
+
+@lru_cache(maxsize=8)
+def get_premium_icon(size: int = 16) -> QIcon:
+    """Checkered circle with a small cache box — Premium-member-only marker
+    for the 'premium_only' column (issue #489)."""
+    return QIcon(_svg_to_pixmap(_PREMIUM_SVG, size))
+
+
+_FAVORITE_POINTS_SVG = (
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16">'
+    '<circle cx="8" cy="6.3" r="5.2" fill="#f5c400" stroke="#a67c00" stroke-width="1"/>'
+    '<path d="M8 3.2 L9.1 5.5 L11.6 5.9 L9.8 7.6 L10.2 10.1 L8 8.9 L5.8 10.1 '
+    'L6.2 7.6 L4.4 5.9 L6.9 5.5 Z" fill="#ffffff" stroke="#a67c00" stroke-width="0.4"/>'
+    '<path d="M5.4 10.6 L3.6 15 L8 13.2 L12.4 15 L10.6 10.6 Z" '
+    'fill="#c0392b" stroke="#7a2318" stroke-width="0.5"/>'
+    '</svg>'
+)
+
+
+@lru_cache(maxsize=8)
+def get_favorite_points_icon(size: int = 14) -> QIcon:
+    """Gold star-medal emblem for the 'Fav. points' column header (issue #489)."""
+    return QIcon(_svg_to_pixmap(_FAVORITE_POINTS_SVG, size))
+
+
+_TRACKABLE_SVG = (
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16">'
+    '<ellipse cx="8" cy="9.2" rx="5.2" ry="5.8" fill="#c0392b" stroke="#7a2318" stroke-width="0.8"/>'
+    '<line x1="8" y1="3.6" x2="8" y2="14.8" stroke="#3a1a10" stroke-width="0.8"/>'
+    '<circle cx="6" cy="6.5" r="1" fill="#1a1a1a"/>'
+    '<circle cx="10" cy="6.5" r="1" fill="#1a1a1a"/>'
+    '<circle cx="5.5" cy="10.5" r="1" fill="#1a1a1a"/>'
+    '<circle cx="10.5" cy="10.5" r="1" fill="#1a1a1a"/>'
+    '<circle cx="8" cy="12.5" r="1" fill="#1a1a1a"/>'
+    '<circle cx="8" cy="4" r="2.6" fill="#2b1a12" stroke="#000000" stroke-width="0.4"/>'
+    '<path d="M6.5 2.5 L5 0.8" stroke="#2b1a12" stroke-width="0.7" stroke-linecap="round"/>'
+    '<path d="M9.5 2.5 L11 0.8" stroke="#2b1a12" stroke-width="0.7" stroke-linecap="round"/>'
+    '</svg>'
+)
+
+
+@lru_cache(maxsize=8)
+def get_trackable_icon(size: int = 14) -> QIcon:
+    """Ladybug-style insect icon for the Trackables column header (issue #489/#491)."""
+    return QIcon(_svg_to_pixmap(_TRACKABLE_SVG, size))

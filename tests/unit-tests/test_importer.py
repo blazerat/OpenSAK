@@ -690,3 +690,65 @@ def test_import_ftf_not_detected_for_free_text_mentions(tmp_db, tmp_path, ftf_us
         import_gpx(f, s)
         cache = s.query(Cache).filter_by(gc_code="GCFTFNO1").one()
         assert cache.first_to_find is False
+
+
+# ── Trackables (issue #489/#491) ────────────────────────────────────────────
+
+def test_import_gpx_sets_trackable_count(tmp_db, tmp_path):
+    # Issue #489/#491: trackable_count must be populated from the parsed
+    # <groundspeak:travelbugs> block on real GPX import, not just when
+    # Trackable rows are added directly in the DB.
+    gpx_with_tb = SAMPLE_GPX.replace(
+        "</groundspeak:logs>",
+        "</groundspeak:logs>\n"
+        '      <groundspeak:travelbugs>\n'
+        '        <groundspeak:travelbug ref="TB1AAAA">\n'
+        '          <groundspeak:name>Speedy the Snail</groundspeak:name>\n'
+        '        </groundspeak:travelbug>\n'
+        '        <groundspeak:travelbug ref="TB1BBBB">\n'
+        '          <groundspeak:name>Wandering Gnome</groundspeak:name>\n'
+        '        </groundspeak:travelbug>\n'
+        '      </groundspeak:travelbugs>',
+        1,
+    )
+    f = write_gpx(tmp_path, "with_tb.gpx", gpx_with_tb)
+    with get_session() as s:
+        import_gpx(f, s)
+        cache = s.query(Cache).filter_by(gc_code="GC12345").one()
+        assert cache.trackable_count == 2
+        assert {tb.ref for tb in cache.trackables} == {"TB1AAAA", "TB1BBBB"}
+
+    # The other cache in the same GPX has no travelbugs block at all.
+    with get_session() as s:
+        other = s.query(Cache).filter_by(gc_code="GC99999").one()
+        assert other.trackable_count == 0
+
+
+def test_reimport_updates_trackable_count(tmp_db, tmp_path):
+    # Re-importing with fewer/more travelbugs must update the count, not
+    # just accumulate stale rows (mirrors test_reimport_updates_not_duplicates).
+    gpx_with_2_tb = SAMPLE_GPX.replace(
+        "</groundspeak:logs>",
+        "</groundspeak:logs>\n"
+        '      <groundspeak:travelbugs>\n'
+        '        <groundspeak:travelbug ref="TB1AAAA">\n'
+        '          <groundspeak:name>Speedy the Snail</groundspeak:name>\n'
+        '        </groundspeak:travelbug>\n'
+        '        <groundspeak:travelbug ref="TB1BBBB">\n'
+        '          <groundspeak:name>Wandering Gnome</groundspeak:name>\n'
+        '        </groundspeak:travelbug>\n'
+        '      </groundspeak:travelbugs>',
+        1,
+    )
+    f1 = write_gpx(tmp_path, "tb_v1.gpx", gpx_with_2_tb)
+    with get_session() as s:
+        import_gpx(f1, s)
+        assert s.query(Cache).filter_by(gc_code="GC12345").one().trackable_count == 2
+
+    gpx_with_0_tb = SAMPLE_GPX  # no travelbugs block — the bug moved on
+    f2 = write_gpx(tmp_path, "tb_v2.gpx", gpx_with_0_tb)
+    with get_session() as s:
+        import_gpx(f2, s)
+        cache = s.query(Cache).filter_by(gc_code="GC12345").one()
+        assert cache.trackable_count == 0
+        assert list(cache.trackables) == []

@@ -62,7 +62,7 @@ _migrated_paths: set = set()  # undgår at køre migrationer to gange på samme 
 # bumped to the highest migration number whenever a new migration is added
 # below — _run_migrations() skips the whole block when the database already
 # reports this version, so a stale constant means new migrations never run.
-SCHEMA_VERSION = 16
+SCHEMA_VERSION = 17
 
 
 def init_db(db_path: Path | None = None) -> Engine:
@@ -502,6 +502,30 @@ def _run_migrations(engine: Engine) -> None:
             ))
             conn.commit()
             print("Migration: oprettede trackables-tabellen (manglede siden v1.14.0)")
+
+        # ── Migration 17: trackable_count kolonne (issue #489/#491) ──────────
+        # Mirrors log_count (Migration 6): cache the trackable count on the
+        # caches row so the new "Trackables" table column can display it
+        # without loading the trackables relationship for every row. Depends
+        # on Migration 16 above having created the trackables table.
+        existing_caches_17 = [
+            row[1]
+            for row in conn.execute(text("PRAGMA table_info(caches)")).fetchall()
+        ]
+        if "trackable_count" not in existing_caches_17:
+            conn.execute(text(
+                "ALTER TABLE caches ADD COLUMN trackable_count INTEGER NOT NULL DEFAULT 0"
+            ))
+            result = conn.execute(text("""
+                UPDATE caches
+                SET trackable_count = (
+                    SELECT COUNT(*)
+                    FROM trackables
+                    WHERE trackables.cache_id = caches.id
+                )
+            """))
+            conn.commit()
+            print(f"Migration: tilføjede caches.trackable_count og opdaterede {result.rowcount} caches")
 
         # ── Stamp the schema version so the next launch skips the probes ─────
         # PRAGMA does not accept bind parameters; SCHEMA_VERSION is a trusted

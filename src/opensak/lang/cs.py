@@ -638,6 +638,7 @@ STRINGS: dict[str, str] = {
     "col_user_data_3":       "Uživatelská data 3",
     "col_user_data_4":       "Uživatelská data 4",
     "col_favorite_points":   "Obl. body",
+    "col_trackables":        "Trackables",
 
     # ── Right-click context menu ──────────────────────────────────────────────
     "ctx_open_geocaching":  "🌐  Otevřít na geocaching.com",
