@@ -30,7 +30,7 @@ ALL_COLUMNS = [
     "gc_code", "name", "cache_type", "difficulty", "terrain", "container",
     "country", "state", "county", "distance", "found", "placed_by",
     "hidden_date", "last_log", "log_count", "dnf", "premium_only", "archived",
-    "favorite", "corrected", "latitude", "longitude", "found_date", "dnf_date",
+    "corrected", "latitude", "longitude", "found_date", "dnf_date",
     "first_to_find", "favorite_points", "user_flag", "locked", "bearing", "user_sort",
     "user_data_1", "user_data_2", "user_data_3", "user_data_4",
 ]
@@ -243,7 +243,6 @@ class TestDisplayValues:
         assert model._display_value(_cache(dnf=True), "dnf") == "DNF"
         assert model._display_value(_cache(premium_only=True), "premium_only") == "P"
         assert model._display_value(_cache(archived=True), "archived") == "✓"
-        assert model._display_value(_cache(favorite_point=True), "favorite") == "★"
         assert model._display_value(_cache(first_to_find=True), "first_to_find") == "FTF"
         assert model._display_value(_cache(user_flag=True), "user_flag") == "🚩"
 
@@ -305,7 +304,7 @@ class TestDataRoles:
     def test_alignment_role(self, model):
         model.load([_cache()])
         for col in ("cache_type", "difficulty", "terrain", "distance", "found",
-                    "container", "favorite", "hidden_date", "last_log",
+                    "container", "hidden_date", "last_log",
                     "found_date", "dnf_date", "placed_by"):
             idx = model.index(0, ALL_COLUMNS.index(col))
             assert model.data(idx, Qt.ItemDataRole.TextAlignmentRole) == Qt.AlignmentFlag.AlignCenter, col
@@ -486,11 +485,10 @@ class TestSort:
         ]
         caches[1].user_note = None
         caches[0].user_note = _note(1.0, 2.0)
-        caches[0].favorite_point = True
         m = self._loaded(model, caches)
         for col in ("terrain", "found", "corrected", "log_count", "last_log",
                     "hidden_date", "found_date", "dnf_date", "first_to_find",
-                    "user_flag", "user_sort", "favorite", "favorite_points", "container",
+                    "user_flag", "user_sort", "favorite_points", "container",
                     "latitude", "longitude", "country"):
             m.sort(ALL_COLUMNS.index(col), Qt.SortOrder.AscendingOrder)
             m.sort(ALL_COLUMNS.index(col), Qt.SortOrder.DescendingOrder)
@@ -514,19 +512,6 @@ class TestSort:
         for col in ("country", "state", "county", "placed_by", "user_data_1"):
             model.sort(ALL_COLUMNS.index(col), Qt.SortOrder.AscendingOrder)
             model.sort(ALL_COLUMNS.index(col), Qt.SortOrder.DescendingOrder)
-
-    def test_sort_by_favorite_no_crash(self, model):
-        # Regression #319: sort() fell through to getattr(c, "favorite") but the
-        # model attribute is favorite_point, causing AttributeError.
-        caches = [
-            _cache(gc_code="A", favorite_point=True),
-            _cache(gc_code="B"),
-        ]
-        model.load(caches)
-        model.sort(ALL_COLUMNS.index("favorite"), Qt.SortOrder.AscendingOrder)
-        assert model._caches[0].gc_code == "B"  # non-favourite first
-        model.sort(ALL_COLUMNS.index("favorite"), Qt.SortOrder.DescendingOrder)
-        assert model._caches[0].gc_code == "A"  # favourite first
 
 
 # ── flags / setData (needs DB) ──────────────────────────────────────────────────
