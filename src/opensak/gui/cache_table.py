@@ -94,7 +94,6 @@ def get_column_defs() -> dict:
         "dnf":          (tr("col_dnf"),               45),
         "premium_only": (tr("col_premium"),           65),
         "archived":     (tr("col_archived"),          70),
-        "favorite":     (tr("col_favorite"),          60),
         "corrected":    (tr("col_corrected"),         40),
         # ── Issue #84: Latitude og Longitude ──────────────────────────────
         "latitude":     (tr("col_latitude"),         110),
@@ -674,7 +673,7 @@ class CacheTableModel(QAbstractTableModel):
                        "distance", "found", "dnf", "premium_only", "archived",
                        "log_count", "corrected", "first_to_find", "user_flag",
                        "locked", "bearing", "user_sort", "favorite_points",
-                       "latitude", "longitude", "favorite",
+                       "latitude", "longitude",
                        "hidden_date", "last_log", "found_date", "dnf_date",
                        "placed_by"):
                 return Qt.AlignmentFlag.AlignCenter
@@ -856,8 +855,6 @@ class CacheTableModel(QAbstractTableModel):
             return "P" if cache.premium_only else ""
         if col == "archived":
             return "✓" if cache.archived else ""
-        if col == "favorite":
-            return "★" if cache.favorite_point else ""
         if col == "corrected":
             # Issue #354: icon-only (DecorationRole) — the old "📍" emoji
             # rendered too small / low-contrast on some platforms.
@@ -957,8 +954,6 @@ class CacheTableModel(QAbstractTableModel):
             self._caches.sort(key=lambda c: int(c.locked or False), reverse=reverse)
         elif col == "user_sort":
             self._caches.sort(key=lambda c: c.user_sort if c.user_sort is not None else 999999, reverse=reverse)
-        elif col == "favorite":
-            self._caches.sort(key=lambda c: int(c.favorite_point or False), reverse=reverse)
         elif col == "favorite_points":
             self._caches.sort(key=lambda c: c.favorite_points or 0, reverse=reverse)
         elif col == "container":
