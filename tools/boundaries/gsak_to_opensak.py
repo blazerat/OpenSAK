@@ -27,6 +27,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import sqlite3
@@ -464,6 +465,11 @@ def _convert_counties(
     return pack_versions
 
 
+def _file_digest(path: Path) -> dict[str, object]:
+    data = path.read_bytes()
+    return {"sha256": hashlib.sha256(data).hexdigest(), "size": len(data)}
+
+
 def _write_manifest(
     out_dir: Path,
     dataset_version: int,
@@ -473,10 +479,21 @@ def _write_manifest(
     # "baseline" (world.geojson + state packs) is bundled in every install and
     # fetched wholesale on first run when not bundled (see geo/packs.py
     # fetch_baseline). "packs" (county-level) stays on-demand, per-country.
+    # sha256/size let verify_release.py detect a corrupted or truncated
+    # release asset without needing to reprocess the whole dataset.
     manifest = {
         "dataset_version": str(dataset_version),
-        "baseline": {name: {"version": str(v)} for name, v in sorted(baseline_versions.items())},
-        "packs": {name: {"version": str(v)} for name, v in sorted(pack_versions.items())},
+        "boundaries_db": _file_digest(out_dir / "boundaries.db"),
+        "baseline": {
+            name: {"version": str(v), **_file_digest(
+                out_dir / ("countries" if name == "world.geojson" else "states") / name
+            )}
+            for name, v in sorted(baseline_versions.items())
+        },
+        "packs": {
+            name: {"version": str(v), **_file_digest(out_dir / "counties" / name)}
+            for name, v in sorted(pack_versions.items())
+        },
     }
     (out_dir / "manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
 

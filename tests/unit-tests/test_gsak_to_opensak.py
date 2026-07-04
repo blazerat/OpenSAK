@@ -1,5 +1,6 @@
 # tests/unit-tests/test_gsak_to_opensak.py — GSAK boundary converter output contract.
 
+import hashlib
 import json
 import sqlite3
 import zipfile
@@ -85,6 +86,25 @@ def test_county_packs_are_flat_and_manifest_matches_real_versions(tmp_path: Path
     assert manifest["baseline"]["usa.geojson"]["version"] == "2"
     assert manifest["packs"]["usa_california.geojson"]["version"] == "3"
     assert manifest["packs"]["usa_texas.geojson"]["version"] == "5"
+
+    def _digest(path: Path) -> tuple[str, int]:
+        data = path.read_bytes()
+        return hashlib.sha256(data).hexdigest(), len(data)
+
+    db_sha, db_size = _digest(out_dir / "boundaries.db")
+    assert (manifest["boundaries_db"]["sha256"], manifest["boundaries_db"]["size"]) == (db_sha, db_size)
+
+    world_sha, world_size = _digest(out_dir / "countries" / "world.geojson")
+    assert manifest["baseline"]["world.geojson"]["sha256"] == world_sha
+    assert manifest["baseline"]["world.geojson"]["size"] == world_size
+
+    usa_sha, usa_size = _digest(out_dir / "states" / "usa.geojson")
+    assert manifest["baseline"]["usa.geojson"]["sha256"] == usa_sha
+    assert manifest["baseline"]["usa.geojson"]["size"] == usa_size
+
+    pack_sha, pack_size = _digest(out_dir / "counties" / "usa_california.geojson")
+    assert manifest["packs"]["usa_california.geojson"]["sha256"] == pack_sha
+    assert manifest["packs"]["usa_california.geojson"]["size"] == pack_size
 
 
 def test_simplify_preserves_shape_when_tolerance_is_zero() -> None:
