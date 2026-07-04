@@ -8,6 +8,66 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [1.15.0-beta.4] — 2026-07-04
+
+> **Beta release** — a new Trackables column and GSAK-style icons for
+> Found/Premium/Fav. points, plus a batch of bugs found and fixed during
+> testing. Three of them were serious enough to also backport to stable
+> as v1.14.1 — noted individually below.
+
+### Added
+
+- **Trackables (travel bugs / geocoins) column** (#489) — a new opt-in
+  column (enable via Column Chooser) showing how many trackables are
+  logged in each cache, with an insect icon in the header. This builds
+  on the existing Trackable data model, which has quietly supported
+  import parsing and the "Has trackables" filter since v1.14.0 — only
+  the column itself was missing. The count is cached on the cache row
+  (same approach as the Last log column's log count), so displaying
+  and sorting it doesn't slow down large databases.
+
+- **GSAK-style icons for Found, Premium and Fav. points** (#489) — Found
+  and Premium now show an icon instead of plain text in the cache list
+  (a gold smiley reused from the map pins, and a checkered-circle-with-
+  cache icon for Premium), and Fav. points gets an emblem icon in its
+  header. All four new icon-only column headers — plus Trackables — get
+  the same icon-and-sort-arrow centering already introduced for
+  Corrected Coordinates in beta.2, so the pair stays together as the
+  column is resized.
+
+### Fixed
+
+- **Potential crash on databases with a "Favourite" (★) column enabled**
+  (#488) — a manual per-cache favourite flag with no GSAK equivalent had
+  shipped without a database migration, which could leave the column
+  missing entirely on some databases. Removed — GSAK only tracks the
+  community "Fav. points" count, which is unaffected. As a safety net,
+  the column list now also ignores any other stale column ID left over
+  from a future column removal, instead of rendering an empty,
+  untranslated column.
+
+- **"Has trackables" filter crashed on any database created before
+  v1.14.0** (#491) — the Trackable table itself was missing its
+  creation migration since the feature was first added. **Also included
+  in v1.14.1.**
+
+- **Map didn't update when correcting coordinates via the cache list's
+  right-click menu** (#474) — unlike the same action from the cache
+  detail panel, the context-menu path never told the map to refresh.
+  Fixed in three parts: the map now refreshes at all; it reveals the
+  pin from an unopened marker cluster when the new location is far from
+  the current view (previously this only worked if the cache was
+  already selected); and correcting a *different* cache than the one
+  currently selected no longer shifts focus away from it. **Also
+  included in v1.14.1.**
+
+- **SMALL row-height setting silently ignored on some systems** (#490)
+  — Qt's platform/font-derived minimum row height could be larger than
+  our 20px SMALL setting, silently overriding it without any visible
+  error. **Also included in v1.14.1.**
+
+---
+
 ## [1.15.0-beta.3] — 2026-07-02
 
 > **Beta release** — fixes two found-status bugs reported by the community
