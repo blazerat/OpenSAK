@@ -8,6 +8,60 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [1.15.0-beta.5] — 2026-07-05
+
+> **Beta release** — four quality-of-life fixes found during beta.4 testing.
+> No schema changes.
+
+### Fixed
+
+- **Deleting the active saved filter left it applied** (#491) — deleting a
+  filter profile only refreshed the "Set filter" dialog's own list; if the
+  deleted profile was the one currently active and the dialog was then
+  closed without pressing Apply, the stale filter stayed applied to the
+  waypoint list and the toolbar still showed the deleted name. Deleting a
+  profile now immediately clears the active filter (and refreshes the cache
+  table) if it was the one in use, regardless of how the dialog is
+  subsequently closed. Deleting a different, non-active profile only
+  refreshes the toolbar's profile list, and quick search text (GC code /
+  name) is left untouched either way.
+
+- **Flag and locked column icons distorted on found rows** (#509) — both
+  columns rendered their "set" state as plain emoji text ("🚩" / "🔒"). The
+  cache list italicizes every column on found-cache rows, and emoji glyphs
+  generally have no real italic form — some platforms (Windows' Segoe UI
+  Emoji in particular) synthesize one by shearing the glyph box, clipping
+  or distorting it. Both columns are now icon-only in both states, the same
+  treatment already used for Found/Premium/Corrected Coordinates: a new
+  solid red flag icon and solid closed-padlock icon when set, the existing
+  faint outline placeholders when unset. No text/font styling can touch
+  them anymore.
+
+- **File-mode GPS export silently overwrote existing files** (#501) —
+  exporting to a regular file (as opposed to syncing to a connected Garmin
+  device) reused the same default filename ("opensak") every time without
+  warning, so re-exporting could silently overwrite a previous export. The
+  export dialog now checks whether the target file already exists and, if
+  so, prompts for a new filename — pre-filled with the next available
+  suggestion (opensak, opensak1, opensak2, ...) so the common case is just
+  pressing OK. Re-prompts if the new name also collides, and cancels
+  cleanly without exporting if the user backs out. Device-mode exports are
+  unaffected — they intentionally keep syncing to the same canonical
+  Garmin/GPX path every time.
+
+- **Filters with zero matches emptied the cache list** (#444) — applying a
+  filter that didn't match any caches silently switched to an empty view,
+  requiring the red "clear filter" button and reopening "Set filter" from
+  scratch to recover. Matching GSAK's behavior, a filter matching zero
+  caches is no longer applied at all: a warning is shown, and "Set filter"
+  reopens with the same (rejected) criteria still filled in so they can be
+  adjusted, while the previous view and active filter stay untouched. Only
+  affects the advanced filter dialog — the quick-filter dropdown and name/
+  GC-code search fields are separate mechanisms where an empty result is
+  normal and unaffected.
+
+---
+
 ## [1.15.0-beta.4] — 2026-07-04
 
 > **Beta release** — a new Trackables column and GSAK-style icons for
