@@ -20,7 +20,9 @@ from opensak.db.models import Attribute, Cache, Log, UserNote, Waypoint
 from opensak.importer.gsak_importer import (
     GSAK_CACHE_TYPE_MAP,
     GSAK_CONTAINER_MAP,
+    _replace_embedded_images_with_placeholders,
     import_gsak_db,
+    scan_gsak_notes_for_embedded_images,
 )
 
 
@@ -496,3 +498,143 @@ def test_reimport_rebuilds_logs_not_duplicates(db_session, tmp_path):
     result = import_gsak_db(db, db_session)
     assert result.logs == 1
     assert db_session.query(Log).count() == 1
+
+
+# ── Personal notes / embedded images (session 3, #472) ───────────────────────
+
+def test_replace_embedded_images_with_placeholders():
+    raw = (
+        '~~GeocacheImages~~\r\n\r\nnull\r\n'
+        '<img src="file:///C:\\Users\\Bob\\AppData\\Roaming\\gsak87\\UserImages\\'
+        'GeocacheImages\\GC3KMD2-null.jpg" width=600 alt="null" title="null">\r\n'
+        '~~GeocacheImages~~'
+    )
+    result, count = _replace_embedded_images_with_placeholders(raw)
+    assert count == 1
+    assert "[image: GC3KMD2-null.jpg]" in result
+    assert "file:///" not in result
+    assert "C:\\Users\\Bob" not in result  # local path not leaked
+    assert "~~GeocacheImages~~" in result  # untouched surrounding text preserved
+
+
+def test_replace_embedded_images_multiple_in_one_note():
+    raw = (
+        '<img src="file:///C:\\a\\one.jpg" width=600 alt="" title="">\r\n'
+        'some caption text\r\n'
+        '<img src="file:///C:\\a\\two.jpg" width=600 alt="" title="">'
+    )
+    result, count = _replace_embedded_images_with_placeholders(raw)
+    assert count == 2
+    assert "[image: one.jpg]" in result
+    assert "[image: two.jpg]" in result
+    assert "some caption text" in result
+
+
+def test_replace_embedded_images_no_match_returns_unchanged():
+    raw = "Just a plain personal note, nothing special."
+    result, count = _replace_embedded_images_with_placeholders(raw)
+    assert count == 0
+    assert result == raw
+
+
+def test_scan_gsak_notes_for_embedded_images(tmp_path):
+    db = _make_gsak_db(
+        tmp_path / "gsak.db3",
+        memos=[{
+            "Code": "GC1TEST",
+            "UserNote": '<img src="file:///C:\\a\\one.jpg" width=600 alt="" title="">'
+                        '<img src="file:///C:\\a\\two.jpg" width=600 alt="" title="">',
+        }],
+    )
+    stats = scan_gsak_notes_for_embedded_images(db)
+    assert stats == {"affected_notes": 1, "total_images": 2}
+
+
+def test_scan_gsak_notes_no_images(tmp_path):
+    db = _make_gsak_db(tmp_path / "gsak.db3")
+    stats = scan_gsak_notes_for_embedded_images(db)
+    assert stats == {"affected_notes": 0, "total_images": 0}
+
+
+def test_note_text_imported_with_placeholder(db_session, tmp_path):
+    db = _make_gsak_db(
+        tmp_path / "gsak.db3",
+        memos=[{
+            "Code": "GC1TEST",
+            "UserNote": 'Great cache!\r\n'
+                        '<img src="file:///C:\\a\\photo.jpg" width=600 alt="" title="">',
+        }],
+    )
+    result = import_gsak_db(db, db_session)
+    assert result.notes == 1
+    assert result.note_images_replaced == 1
+
+    note = db_session.query(UserNote).one()
+    assert "Great cache!" in note.note
+    assert "[image: photo.jpg]" in note.note
+    assert "file:///" not in note.note
+
+
+def test_note_created_without_corrected_coords(db_session, tmp_path):
+    # Real-world finding: the vast majority of notes (2,348 of 2,446 on a
+    # real database) have text but NO corrected coordinates. UserNote must
+    # be created for note text alone, not only when Corrected has a row.
+    db = _make_gsak_db(
+        tmp_path / "gsak.db3",
+        memos=[{"Code": "GC1TEST", "UserNote": "Just a plain personal note."}],
+    )
+    result = import_gsak_db(db, db_session)
+    assert result.notes == 1
+
+    note = db_session.query(UserNote).one()
+    assert note.note == "Just a plain personal note."
+    assert note.is_corrected is False
+    assert note.corrected_lat is None
+
+
+def test_note_and_corrected_coords_together(db_session, tmp_path):
+    db = _make_gsak_db(
+        tmp_path / "gsak.db3",
+        memos=[{"Code": "GC1TEST", "UserNote": "Solved it after a while."}],
+        corrected=[{
+            "kCode": "GC1TEST",
+            "kBeforeLat": "55.58", "kBeforeLon": "11.17",
+            "kAfterLat": "55.6001", "kAfterLon": "11.2002",
+        }],
+    )
+    result = import_gsak_db(db, db_session)
+    assert result.notes == 1
+    assert result.corrected == 1
+
+    note = db_session.query(UserNote).one()
+    assert note.note == "Solved it after a while."
+    assert note.is_corrected is True
+    assert note.corrected_lat == pytest.approx(55.6001)
+
+
+def test_empty_user_note_does_not_create_row(db_session, tmp_path):
+    db = _make_gsak_db(tmp_path / "gsak.db3")  # default memo has no UserNote
+    result = import_gsak_db(db, db_session)
+    assert result.notes == 0
+    assert db_session.query(UserNote).count() == 0
+
+
+def test_reimport_overwrites_note_text(db_session, tmp_path):
+    # Per Allan's decision: no "protect existing note" merge logic — a
+    # GSAK re-import always overwrites note text, same as
+    # Waypoints/Attributes/Logs, since this is mostly a one-time migration
+    # rather than a repeated two-way sync.
+    db1 = _make_gsak_db(
+        tmp_path / "gsak1.db3",
+        memos=[{"Code": "GC1TEST", "UserNote": "Old note text."}],
+    )
+    import_gsak_db(db1, db_session)
+
+    db2 = _make_gsak_db(
+        tmp_path / "gsak2.db3",
+        memos=[{"Code": "GC1TEST", "UserNote": "New note text."}],
+    )
+    import_gsak_db(db2, db_session)
+
+    note = db_session.query(UserNote).one()
+    assert note.note == "New note text."

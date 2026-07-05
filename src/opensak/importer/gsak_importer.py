@@ -30,9 +30,24 @@ SQLAlchemy models, without going via GPX.
       ``log_count``/``last_log_date`` on Cache are (re)computed from the
       imported logs, mirroring GPX import (#87/#186).
 
+── Session 3 (this addition, issue #472) ─────────────────────────────────────
+    - CacheMemo.UserNote -> UserNote.note (personal note text). Embedded
+      local ``file:///`` image references (from GSAK's own "GrabImages"
+      macro) are replaced with ``[image: filename.ext]`` placeholders —
+      verified against a real 12,600-cache database: 154 notes / 312 <img>
+      tags, all matching one consistent pattern. ``scan_gsak_notes_for_
+      embedded_images()`` lets the (future, session 4) import dialog show a
+      one-time count before the user commits to importing.
+      UserNote is now created/updated whenever there is corrected coords
+      OR note text (previously only on corrected coords — a real GSAK
+      database showed 2,348 of 2,446 notes have text but no corrected
+      coords, so the narrower condition silently dropped almost all real
+      note text). Like Waypoints/Attributes/Logs, the note is unconditionally
+      overwritten on every import — no "protect existing note" merge logic,
+      per Allan's call that this is mostly a one-time GSAK-to-OpenSAK
+      migration rather than a repeated two-way sync.
+
 Deliberately NOT imported yet (later sessions per #469 plan):
-    - UserNote.note         (session 3 — personal note *text*, needs the
-      file:/// embedded-image placeholder pre-scan agreed in #472)
     - CacheMemo.TravelBugs, Custom/CustomLocal, Ignore (out of scope / #473)
     - Cache.find_count (issue #517 prep column) — GSAK's own FoundCount
       turned out (verified against a real 12,600-cache database) to be
@@ -53,6 +68,7 @@ which rebuilds everything every time.
 
 from __future__ import annotations
 
+import re
 import sqlite3
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -108,6 +124,65 @@ GSAK_CONTAINER_MAP: dict[str, str] = {
 # database (A,0,0 / T,0,1 / X,1,0 — no other combination occurs).
 _STATUS_ARCHIVED = "X"
 _STATUS_AVAILABLE = "A"
+
+# ── Issue #472: embedded local image references in UserNote ─────────────────
+# GSAK's own "GrabImages" macro downloads images referenced in a cache's
+# online content and embeds them into CacheMemo.UserNote as HTML <img> tags
+# pointing at a local file:/// path on the GSAK user's *old* computer, e.g.:
+#   <img src="file:///C:\Users\Bob\...\GeocacheImages\GC3KMD2-null.jpg"
+#        width=600 alt="null" title="null">
+# These paths are meaningless on a different machine (or even the same
+# machine, once GSAK itself is uninstalled), and OpenSAK's Notes tab is a
+# plain QPlainTextEdit — it can't render HTML/images either way. Verified
+# against a real 12,600-cache database: 154 notes / 312 individual <img>
+# tags, all following this exact pattern (0 anomalies against the regex
+# below). Each tag is replaced with a plain-text placeholder holding just
+# the image's base filename — not the full local path, which could reveal
+# the source computer's username/folder structure.
+_EMBEDDED_IMG_PATTERN = re.compile(r'<img src="file:///([^"]+)"[^>]*>')
+
+
+def _replace_embedded_images_with_placeholders(note_text: str) -> tuple[str, int]:
+    """Replace every ``<img src="file:///...">`` tag in *note_text* with a
+    ``[image: filename.ext]`` placeholder. Returns (new_text, images_replaced).
+
+    Everything else in the note (captions, GSAK's ``~~GeocacheImages~~``
+    section markers, etc.) is left exactly as-is — this only targets the
+    specific un-renderable image tags, not a general HTML/text cleanup.
+    """
+    count = 0
+
+    def _sub(m: re.Match) -> str:
+        nonlocal count
+        count += 1
+        local_path = m.group(1)
+        filename = local_path.replace("\\", "/").rsplit("/", 1)[-1]
+        return f"[image: {filename}]"
+
+    return _EMBEDDED_IMG_PATTERN.sub(_sub, note_text), count
+
+
+def scan_gsak_notes_for_embedded_images(db_path: Path) -> dict:
+    """
+    Pre-scan a GSAK database for personal notes containing embedded local
+    images, *without* importing anything — for the import dialog (session 4)
+    to show a one-time warning before the user commits to importing.
+
+    Returns ``{"affected_notes": int, "total_images": int}``.
+    """
+    conn = _open_readonly(Path(db_path))
+    try:
+        affected_notes = 0
+        total_images = 0
+        cur = conn.execute("SELECT UserNote FROM CacheMemo WHERE UserNote LIKE '%file:///%'")
+        for row in cur.fetchall():
+            n = len(_EMBEDDED_IMG_PATTERN.findall(row["UserNote"] or ""))
+            if n:
+                affected_notes += 1
+                total_images += n
+        return {"affected_notes": affected_notes, "total_images": total_images}
+    finally:
+        conn.close()
 
 
 def _s(value) -> Optional[str]:
@@ -166,19 +241,23 @@ def _attribute_name_lookup() -> dict[int, str]:
 
 
 class GsakImportResult(ImportResult):
-    """ImportResult plus GSAK-specific counters (attributes, corrected coords, logs)."""
+    """ImportResult plus GSAK-specific counters (attributes, corrected coords, logs, notes)."""
 
     def __init__(self):
         super().__init__()
         self.attributes: int = 0
         self.corrected: int = 0
         self.logs: int = 0
+        self.notes: int = 0
+        self.note_images_replaced: int = 0
 
     def __str__(self) -> str:
         base = super().__str__()
         return (base + f"\n  Attributes     : {self.attributes}"
                 f"\n  Corrected coords: {self.corrected}"
-                f"\n  Logs           : {self.logs}")
+                f"\n  Logs           : {self.logs}"
+                f"\n  Notes          : {self.notes}"
+                f"\n  Note images -> placeholders: {self.note_images_replaced}")
 
 
 def _open_readonly(db_path: Path) -> sqlite3.Connection:
@@ -321,6 +400,14 @@ def _row_to_cache_data(row: sqlite3.Row) -> Optional[dict]:
         elevation = None
 
     raw_type = _s(row["CacheType"]) or ""
+
+    # ── Issue #472: personal note text, with embedded-image placeholders ────
+    raw_note = _s(row["UserNote"])
+    note_text: Optional[str] = None
+    note_images_replaced = 0
+    if raw_note is not None:
+        note_text, note_images_replaced = _replace_embedded_images_with_placeholders(raw_note)
+
     return {
         "gc_code":     gc_code,
         "name":        _s(row["Name"]) or gc_code,
@@ -378,11 +465,15 @@ def _row_to_cache_data(row: sqlite3.Row) -> Optional[dict]:
         # brand-new caches; an existing OpenSAK-locked cache keeps its own
         # lock regardless of what the source GSAK database says.
         "_gsak_lock": _b(row["Lock"]),
+
+        # ── Issue #472 ────────────────────────────────────────────────────
+        "note_text":            note_text,
+        "note_images_replaced": note_images_replaced,
     }
 
 
 _CACHE_JOIN_SQL = """
-    SELECT c.*, m.LongDescription, m.ShortDescription, m.Url, m.Hints
+    SELECT c.*, m.LongDescription, m.ShortDescription, m.Url, m.Hints, m.UserNote
     FROM Caches c
     LEFT JOIN CacheMemo m ON c.Code = m.Code
 """
@@ -548,16 +639,29 @@ def _upsert_cache_from_gsak(
     cache.log_count = len(seen_log_ids)
     cache.last_log_date = max(log_dates) if log_dates else None
 
-    # Corrected coordinates -> UserNote (note text itself is session 3 scope;
-    # an existing note's text is left untouched here either way).
-    if corrected is not None:
+    # UserNote: corrected coordinates + personal note text (#469 + #472).
+    # Always overwritten on import — same rebuild-every-time policy as
+    # Waypoints/Attributes/Logs, per Allan's call that a merge/protect-
+    # existing-note strategy isn't worth the complexity for what's mostly a
+    # one-time GSAK-to-OpenSAK migration, not a repeated two-way sync.
+    note_text = data.get("note_text")
+    if corrected is not None or note_text is not None:
         note = cache.user_note
         if note is None:
             note = UserNote(cache=cache)
             session.add(note)
-        note.corrected_lat = corrected["corrected_lat"]
-        note.corrected_lon = corrected["corrected_lon"]
-        note.is_corrected = True
+        if corrected is not None:
+            note.corrected_lat = corrected["corrected_lat"]
+            note.corrected_lon = corrected["corrected_lon"]
+            note.is_corrected = True
+        if note_text is not None:
+            note.note = note_text
+            if data.get("note_images_replaced"):
+                if warnings is not None:
+                    warnings.append(
+                        f"{gc_code}: replaced {data['note_images_replaced']} embedded "
+                        f"image reference(s) in the personal note with placeholders"
+                    )
 
     return cache, created
 
@@ -577,20 +681,23 @@ def _flush_gsak_batch(
 
     sp = session.begin_nested()
     try:
-        pending: list[tuple[Cache, bool, int, bool]] = []
+        pending: list[tuple[Cache, bool, int, bool, bool, int]] = []
         for data, attr_rows, wpt_rows, log_rows, corrected in batch:
             cache, created = _upsert_cache_from_gsak(
                 session, data, attr_rows, wpt_rows, log_rows, corrected,
                 attr_names, source, existing_ids, result.warnings,
             )
-            pending.append((cache, created, len(attr_rows), corrected is not None))
+            pending.append((
+                cache, created, len(attr_rows), corrected is not None,
+                data.get("note_text") is not None, data.get("note_images_replaced", 0),
+            ))
         sp.commit()
     except Exception:
         sp.rollback()
         _flush_gsak_batch_isolated(session, batch, attr_names, source, existing_ids, result)
         return
 
-    for cache, created, n_attrs, had_corrected in pending:
+    for cache, created, n_attrs, had_corrected, had_note, n_images in pending:
         if created:
             result.created += 1
             existing_ids[cache.gc_code] = cache.id
@@ -601,6 +708,9 @@ def _flush_gsak_batch(
         result.logs += cache.log_count
         if had_corrected:
             result.corrected += 1
+        if had_note:
+            result.notes += 1
+        result.note_images_replaced += n_images
 
 
 def _flush_gsak_batch_isolated(
@@ -630,6 +740,9 @@ def _flush_gsak_batch_isolated(
             result.logs += cache.log_count
             if corrected is not None:
                 result.corrected += 1
+            if data.get("note_text") is not None:
+                result.notes += 1
+            result.note_images_replaced += data.get("note_images_replaced", 0)
         except Exception as e:
             cell.rollback()
             result.errors.append(f"DB error for {data.get('gc_code', '?')} in {source}: {e}")
