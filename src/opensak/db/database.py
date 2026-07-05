@@ -62,7 +62,7 @@ _migrated_paths: set = set()  # undgår at køre migrationer to gange på samme 
 # bumped to the highest migration number whenever a new migration is added
 # below — _run_migrations() skips the whole block when the database already
 # reports this version, so a stale constant means new migrations never run.
-SCHEMA_VERSION = 17
+SCHEMA_VERSION = 18
 
 
 def init_db(db_path: Path | None = None) -> Engine:
@@ -526,6 +526,71 @@ def _run_migrations(engine: Engine) -> None:
             """))
             conn.commit()
             print(f"Migration: tilføjede caches.trackable_count og opdaterede {result.rowcount} caches")
+
+        # ── Migration 18: GSAK database import schema additions (issue #469) ─
+        # Adds fields identified during the #469 field-by-field comparison
+        # against real GSAK databases, ahead of building the importer itself
+        # (session 1), so the mapping code can target the final schema
+        # directly instead of retrofitting columns afterwards.
+        existing_caches_18 = [
+            row[1]
+            for row in conn.execute(text("PRAGMA table_info(caches)")).fetchall()
+        ]
+        gsak_import_cache_columns = [
+            ("gc_note",     "TEXT"),
+            ("url",         "VARCHAR(512)"),
+            ("elevation",   "FLOAT"),
+            ("color",       "VARCHAR(16)"),
+            ("guid",        "VARCHAR(64)"),
+            ("watch",       "BOOLEAN NOT NULL DEFAULT 0"),
+            ("gc_cache_id", "VARCHAR(32)"),
+        ]
+        added = []
+        for col_name, col_def in gsak_import_cache_columns:
+            if col_name not in existing_caches_18:
+                conn.execute(text(f"ALTER TABLE caches ADD COLUMN {col_name} {col_def}"))
+                added.append(col_name)
+        if added:
+            conn.commit()
+            print(f"Migration: tilføjede GSAK-import-felter til caches: {', '.join(added)}")
+
+        existing_wpts_18 = [
+            row[1]
+            for row in conn.execute(text("PRAGMA table_info(waypoints)")).fetchall()
+        ]
+        gsak_import_waypoint_columns = [
+            ("wp_code",         "VARCHAR(16)"),
+            ("url",             "VARCHAR(512)"),
+            ("wp_date",         "DATETIME"),
+            ("created_by_user", "BOOLEAN NOT NULL DEFAULT 0"),
+            ("wp_flag",         "BOOLEAN NOT NULL DEFAULT 0"),
+        ]
+        added = []
+        for col_name, col_def in gsak_import_waypoint_columns:
+            if col_name not in existing_wpts_18:
+                conn.execute(text(f"ALTER TABLE waypoints ADD COLUMN {col_name} {col_def}"))
+                added.append(col_name)
+        if added:
+            conn.commit()
+            print(f"Migration: tilføjede GSAK-import-felter til waypoints: {', '.join(added)}")
+
+        existing_logs_18 = [
+            row[1]
+            for row in conn.execute(text("PRAGMA table_info(logs)")).fetchall()
+        ]
+        gsak_import_log_columns = [
+            ("latitude",        "FLOAT"),
+            ("longitude",       "FLOAT"),
+            ("logged_by_owner", "BOOLEAN NOT NULL DEFAULT 0"),
+        ]
+        added = []
+        for col_name, col_def in gsak_import_log_columns:
+            if col_name not in existing_logs_18:
+                conn.execute(text(f"ALTER TABLE logs ADD COLUMN {col_name} {col_def}"))
+                added.append(col_name)
+        if added:
+            conn.commit()
+            print(f"Migration: tilføjede GSAK-import-felter til logs: {', '.join(added)}")
 
         # ── Stamp the schema version so the next launch skips the probes ─────
         # PRAGMA does not accept bind parameters; SCHEMA_VERSION is a trusted
