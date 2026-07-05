@@ -26,7 +26,9 @@ from opensak.utils.types import DateFormat, GcCode, TEXT_SIZE_MAP, TextSize, nor
 from opensak.utils.utils import normalize_geocacher_name
 from opensak.gui.icon_provider import (
     get_cache_type_icon,
+    get_flag_icon,
     get_flag_placeholder_icon,
+    get_lock_icon,
     get_lock_placeholder_icon,
     get_corrected_coords_icon,
     get_found_icon,
@@ -808,10 +810,10 @@ class CacheTableModel(QAbstractTableModel):
             # segment, producing a visual artifact (issue #416).
             # "text" mode: display value is plain text, no decoration needed.
             return None
-        if col == "user_flag" and not cache.user_flag:
-            return get_flag_placeholder_icon(16)
-        if col == "locked" and not cache.locked:
-            return get_lock_placeholder_icon(16)
+        if col == "user_flag":
+            return get_flag_icon(16) if cache.user_flag else get_flag_placeholder_icon(16)
+        if col == "locked":
+            return get_lock_icon(16) if cache.locked else get_lock_placeholder_icon(16)
         if col == "corrected":
             note = cache.user_note
             if note and note.is_corrected:
@@ -925,9 +927,14 @@ class CacheTableModel(QAbstractTableModel):
             # column full of zeroes would be visual noise for little benefit.
             return str(cache.trackable_count) if cache.trackable_count else ""
         if col == "user_flag":
-            return "🚩" if cache.user_flag else ""
+            # Issue #509: icon-only (DecorationRole) — the old "🚩" emoji got
+            # visually distorted on found rows, whose FontRole is italicized;
+            # emoji glyphs have no real italic form and some platforms
+            # (Windows' Segoe UI Emoji) synthesize/clip one instead.
+            return ""
         if col == "locked":
-            return "🔒" if cache.locked else ""
+            # Issue #509 (follow-up): icon-only, same reasoning as user_flag above.
+            return ""
         if col == "user_sort":
             return str(cache.user_sort) if cache.user_sort is not None else ""
         if col == "user_data_1":

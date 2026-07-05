@@ -278,13 +278,16 @@ class TestDisplayValues:
     def test_boolean_markers(self, model):
         # Issue #489: found/premium_only became icon-only (DecorationRole) —
         # DisplayRole is now always blank for these two, regardless of value.
+        # Issue #509: user_flag joined them — the old "🚩" emoji got visually
+        # distorted on found rows (whose FontRole is italicized).
         assert model._display_value(_cache(found=True), "found") == ""
         assert model._display_value(_cache(found=False), "found") == ""
         assert model._display_value(_cache(dnf=True), "dnf") == "DNF"
         assert model._display_value(_cache(premium_only=True), "premium_only") == ""
         assert model._display_value(_cache(archived=True), "archived") == "✓"
         assert model._display_value(_cache(first_to_find=True), "first_to_find") == "FTF"
-        assert model._display_value(_cache(user_flag=True), "user_flag") == "🚩"
+        assert model._display_value(_cache(user_flag=True), "user_flag") == ""
+        assert model._display_value(_cache(user_flag=False), "user_flag") == ""
 
     def test_boolean_marker_icons(self, model):
         # Issue #489: found/premium_only show a GSAK-style icon (via
@@ -294,6 +297,15 @@ class TestDisplayValues:
         assert model._decoration_value(_cache(found=False), "found") is None
         assert model._decoration_value(_cache(premium_only=True), "premium_only") is not None
         assert model._decoration_value(_cache(premium_only=False), "premium_only") is None
+
+    def test_user_flag_icon_set_vs_placeholder(self, model):
+        # Issue #509: user_flag now always shows an icon — the solid flag
+        # when set, the faint placeholder when unset — never emoji text.
+        set_icon = model._decoration_value(_cache(user_flag=True), "user_flag")
+        unset_icon = model._decoration_value(_cache(user_flag=False), "user_flag")
+        assert set_icon is not None
+        assert unset_icon is not None
+        assert set_icon.cacheKey() != unset_icon.cacheKey()
 
     def test_dates(self, model, fake_settings):
         d = datetime(2024, 3, 1)
@@ -444,21 +456,36 @@ class TestDataRoles:
         assert model.data(cont_idx, Qt.ItemDataRole.DecorationRole) is None
 
     def test_flag_placeholder_icon_when_unset(self, model):
+        # Issue #509: user_flag is now icon-only in both states — a faint
+        # placeholder when unset, a solid flag when set (previously the set
+        # state fell through to plain "🚩" DisplayRole text with no icon).
         model.load([_cache(user_flag=False), _cache(gc_code="GCB", user_flag=True)])
         unset_idx = model.index(0, ALL_COLUMNS.index("user_flag"))
         set_idx   = model.index(1, ALL_COLUMNS.index("user_flag"))
         assert model.data(unset_idx, Qt.ItemDataRole.DecorationRole) is not None
-        assert model.data(set_idx,   Qt.ItemDataRole.DecorationRole) is None
+        assert model.data(set_idx,   Qt.ItemDataRole.DecorationRole) is not None
+        assert model.data(set_idx, Qt.ItemDataRole.DisplayRole) == ""
+        assert model.data(unset_idx, Qt.ItemDataRole.DisplayRole) == ""
 
     def test_lock_placeholder_icon_when_unset(self, model):
         # Issue #202: same placeholder pattern as user_flag.
+        # Issue #509 (follow-up): locked is now icon-only in both states too —
+        # a faint placeholder when unset, a solid padlock when set.
         model.load([_cache(locked=False), _cache(gc_code="GCB", locked=True)])
         unset_idx = model.index(0, ALL_COLUMNS.index("locked"))
         set_idx   = model.index(1, ALL_COLUMNS.index("locked"))
         assert model.data(unset_idx, Qt.ItemDataRole.DecorationRole) is not None
-        assert model.data(set_idx,   Qt.ItemDataRole.DecorationRole) is None
-        assert model.data(set_idx, Qt.ItemDataRole.DisplayRole) == "🔒"
+        assert model.data(set_idx,   Qt.ItemDataRole.DecorationRole) is not None
+        assert model.data(set_idx, Qt.ItemDataRole.DisplayRole) == ""
         assert model.data(unset_idx, Qt.ItemDataRole.DisplayRole) == ""
+
+    def test_lock_icon_set_vs_placeholder(self, model):
+        # Issue #509 (follow-up): set and unset states must use distinct icons.
+        set_icon = model._decoration_value(_cache(locked=True), "locked")
+        unset_icon = model._decoration_value(_cache(locked=False), "locked")
+        assert set_icon is not None
+        assert unset_icon is not None
+        assert set_icon.cacheKey() != unset_icon.cacheKey()
 
     def test_userrole_returns_cache_and_dict(self, model):
         model.load([_cache(container="Micro", cache_type="Virtual Cache")])

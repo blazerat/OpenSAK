@@ -592,10 +592,59 @@ def get_flag_placeholder_icon(size: int = 16) -> QIcon:
     return QIcon(_svg_to_pixmap(_FLAG_PLACEHOLDER_SVG, size))
 
 
+# Issue #509: solid red flag QIcon shown when user_flag is set.
+#
+# The column previously rendered a "🚩" emoji as plain DisplayRole text.
+# The cache_table FontRole handler italicizes every column for found caches
+# (cache.found), and emoji glyphs generally have no real italic glyph —
+# Qt/the OS font fallback synthesizes one by shearing the glyph box, which
+# on Windows' Segoe UI Emoji clips/distorts the flag. Same class of bug as
+# the old "📍"/"✓" text glyphs fixed in #354/#489: replaced with a proper
+# icon-only column (DecorationRole) so no font style is ever applied to it.
+_FLAG_SET_SVG = (
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16">'
+    '<line x1="4" y1="2" x2="4" y2="14" stroke="#8a1c1c" stroke-width="1.5"'
+    ' stroke-linecap="round"/>'
+    '<polygon points="4,3 13,6 4,9" fill="#e53935" stroke="#8a1c1c" stroke-width="1"'
+    ' stroke-linejoin="round"/>'
+    '</svg>'
+)
+
+
+@lru_cache(maxsize=8)
+def get_flag_icon(size: int = 16) -> QIcon:
+    """Solid red flag QIcon shown in the user_flag column when flag is set (issue #509)."""
+    return QIcon(_svg_to_pixmap(_FLAG_SET_SVG, size))
+
+
 @lru_cache(maxsize=8)
 def get_lock_placeholder_icon(size: int = 16) -> QIcon:
     """Faint outlined open-padlock QIcon shown in the locked column when unset (issue #202)."""
     return QIcon(_svg_to_pixmap(_LOCK_PLACEHOLDER_SVG, size))
+
+
+# Issue #509 (follow-up): solid closed-padlock QIcon shown when locked is set.
+#
+# Same rationale as the flag fix above — the column previously rendered a
+# "🔒" emoji as plain DisplayRole text, which the FontRole handler could
+# italicize on found rows with the same synthetic-italic clipping risk on
+# platforms without a real italic emoji glyph (e.g. Windows). Replaced with
+# a proper icon-only column so no font style is ever applied to it.
+_LOCK_SET_SVG = (
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16">'
+    '<rect x="3.5" y="7" width="9" height="6.5" rx="1" fill="#555555"'
+    ' stroke="#2b2b2b" stroke-width="1"/>'
+    '<path d="M5.5 7 V5 a2.5 2.5 0 0 1 5 0 V7" fill="none"'
+    ' stroke="#2b2b2b" stroke-width="1.3"/>'
+    '<circle cx="8" cy="9.8" r="1" fill="#eeeeee"/>'
+    '</svg>'
+)
+
+
+@lru_cache(maxsize=8)
+def get_lock_icon(size: int = 16) -> QIcon:
+    """Solid closed-padlock QIcon shown in the locked column when set (issue #509)."""
+    return QIcon(_svg_to_pixmap(_LOCK_SET_SVG, size))
 
 
 # ── Corrected-coordinates warning icon (issue #354) ────────────────────────────
