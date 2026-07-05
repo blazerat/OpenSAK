@@ -166,6 +166,71 @@ def test_clear_filter_removes_advanced_filter(seeded_window, qtbot):
     assert window._filter_lbl.text() == ""
 
 
+# ── Deleting the active saved filter profile (issue #491) ────────────────────
+
+
+def test_profile_deleted_clears_active_filter(seeded_window, qtbot):
+    # Deleting the profile that is currently active must clear the filter
+    # and restore the full row count, even though the FilterDialog itself
+    # was never applied/closed here (mirrors "Close without Apply" repro).
+    from opensak.filters.engine import FilterSet, SortSpec, CacheTypeFilter
+
+    window = seeded_window
+    fs = FilterSet(mode="AND")
+    fs.add(CacheTypeFilter(["Traditional Cache"]))
+    window._on_filter_applied(fs, SortSpec("name", ascending=True), "Traditional only")
+    qtbot.wait(50)
+    assert window._cache_table.row_count() == 2
+    assert window._active_filter_name == "Traditional only"
+
+    window._on_profile_deleted("Traditional only")
+    qtbot.wait(50)
+
+    assert window._cache_table.row_count() == TOTAL
+    assert window._active_filter_name == ""
+    assert window._filter_lbl.text() == ""
+
+
+def test_profile_deleted_of_inactive_profile_leaves_active_filter(seeded_window, qtbot):
+    # Deleting a *different*, non-active profile must not touch the
+    # currently-applied filter or the cache table.
+    from opensak.filters.engine import FilterSet, SortSpec, CacheTypeFilter
+
+    window = seeded_window
+    fs = FilterSet(mode="AND")
+    fs.add(CacheTypeFilter(["Traditional Cache"]))
+    window._on_filter_applied(fs, SortSpec("name", ascending=True), "Traditional only")
+    qtbot.wait(50)
+    assert window._cache_table.row_count() == 2
+
+    window._on_profile_deleted("Some other profile")
+    qtbot.wait(50)
+
+    assert window._cache_table.row_count() == 2
+    assert window._active_filter_name == "Traditional only"
+
+
+def test_profile_deleted_preserves_quick_search_text(seeded_window, qtbot):
+    # Deleting the active advanced filter must not wipe unrelated quick
+    # search text (GC code / name) — only _clear_filter() should do that.
+    from opensak.filters.engine import FilterSet, SortSpec, CacheTypeFilter
+
+    window = seeded_window
+    window._search_gc.setText("GC")
+    qtbot.wait(50)
+
+    fs = FilterSet(mode="AND")
+    fs.add(CacheTypeFilter(["Traditional Cache"]))
+    window._on_filter_applied(fs, SortSpec("name", ascending=True), "Traditional only")
+    qtbot.wait(50)
+
+    window._on_profile_deleted("Traditional only")
+    qtbot.wait(50)
+
+    assert window._search_gc.text() == "GC"
+    assert window._active_filter_name == ""
+
+
 # ── WhereClauseFilter integration via _on_filter_applied ──────────────────────
 
 

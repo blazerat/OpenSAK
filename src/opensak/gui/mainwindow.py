@@ -1674,6 +1674,7 @@ class MainWindow(QMainWindow):
         from opensak.gui.dialogs.filter_dialog import FilterDialog
         dlg = FilterDialog(self, self._current_filterset, self._active_filter_name)
         dlg.filter_applied.connect(self._on_filter_applied)
+        dlg.profile_deleted.connect(self._on_profile_deleted)
         dlg.exec()
 
     def _on_filter_applied(self, filterset, sort, profile_name: str) -> None:
@@ -1698,6 +1699,30 @@ class MainWindow(QMainWindow):
             self._count_lbl.setText(tr("count_caches", count=count))
         self._statusbar.showMessage(tr("status_filter_result", count=count), 3000)
         self._update_info_bar()
+
+    def _on_profile_deleted(self, name: str) -> None:
+        """Reagér på at en gemt filter-profil er slettet i "Set filter"-dialogen.
+
+        Fires uanset om dialogen efterfølgende lukkes med Apply eller bare
+        Close/Escape (issue #491). Hvis den slettede profil var det aktive
+        filter i waypoint-listen, sættes filteret til None og cache-tabellen
+        opdateres. Rører IKKE quick-search-felterne (GC code / navn) — kun
+        det avancerede filter nulstilles, jf. _refresh_cache_list() som
+        allerede kombinerer korrekt med et evt. tomt _current_filterset.
+        Hvis en anden (ikke-aktiv) profil blev slettet, opdateres kun
+        toolbar-dropdownen så den døde profil forsvinder derfra.
+        """
+        if name and name == self._active_filter_name:
+            self._current_filterset = FilterSet()
+            self._active_filter_name = ""
+            has_search = bool(self._search_gc.text().strip() or self._search_box.text().strip())
+            self._set_clear_filter_active(has_search)
+            self._filter_lbl.setText("")
+            self._populate_filter_profile_combo(select_name=None)
+            self._refresh_cache_list()
+            self._statusbar.showMessage(tr("status_filter_reset"), 3000)
+        else:
+            self._populate_filter_profile_combo(select_name=self._active_filter_name or None)
 
     def _set_clear_filter_active(self, active: bool) -> None:
         """Sæt klar-filter knappens farve og tilstand — rød når aktiv, grå når inaktiv."""

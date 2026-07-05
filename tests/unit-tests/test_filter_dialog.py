@@ -416,6 +416,21 @@ class TestProfiles:
         dlg._delete_profile()
         assert not p.exists()
 
+    def test_delete_profile_emits_profile_deleted_signal(self, dlg, monkeypatch, tmp_path, qtbot):
+        # issue #491: deleting a profile must report the name immediately,
+        # regardless of whether the dialog is later applied or just closed.
+        p = tmp_path / "del.json"
+        p.write_text("{}")
+        dlg._profile_combo.blockSignals(True)
+        dlg._profile_combo.addItem("Del", p)
+        dlg._profile_combo.setCurrentIndex(dlg._profile_combo.count() - 1)
+        dlg._profile_combo.blockSignals(False)
+        monkeypatch.setattr(fd.QMessageBox, "question",
+                            lambda *a, **k: fd.QMessageBox.StandardButton.Yes)
+        with qtbot.waitSignal(dlg.profile_deleted, timeout=1000) as blocker:
+            dlg._delete_profile()
+        assert blocker.args == ["Del"]
+
 
 # ── default button / Enter key (#370) ──────────────────────────────────────────
 
