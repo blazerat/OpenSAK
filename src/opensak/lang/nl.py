@@ -42,6 +42,8 @@ STRINGS: dict[str, str] = {
     "count_caches":                 "{count} caches",
     "count_cache_single":           "1 cache",
     "filter_active_label":          "🔍 Filter actief",
+    "filter_no_results_title":      "Geen overeenkomende caches",
+    "filter_no_results_msg":        "Dit filter komt met geen enkele cache overeen en is daarom niet toegepast. Pas de criteria aan en probeer opnieuw.",
 
     # ── Menu bar ──────────────────────────────────────────────────────────────
     "menu_file":                    "&Bestand",
@@ -226,12 +228,15 @@ STRINGS: dict[str, str] = {
     "gps_caches_ready":             "<b>{count} caches</b> klaar voor export (huidig gefilterde/zichtbare caches)",
     "gps_dest_group":               "Bestemming",
     "gps_rb_device":                "Rechtstreeks naar GPS-apparaat sturen:",
-    "gps_rb_file":                  "Opslaan als GPX-bestand:",
+    "gps_rb_file":                  "Opslaan als bestand:",
     "gps_scan_btn":                 "🔍 Scannen",
     "gps_scan_scanning":            "⏳",
     "gps_devices_found":            "✓ {count} Garmin-apparaat/apparaten gevonden",
     "gps_no_device":                "(Geen GPS-apparaat gevonden)",
-    "gps_no_device_hint":           "Geen Garmin-apparaat gevonden — verbind je GPS en klik opnieuw op Scannen, of gebruik 'Opslaan als GPX-bestand'",
+    "gps_no_device_hint":           "Geen Garmin-apparaat gevonden — verbind je GPS en klik opnieuw op Scannen, of gebruik 'Opslaan als bestand'",
+    "gps_format_group":             "Exportformaat",
+    "gps_format_gpx":               "GPX  —  standaard Garmin-formaat (max. ~5 000 caches)",
+    "gps_format_ggz":               "GGZ  —  gecomprimeerd Garmin-formaat (onbeperkt aantal caches)",
     "gps_browse":                   "Bladeren…",
     "gps_file_placeholder":         "Locatie kiezen…",
     "gps_opt_group":                "Opties",
@@ -248,6 +253,8 @@ STRINGS: dict[str, str] = {
     "gps_confirm_no_files_msg":     "Geen bestaande GPX-bestanden op het apparaat gevonden.\nWil je doorgaan met de upload?",
     "gps_delete_file_list":         "Te verwijderen bestanden:\n{files}",
     "gps_no_dest":                  "Selecteer eerst een bestemming.",
+    "gps_file_exists_title":        "Bestand bestaat al",
+    "gps_file_exists_prompt":       "\"{filename}\" bestaat al op deze locatie. Voer een andere bestandsnaam in:",
 
     # ── Settings dialog ───────────────────────────────────────────────────────
     "settings_dialog_title":        "Instellingen",
@@ -617,6 +624,7 @@ STRINGS: dict[str, str] = {
     "col_dnf_date":          "DNF-datum",
     "col_found_date":        "Datum gevonden",
     "col_first_to_find":     "FTF",
+    "col_first_to_find_header_tooltip": "FTF wordt alleen herkend via {FTF}, {*FTF*} of [FTF] in je eigen log — dezelfde tags die ProjectGC vereist",
     "col_user_flag":         "🚩",
     "col_user_flag_label":   "🚩 Gebruikersvlag",
     "col_user_flag_header_tooltip": "Gebruikersvlag — klik om te wisselen",
@@ -635,6 +643,7 @@ STRINGS: dict[str, str] = {
     "col_user_data_3":       "Gebruikersdata 3",
     "col_user_data_4":       "Gebruikersdata 4",
     "col_favorite_points":   "Fav. punten",
+    "col_trackables":        "Trackables",
 
     # ── Right-click context menu ──────────────────────────────────────────────
     "ctx_open_geocaching":  "🌐  Openen op geocaching.com",
@@ -728,13 +737,12 @@ STRINGS: dict[str, str] = {
     "detail_corrected_clear_tooltip":"Gecorrigeerde coördinaten wissen",
     "detail_corrected_add_btn":     "Gecorrigeerde coördinaten toevoegen…",
 
-    "col_corrected":                "📍",
-    "col_corrected_label":          "📍 Gecorrigeerde coördinaten",
+    "col_corrected":                "CC",
     "col_corrected_header_tooltip": "Gecorrigeerde coördinaten — dubbelklik om te bewerken",
     "col_corrected_tooltip":        "Gecorrigeerde coördinaten: {coords}",
 
-    "ctx_add_corrected":            "📍  Gecorrigeerde coördinaten toevoegen…",
-    "ctx_edit_corrected":           "📍  Gecorrigeerde coördinaten bewerken…",
+    "ctx_add_corrected":            "Gecorrigeerde coördinaten toevoegen…",
+    "ctx_edit_corrected":           "Gecorrigeerde coördinaten bewerken…",
     "ctx_clear_corrected":          "✕  Gecorrigeerde coördinaten wissen",
 
     "corrected_dialog_title":       "Gecorrigeerde coördinaten",
@@ -991,7 +999,7 @@ STRINGS: dict[str, str] = {
     "kml_dialog_done_msg":                     "{count} cache(s) geëxporteerd naar:\n{path}\n\nImporteer het bestand op maps.google.com/d.",
     "kml_dialog_error_title":                  "Exportfout",
     "kml_dialog_error_msg":                    "Export mislukt:\n{message}",
-    "action_export":                 "&Exporteren (GPX/LOC/...)",
+    "action_export":                 "&Exporteren (GPX/LOC/GGZ)",
     "file_export_dialog_title":      "Caches exporteren",
     "file_export_cache_count":       "{count} caches klaar voor export",
     "file_export_format_label":      "Bestandsformaat",

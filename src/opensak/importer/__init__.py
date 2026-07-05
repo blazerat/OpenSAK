@@ -486,6 +486,8 @@ def _parse_wpt(wpt_el) -> Optional[dict]:
 
 from opensak.utils.constants import KNOWN_PREFIXES as _KNOWN_PREFIXES
 from opensak.utils.constants import KNOWN_SINGLE_PREFIXES as _KNOWN_SINGLE_PREFIXES
+from opensak.utils.constants import FOUND_LOG_TYPES
+from opensak.utils.constants import FTF_TAG_PATTERN
 
 
 def _parse_extra_wpt(wpt_el) -> Optional[dict]:
@@ -879,6 +881,12 @@ def _upsert_cache(
     for tb in data.get("trackables", []):
         session.add(Trackable(cache=cache, ref=tb["ref"], name=tb["name"]))
 
+    # ── Issue #489/#491: Cache trackable count for fast UI display ──────────
+    # Mirrors log_count above: old trackables were deleted at the start of
+    # this function (re-import), so the length of the list we just added
+    # from the GPX equals the new total trackable count for this cache.
+    cache.trackable_count = len(data.get("trackables", []))
+
     # ── Found by me (sym=Geocache Found) + found_date fra brugerens log ────────
     # Vi sætter kun found=True hvis GPX'en eksplicit markerer cachen som fundet
     # (sym="Geocache Found"). found=False sætter vi IKKE ved re-import — det ville
@@ -888,7 +896,13 @@ def _upsert_cache(
     # found_date hentes fra brugerens egen log-entry:
     #   1. Søg efter log med finder_id der matcher gc_finder_id i Settings.
     #   2. Fallback: søg på gc_username (case-insensitive).
-    #   3. Hvis ingen match og cachen er found: brug ældste "Found it" dato.
+    #   3. Hvis ingen match og cachen er found: brug ældste dato blandt
+    #      FOUND_LOG_TYPES (se opensak.utils.constants).
+    #
+    # Bug #457: trin 1-3 kiggede tidligere kun på log_type == "Found it", så
+    # webcam-caches ("Webcam Photo Taken") og events ("Attended") endte uden
+    # found_date selvom de var markeret som fundet (sym="Geocache Found").
+    # Nu matches mod FOUND_LOG_TYPES i stedet for en enkelt hardkodet streng.
     #
     # Auto-lær finder_id: første gang vi ser en log der matcher gc_username
     # gemmer vi det numeriske finder_id i Settings — så næste import er hurtigere.
@@ -908,7 +922,7 @@ def _upsert_cache(
         # Trin 1: match på numerisk finder_id (hurtigst + mest præcist)
         if gc_finder_id:
             for lg in logs_data:
-                if (lg.get("log_type") == "Found it"
+                if (lg.get("log_type") in FOUND_LOG_TYPES
                         and str(lg.get("finder_id", "")).strip() == gc_finder_id):
                     found_log = lg
                     break
@@ -916,7 +930,7 @@ def _upsert_cache(
         # Trin 2: match på brugernavn (case-insensitive)
         if found_log is None and gc_username:
             for lg in logs_data:
-                if (lg.get("log_type") == "Found it"
+                if (lg.get("log_type") in FOUND_LOG_TYPES
                         and (lg.get("finder") or "").strip().lower() == gc_username):
                     found_log = lg
                     # Auto-lær finder_id fra denne log
@@ -925,10 +939,10 @@ def _upsert_cache(
                         _sett.gc_finder_id = detected_id
                     break
 
-        # Trin 3: fallback — ældste "Found it" log (f.eks. ingen brugernavn sat)
+        # Trin 3: fallback — ældste "found"-log (f.eks. ingen brugernavn sat)
         if found_log is None:
             found_logs = [lg for lg in logs_data
-                          if lg.get("log_type") == "Found it" and lg.get("log_date")]
+                          if lg.get("log_type") in FOUND_LOG_TYPES and lg.get("log_date")]
             if found_logs:
                 found_log = min(found_logs, key=lambda lg: lg["log_date"])
 
@@ -971,13 +985,19 @@ def _upsert_cache(
             # er IKKE pålidelig fra en PQ — PQ viser kun de 5 NYESTE logs,
             # ikke alle logs. En gammel found-log fra brugeren vil tit være
             # den ældste af de 5 viste, selvom hundredvis fandt den først.
-            # Kun keyword-match i brugerens egen log-tekst er sikker.
+            # Kun tag-match i brugerens egen log-tekst er sikker.
+            #
+            # Bug: log fandtes tidligere ved fritekst-match på "ftf",
+            # "first to find", "first finder" m.fl. — det gav falske
+            # positiver når en log blot NÆVNTE first-to-find-konceptet uden
+            # at gøre krav på det, fx "...forgæves forsøg på at blive first
+            # finder..." (en log om IKKE at få FTF). ProjectGC — som de
+            # fleste geocachere bruger til FTF-statistik — kræver et af de
+            # eksplicitte tags {FTF}, {*FTF*} eller [FTF] i loggen, så vi
+            # matcher nu udelukkende mod FTF_TAG_PATTERN i stedet.
             from opensak.gui.settings import get_settings
             gc_username  = get_settings().gc_username.strip().lower()
             gc_finder_id = get_settings().gc_finder_id.strip()
-
-            ftf_keywords = ("ftf", "first to find", "first finder",
-                            "første til at finde")
 
             if gc_username or gc_finder_id:
                 user_found_logs = [
@@ -990,7 +1010,7 @@ def _upsert_cache(
                     )
                 ]
                 cache.first_to_find = any(
-                    any(kw in (lg.get("text") or "").lower() for kw in ftf_keywords)
+                    FTF_TAG_PATTERN.search(lg.get("text") or "")
                     for lg in user_found_logs
                 )
             else:

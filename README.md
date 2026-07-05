@@ -111,7 +111,7 @@ A modern, cross-platform geocaching management tool for **Linux**, **Windows** a
 
 ```bash
 # Linux / macOS (from source)
-git clone https://github.com/AgreeDK/opensak.git
+git clone https://github.com/OpenSAK-Org/opensak.git
 cd opensak
 python3 -m venv .venv && source .venv/bin/activate
 pip install -e .
@@ -124,7 +124,7 @@ For Windows, macOS bundles, and AppImage downloads see [docs/installation.md](do
 
 ## Reporting Bugs
 
-Please use [GitHub Issues](https://github.com/AgreeDK/opensak/issues) and include:
+Please use [GitHub Issues](https://github.com/OpenSAK-Org/opensak/issues) and include:
 - Your platform (Linux / Windows / macOS + version)
 - Python version: `python3 --version`
 - The error message from the terminal (if any)

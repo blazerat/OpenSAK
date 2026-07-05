@@ -39,6 +39,8 @@ STRINGS: dict[str, str] = {
     "count_caches":                 "{count} keší",
     "count_cache_single":           "1 keš",
     "filter_active_label":          "🔍 Filtr aktivní",
+    "filter_no_results_title":      "Žádné odpovídající keše",
+    "filter_no_results_msg":        "Tento filtr neodpovídá žádné keši, a proto nebyl použit. Upravte kritéria a zkuste to znovu.",
 
     # ── Menu bar ──────────────────────────────────────────────────────────────
     "menu_file":                    "&Soubor",
@@ -223,12 +225,15 @@ STRINGS: dict[str, str] = {
     "gps_caches_ready":             "<b>{count} keší</b> připraveno k exportu (aktuálně filtrované/zobrazené keše)",
     "gps_dest_group":               "Cíl",
     "gps_rb_device":                "Odeslat přímo do GPS zařízení:",
-    "gps_rb_file":                  "Uložit jako GPX soubor:",
+    "gps_rb_file":                  "Uložit jako soubor:",
     "gps_scan_btn":                 "🔍 Hledat",
     "gps_scan_scanning":            "⏳",
     "gps_devices_found":            "✓ Nalezeno {count} Garmin zařízení",
     "gps_no_device":                "(Žádné GPS zařízení nenalezeno)",
-    "gps_no_device_hint":           "Žádné Garmin zařízení nenalezeno — připojte GPS a klikněte znovu na Hledat, nebo použijte 'Uložit jako GPX soubor'",
+    "gps_no_device_hint":           "Žádné Garmin zařízení nenalezeno — připojte GPS a klikněte znovu na Hledat, nebo použijte 'Uložit jako soubor'",
+    "gps_format_group":             "Formát exportu",
+    "gps_format_gpx":               "GPX  —  standardní formát Garmin (max. ~5 000 keší)",
+    "gps_format_ggz":               "GGZ  —  komprimovaný formát Garmin (neomezený počet keší)",
     "gps_browse":                   "Procházet…",
     "gps_file_placeholder":         "Vyberte umístění…",
     "gps_opt_group":                "Možnosti",
@@ -245,6 +250,8 @@ STRINGS: dict[str, str] = {
     "gps_confirm_no_files_msg":     "Na zařízení nebyly nalezeny žádné GPX soubory.\\nChcete pokračovat s nahráváním?",
     "gps_delete_file_list":         "Soubory ke smazání:\\n{files}",
     "gps_no_dest":                  "Nejprve prosím vyberte cíl.",
+    "gps_file_exists_title":        "Soubor již existuje",
+    "gps_file_exists_prompt":       "\"{filename}\" na tomto místě již existuje. Zadejte jiný název souboru:",
 
     # ── Settings dialog ───────────────────────────────────────────────────────
     "settings_dialog_title":        "Nastavení",
@@ -616,6 +623,7 @@ STRINGS: dict[str, str] = {
     "col_dnf_date":          "Datum DNF",
     "col_found_date":       "Datum nálezu",
     "col_first_to_find":     "FTF",
+    "col_first_to_find_header_tooltip": "FTF se rozpozná pouze z {FTF}, {*FTF*} nebo [FTF] ve vlastním logu — stejné tagy vyžaduje ProjectGC",
     "col_user_flag":         "🚩",
     "col_user_flag_label":   "🚩 Uživatelský příznak",
     "col_user_flag_header_tooltip": "Uživatelský příznak — klikněte pro přepnutí",
@@ -634,6 +642,7 @@ STRINGS: dict[str, str] = {
     "col_user_data_3":       "Uživatelská data 3",
     "col_user_data_4":       "Uživatelská data 4",
     "col_favorite_points":   "Obl. body",
+    "col_trackables":        "Trackables",
 
     # ── Right-click context menu ──────────────────────────────────────────────
     "ctx_open_geocaching":  "🌐  Otevřít na geocaching.com",
@@ -727,13 +736,12 @@ STRINGS: dict[str, str] = {
     "detail_corrected_clear_tooltip":"Vymazat opravené souřadnice",
     "detail_corrected_add_btn":     "Přidat opravené souřadnice…",
 
-    "col_corrected":                "📍",
-    "col_corrected_label":          "📍 Opravené souřadnice",
+    "col_corrected":                "CC",
     "col_corrected_header_tooltip": "Opravené souřadnice — poklepejte pro úpravu",
     "col_corrected_tooltip":        "Opravené souřadnice: {coords}",
 
-    "ctx_add_corrected":            "📍  Přidat opravené souřadnice…",
-    "ctx_edit_corrected":           "📍  Upravit opravené souřadnice…",
+    "ctx_add_corrected":            "Přidat opravené souřadnice…",
+    "ctx_edit_corrected":           "Upravit opravené souřadnice…",
     "ctx_clear_corrected":          "✕  Vymazat opravené souřadnice",
 
     "corrected_dialog_title":       "Opravené souřadnice",
@@ -989,7 +997,7 @@ STRINGS: dict[str, str] = {
     "kml_dialog_done_msg":                     "{count} keš(í) exportováno do:\n{path}\n\nImportujte soubor na maps.google.com/d.",
     "kml_dialog_error_title":                  "Chyba exportu",
     "kml_dialog_error_msg":                    "Export selhal:\n{message}",
-    "action_export":                 "&Exportovat (GPX/LOC/...)",
+    "action_export":                 "&Exportovat (GPX/LOC/GGZ)",
     "file_export_dialog_title":      "Exportovat keše",
     "file_export_cache_count":       "{count} keší připraveno k exportu",
     "file_export_format_label":      "Formát souboru",

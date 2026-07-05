@@ -62,7 +62,7 @@ _migrated_paths: set = set()  # undgår at køre migrationer to gange på samme 
 # bumped to the highest migration number whenever a new migration is added
 # below — _run_migrations() skips the whole block when the database already
 # reports this version, so a stale constant means new migrations never run.
-SCHEMA_VERSION = 17
+SCHEMA_VERSION = 19
 
 
 def init_db(db_path: Path | None = None) -> Engine:
@@ -503,19 +503,108 @@ def _run_migrations(engine: Engine) -> None:
             conn.commit()
             print("Migration: oprettede trackables-tabellen (manglede siden v1.14.0)")
 
-        # ── Migration 17: Drop legacy favorite_point column (issue #488) ──────
-        # v1.14.0 shipped with a column called 'favorite_point' (singular,
-        # NOT NULL) that was later removed from the model but never dropped
-        # from existing databases. Its presence causes NOT NULL failures
-        # when inserting rows (e.g. moving caches between databases).
+        # ── Migration 17: trackable_count kolonne (issue #489/#491) ──────────
+        # Mirrors log_count (Migration 6): cache the trackable count on the
+        # caches row so the new "Trackables" table column can display it
+        # without loading the trackables relationship for every row. Depends
+        # on Migration 16 above having created the trackables table.
         existing_caches_17 = [
             row[1]
             for row in conn.execute(text("PRAGMA table_info(caches)")).fetchall()
         ]
-        if "favorite_point" in existing_caches_17:
-            conn.execute(text("ALTER TABLE caches DROP COLUMN favorite_point"))
+        if "trackable_count" not in existing_caches_17:
+            conn.execute(text(
+                "ALTER TABLE caches ADD COLUMN trackable_count INTEGER NOT NULL DEFAULT 0"
+            ))
+            result = conn.execute(text("""
+                UPDATE caches
+                SET trackable_count = (
+                    SELECT COUNT(*)
+                    FROM trackables
+                    WHERE trackables.cache_id = caches.id
+                )
+            """))
             conn.commit()
-            print("Migration: droppede legacy-kolonnen caches.favorite_point")
+            print(f"Migration: tilføjede caches.trackable_count og opdaterede {result.rowcount} caches")
+
+        # ── Migration 18: GSAK database import schema additions (issue #469) ─
+        # Adds fields identified during the #469 field-by-field comparison
+        # against real GSAK databases, ahead of building the importer itself
+        # (session 1), so the mapping code can target the final schema
+        # directly instead of retrofitting columns afterwards.
+        existing_caches_18 = [
+            row[1]
+            for row in conn.execute(text("PRAGMA table_info(caches)")).fetchall()
+        ]
+        gsak_import_cache_columns = [
+            ("gc_note",     "TEXT"),
+            ("url",         "VARCHAR(512)"),
+            ("elevation",   "FLOAT"),
+            ("color",       "VARCHAR(16)"),
+            ("guid",        "VARCHAR(64)"),
+            ("watch",       "BOOLEAN NOT NULL DEFAULT 0"),
+            ("gc_cache_id", "VARCHAR(32)"),
+        ]
+        added = []
+        for col_name, col_def in gsak_import_cache_columns:
+            if col_name not in existing_caches_18:
+                conn.execute(text(f"ALTER TABLE caches ADD COLUMN {col_name} {col_def}"))
+                added.append(col_name)
+        if added:
+            conn.commit()
+            print(f"Migration: tilføjede GSAK-import-felter til caches: {', '.join(added)}")
+
+        existing_wpts_18 = [
+            row[1]
+            for row in conn.execute(text("PRAGMA table_info(waypoints)")).fetchall()
+        ]
+        gsak_import_waypoint_columns = [
+            ("wp_code",         "VARCHAR(16)"),
+            ("url",             "VARCHAR(512)"),
+            ("wp_date",         "DATETIME"),
+            ("created_by_user", "BOOLEAN NOT NULL DEFAULT 0"),
+            ("wp_flag",         "BOOLEAN NOT NULL DEFAULT 0"),
+        ]
+        added = []
+        for col_name, col_def in gsak_import_waypoint_columns:
+            if col_name not in existing_wpts_18:
+                conn.execute(text(f"ALTER TABLE waypoints ADD COLUMN {col_name} {col_def}"))
+                added.append(col_name)
+        if added:
+            conn.commit()
+            print(f"Migration: tilføjede GSAK-import-felter til waypoints: {', '.join(added)}")
+
+        existing_logs_18 = [
+            row[1]
+            for row in conn.execute(text("PRAGMA table_info(logs)")).fetchall()
+        ]
+        gsak_import_log_columns = [
+            ("latitude",        "FLOAT"),
+            ("longitude",       "FLOAT"),
+            ("logged_by_owner", "BOOLEAN NOT NULL DEFAULT 0"),
+        ]
+        added = []
+        for col_name, col_def in gsak_import_log_columns:
+            if col_name not in existing_logs_18:
+                conn.execute(text(f"ALTER TABLE logs ADD COLUMN {col_name} {col_def}"))
+                added.append(col_name)
+        if added:
+            conn.commit()
+            print(f"Migration: tilføjede GSAK-import-felter til logs: {', '.join(added)}")
+
+        # ── Migration 19: find_count on caches (issue #517) ──────────────────
+        # GC API field prep. Also populated straight away by the GSAK
+        # importer from Caches.FoundCount (see #469 gsak_importer.py).
+        existing_caches_19 = [
+            row[1]
+            for row in conn.execute(text("PRAGMA table_info(caches)")).fetchall()
+        ]
+        if "find_count" not in existing_caches_19:
+            conn.execute(text(
+                "ALTER TABLE caches ADD COLUMN find_count INTEGER"
+            ))
+            conn.commit()
+            print("Migration: tilføjede caches.find_count")
 
         # ── Stamp the schema version so the next launch skips the probes ─────
         # PRAGMA does not accept bind parameters; SCHEMA_VERSION is a trusted

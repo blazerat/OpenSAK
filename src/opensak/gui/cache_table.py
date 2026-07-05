@@ -11,8 +11,11 @@ from datetime import datetime
 from PySide6.QtCore import (
     Qt, QAbstractTableModel, QModelIndex, QPersistentModelIndex, Signal, QPoint, QLocale, QDate
 )
-from PySide6.QtGui import QColor, QFont
-from PySide6.QtWidgets import QTableView, QHeaderView, QAbstractItemView, QMenu, QApplication
+from PySide6.QtGui import QColor, QFont, QIcon, QPainter, QPixmap
+from PySide6.QtWidgets import (
+    QTableView, QHeaderView, QAbstractItemView, QMenu, QApplication,
+    QStyle, QStyleOptionHeader,
+)
 
 from opensak.db.models import Cache
 from opensak.filters.engine import _haversine_km
@@ -21,7 +24,18 @@ from opensak.coords import format_coords, format_lat, format_lon, format_lat, fo
 from opensak.lang import tr
 from opensak.utils.types import DateFormat, GcCode, TEXT_SIZE_MAP, TextSize, norm_locale_date_fmt
 from opensak.utils.utils import normalize_geocacher_name
-from opensak.gui.icon_provider import get_cache_type_icon, get_flag_placeholder_icon, get_lock_placeholder_icon
+from opensak.gui.icon_provider import (
+    get_cache_type_icon,
+    get_flag_icon,
+    get_flag_placeholder_icon,
+    get_lock_icon,
+    get_lock_placeholder_icon,
+    get_corrected_coords_icon,
+    get_found_icon,
+    get_premium_icon,
+    get_favorite_points_icon,
+    get_trackable_icon,
+)
 from opensak.gui.dialogs.column_dialog import get_column_widths, set_column_widths, get_container_display, get_type_display
 import math
 
@@ -103,6 +117,8 @@ def get_column_defs() -> dict:
         "user_data_2":     (tr("col_user_data_2"),    100),
         "user_data_3":     (tr("col_user_data_3"),    100),
         "user_data_4":     (tr("col_user_data_4"),    100),
+        # ── Issue #489/#491: Trackables (travel bugs / geocoins) ──────────
+        "trackables":      (tr("col_trackables"),      55),
     }
 
 
@@ -285,6 +301,37 @@ class CacheTypeDelegate(QStyledItemDelegate):
             super().paint(painter, option, index)
             return
 
+        raw = index.data(Qt.ItemDataRole.DecorationRole)
+        if not raw:
+            super().paint(painter, option, index)
+            return
+
+        from PySide6.QtWidgets import QStyle
+        from PySide6.QtGui import QIcon, QPixmap
+        if isinstance(raw, QPixmap):
+            icon = QIcon(raw)
+        elif isinstance(raw, QIcon):
+            icon = raw
+        else:
+            super().paint(painter, option, index)
+            return
+
+        painter.save()
+        style = option.widget.style() if option.widget else QApplication.style()
+        style.drawPrimitive(QStyle.PrimitiveElement.PE_PanelItemViewItem, option, painter, option.widget)
+        icon.paint(painter, option.rect, Qt.AlignmentFlag.AlignCenter)
+        painter.restore()
+
+
+class CorrectedCoordsDelegate(QStyledItemDelegate):
+    """Centers the corrected-coordinates warning-triangle icon in the column.
+
+    Same rationale as CacheTypeDelegate: the "corrected" column is icon-only
+    (no text), and Qt's default delegate left-aligns the decoration inside
+    the content rect instead of centering it.
+    """
+
+    def paint(self, painter: QPainter, option, index) -> None:
         raw = index.data(Qt.ItemDataRole.DecorationRole)
         if not raw:
             super().paint(painter, option, index)
@@ -598,6 +645,21 @@ class CacheTableModel(QAbstractTableModel):
         if orientation == Qt.Orientation.Horizontal:
             if role == Qt.ItemDataRole.DisplayRole:
                 col_id = self._columns[section]
+                if col_id == "corrected":
+                    # Issue #354: ikon-only header (DecorationRole nedenfor).
+                    # "CC"-teksten fra sprogfilerne bruges IKKE her — den ville
+                    # blive klemt sammen med Qt's indbyggede sorterings-pil i
+                    # den smalle 40px kolonne. col_corrected-nøglen holdes
+                    # ikke-tom i sprogfilerne udelukkende for at bestå
+                    # test_no_empty_values; den reelle tekst til Column Chooser
+                    # kommer fra det delte detail_corrected_coords-nøgle.
+                    return ""
+                if col_id in ("found", "premium_only", "favorite_points", "trackables"):
+                    # Issue #489: samme icon-only header-mønster som "corrected"
+                    # — GSAK-stil ikoner i stedet for tekst. Fuld tekst vises
+                    # stadig som tooltip (ToolTipRole nedenfor) og i Column
+                    # Chooser (via get_column_defs(), uændret).
+                    return ""
                 return get_column_defs().get(col_id, (col_id, 80))[0]
             if role == Qt.ItemDataRole.ToolTipRole:
                 col_id = self._columns[section]
@@ -607,8 +669,27 @@ class CacheTableModel(QAbstractTableModel):
                     return tr("col_user_flag_header_tooltip")
                 if col_id == "locked":
                     return tr("col_locked_header_tooltip")
+                if col_id == "first_to_find":
+                    return tr("col_first_to_find_header_tooltip")
+                if col_id in ("found", "premium_only", "favorite_points", "trackables"):
+                    # Issue #489: header blev icon-only — den oprindelige
+                    # kolonnetekst genbruges direkte som tooltip.
+                    return get_column_defs().get(col_id, (col_id, 80))[0]
             if role == Qt.ItemDataRole.TextAlignmentRole:
                 return Qt.AlignmentFlag.AlignCenter
+            if role == Qt.ItemDataRole.DecorationRole:
+                col_id = self._columns[section]
+                if col_id == "corrected":
+                    # Issue #354: ikon-only header, samme SVG-trekant som kolonnens celler
+                    return get_corrected_coords_icon(14)
+                if col_id == "found":
+                    return get_found_icon(14)
+                if col_id == "premium_only":
+                    return get_premium_icon(14)
+                if col_id == "favorite_points":
+                    return get_favorite_points_icon(14)
+                if col_id == "trackables":
+                    return get_trackable_icon(14)
         return None
 
     def data(self, index: QModelIndex | QPersistentModelIndex, role=Qt.ItemDataRole.DisplayRole):
@@ -625,6 +706,7 @@ class CacheTableModel(QAbstractTableModel):
                        "distance", "found", "dnf", "premium_only", "archived",
                        "log_count", "corrected", "first_to_find", "user_flag",
                        "locked", "bearing", "user_sort", "favorite_points",
+                       "trackables",
                        "latitude", "longitude",
                        "hidden_date", "last_log", "found_date", "dnf_date",
                        "placed_by"):
@@ -728,10 +810,19 @@ class CacheTableModel(QAbstractTableModel):
             # segment, producing a visual artifact (issue #416).
             # "text" mode: display value is plain text, no decoration needed.
             return None
-        if col == "user_flag" and not cache.user_flag:
-            return get_flag_placeholder_icon(16)
-        if col == "locked" and not cache.locked:
-            return get_lock_placeholder_icon(16)
+        if col == "user_flag":
+            return get_flag_icon(16) if cache.user_flag else get_flag_placeholder_icon(16)
+        if col == "locked":
+            return get_lock_icon(16) if cache.locked else get_lock_placeholder_icon(16)
+        if col == "corrected":
+            note = cache.user_note
+            if note and note.is_corrected:
+                return get_corrected_coords_icon(16)
+            return None
+        if col == "found":
+            return get_found_icon(16) if cache.found else None
+        if col == "premium_only":
+            return get_premium_icon(16) if cache.premium_only else None
         return None
 
     @staticmethod
@@ -784,7 +875,8 @@ class CacheTableModel(QAbstractTableModel):
                 return "?"
             return _bearing_compass(deg)
         if col == "found":
-            return "✓" if cache.found else ""
+            # Issue #489: icon-only (DecorationRole) — smiley i stedet for "✓".
+            return ""
         if col == "placed_by":
             return cache.placed_by or ""
         if col == "hidden_date":
@@ -799,12 +891,14 @@ class CacheTableModel(QAbstractTableModel):
         if col == "dnf":
             return "DNF" if cache.dnf else ""
         if col == "premium_only":
-            return "P" if cache.premium_only else ""
+            # Issue #489: icon-only (DecorationRole) — checkered-circle-ikon i stedet for "P".
+            return ""
         if col == "archived":
             return "✓" if cache.archived else ""
         if col == "corrected":
-            note = cache.user_note
-            return "📍" if (note and note.is_corrected) else ""
+            # Issue #354: icon-only (DecorationRole) — the old "📍" emoji
+            # rendered too small / low-contrast on some platforms.
+            return ""
         # ── Issue #84: Latitude og Longitude (i brugerens valgte format) ──────
         if col == "latitude":
             lat, _ = self._effective_coords(cache)
@@ -827,10 +921,20 @@ class CacheTableModel(QAbstractTableModel):
             return "FTF" if cache.first_to_find else ""
         if col == "favorite_points":
             return str(cache.favorite_points) if cache.favorite_points is not None else ""
+        if col == "trackables":
+            # Issue #489/#491: blank when 0/None rather than always showing
+            # "0" (unlike log_count) — most caches have no trackables, and a
+            # column full of zeroes would be visual noise for little benefit.
+            return str(cache.trackable_count) if cache.trackable_count else ""
         if col == "user_flag":
-            return "🚩" if cache.user_flag else ""
+            # Issue #509: icon-only (DecorationRole) — the old "🚩" emoji got
+            # visually distorted on found rows, whose FontRole is italicized;
+            # emoji glyphs have no real italic form and some platforms
+            # (Windows' Segoe UI Emoji) synthesize/clip one instead.
+            return ""
         if col == "locked":
-            return "🔒" if cache.locked else ""
+            # Issue #509 (follow-up): icon-only, same reasoning as user_flag above.
+            return ""
         if col == "user_sort":
             return str(cache.user_sort) if cache.user_sort is not None else ""
         if col == "user_data_1":
@@ -902,6 +1006,8 @@ class CacheTableModel(QAbstractTableModel):
             self._caches.sort(key=lambda c: c.user_sort if c.user_sort is not None else 999999, reverse=reverse)
         elif col == "favorite_points":
             self._caches.sort(key=lambda c: c.favorite_points or 0, reverse=reverse)
+        elif col == "trackables":
+            self._caches.sort(key=lambda c: c.trackable_count or 0, reverse=reverse)
         elif col == "container":
             # Issue #90: Sort by logical container size, not alphabetically
             self._caches.sort(
@@ -945,6 +1051,100 @@ class CacheTableModel(QAbstractTableModel):
             self.dataChanged.emit(first, last)
 
 
+class _CacheTableHeaderView(QHeaderView):
+    """Horizontal header for the cache table.
+
+    Qt's default QHeaderView layout draws a section's decoration icon on one
+    side and the sort-indicator arrow pinned to the opposite edge. For an
+    icon-only column (no text) like "corrected", that means the icon and the
+    arrow drift apart as the column is widened, instead of staying together
+    as a pair (feedback on the Corrected coordinates column). This subclass
+    only changes painting for icon-only columns; every other column falls
+    back to the normal Qt painting untouched.
+    """
+
+    # Column ids that show only an icon in the header (no text) and should
+    # therefore have their icon + sort arrow centered together as a pair.
+    _ICON_ONLY_COLUMNS = {"corrected", "found", "premium_only", "favorite_points", "trackables"}
+
+    # Issue #489: each icon-only column's header icon getter (14px, matching
+    # the original "corrected" triangle). Looked up dynamically in
+    # paintSection() below instead of hardcoding a single icon.
+    _HEADER_ICON_GETTERS = {
+        "corrected":       get_corrected_coords_icon,
+        "found":           get_found_icon,
+        "premium_only":    get_premium_icon,
+        "favorite_points": get_favorite_points_icon,
+        "trackables":      get_trackable_icon,
+    }
+
+    def __init__(self, columns_provider, parent=None):
+        super().__init__(Qt.Orientation.Horizontal, parent)
+        self._columns_provider = columns_provider
+        # A freshly constructed QHeaderView defaults to sectionsClickable=False.
+        # QTableView's own auto-created header starts out True, which is why
+        # swapping in this custom header silently broke click-to-sort until
+        # this was added explicitly (setSortingEnabled() does not set it).
+        self.setSectionsClickable(True)
+
+    def paintSection(self, painter, rect, logicalIndex) -> None:
+        columns = self._columns_provider()
+        if (
+            logicalIndex >= len(columns)
+            or columns[logicalIndex] not in self._ICON_ONLY_COLUMNS
+            or rect.width() <= 0 or rect.height() <= 0
+        ):
+            super().paintSection(painter, rect, logicalIndex)
+            return
+
+        painter.save()
+
+        # Draw the section background/border only — no text, no icon, and no
+        # native sort arrow (we position the icon and arrow ourselves below).
+        opt = QStyleOptionHeader()
+        self.initStyleOption(opt)
+        opt.rect = rect
+        opt.section = logicalIndex
+        opt.text = ""
+        opt.icon = QIcon()
+        opt.sortIndicator = QStyleOptionHeader.SortIndicator.None_
+        self.style().drawControl(QStyle.ControlElement.CE_Header, opt, painter, self)
+
+        col_id = columns[logicalIndex]
+        icon_getter = self._HEADER_ICON_GETTERS.get(col_id, get_corrected_coords_icon)
+        icon = icon_getter(14).pixmap(14, 14)
+        is_sorted = self.sortIndicatorSection() == logicalIndex
+
+        arrow = None
+        if is_sorted:
+            arrow_size = 9
+            arrow = QPixmap(arrow_size, arrow_size)
+            arrow.fill(Qt.GlobalColor.transparent)
+            arrow_opt = QStyleOptionHeader()
+            self.initStyleOption(arrow_opt)
+            arrow_opt.rect = arrow.rect()
+            arrow_opt.sortIndicator = (
+                QStyleOptionHeader.SortIndicator.SortDown
+                if self.sortIndicatorOrder() == Qt.SortOrder.AscendingOrder
+                else QStyleOptionHeader.SortIndicator.SortUp
+            )
+            arrow_painter = QPainter(arrow)
+            self.style().drawPrimitive(
+                QStyle.PrimitiveElement.PE_IndicatorHeaderArrow, arrow_opt, arrow_painter, self
+            )
+            arrow_painter.end()
+
+        spacing = 3
+        total_width = icon.width() + (spacing + arrow.width() if arrow else 0)
+        x = rect.x() + (rect.width() - total_width) // 2
+        painter.drawPixmap(x, rect.y() + (rect.height() - icon.height()) // 2, icon)
+        if arrow:
+            arrow_x = x + icon.width() + spacing
+            painter.drawPixmap(arrow_x, rect.y() + (rect.height() - arrow.height()) // 2, arrow)
+
+        painter.restore()
+
+
 class CacheTableView(QTableView):
     """The main cache list widget."""
 
@@ -972,6 +1172,7 @@ class CacheTableView(QTableView):
         self.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
         self.setAlternatingRowColors(True)
         self.setShowGrid(False)
+        self.setHorizontalHeader(_CacheTableHeaderView(lambda: self._model._columns, self))
         self.setSortingEnabled(True)
         self.verticalHeader().setVisible(False)
         self.setWordWrap(False)
@@ -1050,6 +1251,12 @@ class CacheTableView(QTableView):
                 elif col_id == "gc_code":
                     self._gc_code_delegate = GcCodeDelegate(self)
                     self.setItemDelegateForColumn(i, self._gc_code_delegate)
+                elif col_id in ("corrected", "found", "premium_only"):
+                    # Issue #489: samme generiske centrerings-delegate som
+                    # "corrected" (#354) — den er stateless og læser blot
+                    # DecorationRole, så den genbruges uændret her.
+                    self._icon_only_delegate = CorrectedCoordsDelegate(self)
+                    self.setItemDelegateForColumn(i, self._icon_only_delegate)
                 else:
                     # None clears the column delegate (stub types it non-optional)
                     self.setItemDelegateForColumn(i, None)  # type: ignore[arg-type]
@@ -1217,6 +1424,7 @@ class CacheTableView(QTableView):
             act_edit_corrected = menu.addAction(tr("ctx_edit_corrected"))
         else:
             act_edit_corrected = menu.addAction(tr("ctx_add_corrected"))
+        act_edit_corrected.setIcon(get_corrected_coords_icon(16))
         act_edit_corrected.triggered.connect(
             lambda checked=False, c=cache: self._edit_corrected(c)
         )
@@ -1245,7 +1453,7 @@ class CacheTableView(QTableView):
             act_found.triggered.connect(lambda: self._toggle_found(cache, True))
 
         from opensak.utils import flags
-        if flags.update_location:
+        if flags.reverse_geocoding:
             menu.addSeparator()
 
             act_update_loc = menu.addAction(tr("ctx_update_location"))

@@ -8,66 +8,205 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
-## [1.14.2] — 2026-07-04
+## [1.15.0-beta.5] — 2026-07-05
 
-> Hotfix release. Fixes a startup crash affecting any installed version of
-> OpenSAK (stable and beta alike) that predates the "sort by Trackables"
-> feature.
+> **Beta release** — four quality-of-life fixes found during beta.4 testing.
+> No schema changes.
 
 ### Fixed
 
-- **Unknown sort field in shared settings crashed the app on startup**
-  (closes #498) — `opensak.json` (which stores UI state such as the active
-  sort column) is shared across every OpenSAK version installed on a
-  machine, not just the one currently running. If a newer version saved a
-  sort field this version doesn't know yet (e.g. `trackables`, added for
-  column-header sorting in the v1.15.0 beta line), starting this version
-  raised an unhandled `ValueError` before the main window could even open.
-  Restoring the saved sort now falls back to the default (`name`) and
-  repairs the stored value if the field isn't recognised, instead of
-  crashing.
+- **Deleting the active saved filter left it applied** (#491) — deleting a
+  filter profile only refreshed the "Set filter" dialog's own list; if the
+  deleted profile was the one currently active and the dialog was then
+  closed without pressing Apply, the stale filter stayed applied to the
+  waypoint list and the toolbar still showed the deleted name. Deleting a
+  profile now immediately clears the active filter (and refreshes the cache
+  table) if it was the one in use, regardless of how the dialog is
+  subsequently closed. Deleting a different, non-active profile only
+  refreshes the toolbar's profile list, and quick search text (GC code /
+  name) is left untouched either way.
+
+- **Flag and locked column icons distorted on found rows** (#509) — both
+  columns rendered their "set" state as plain emoji text ("🚩" / "🔒"). The
+  cache list italicizes every column on found-cache rows, and emoji glyphs
+  generally have no real italic form — some platforms (Windows' Segoe UI
+  Emoji in particular) synthesize one by shearing the glyph box, clipping
+  or distorting it. Both columns are now icon-only in both states, the same
+  treatment already used for Found/Premium/Corrected Coordinates: a new
+  solid red flag icon and solid closed-padlock icon when set, the existing
+  faint outline placeholders when unset. No text/font styling can touch
+  them anymore.
+
+- **File-mode GPS export silently overwrote existing files** (#501) —
+  exporting to a regular file (as opposed to syncing to a connected Garmin
+  device) reused the same default filename ("opensak") every time without
+  warning, so re-exporting could silently overwrite a previous export. The
+  export dialog now checks whether the target file already exists and, if
+  so, prompts for a new filename — pre-filled with the next available
+  suggestion (opensak, opensak1, opensak2, ...) so the common case is just
+  pressing OK. Re-prompts if the new name also collides, and cancels
+  cleanly without exporting if the user backs out. Device-mode exports are
+  unaffected — they intentionally keep syncing to the same canonical
+  Garmin/GPX path every time.
+
+- **Filters with zero matches emptied the cache list** (#444) — applying a
+  filter that didn't match any caches silently switched to an empty view,
+  requiring the red "clear filter" button and reopening "Set filter" from
+  scratch to recover. Matching GSAK's behavior, a filter matching zero
+  caches is no longer applied at all: a warning is shown, and "Set filter"
+  reopens with the same (rejected) criteria still filled in so they can be
+  adjusted, while the previous view and active filter stay untouched. Only
+  affects the advanced filter dialog — the quick-filter dropdown and name/
+  GC-code search fields are separate mechanisms where an empty result is
+  normal and unaffected.
 
 ---
 
-## [1.14.1] — 2026-07-04
+## [1.15.0-beta.4] — 2026-07-04
 
-> Hotfix release. Four bugs found and fixed on the `beta` branch turned out to
-> already be present in the shipped `v1.14.0` stable release, two of which
-> could crash the app for existing users. This release cherry-picks only
-> those fixes onto `main` — the ongoing `v1.15.0` beta work (GGZ export,
-> corrected-coords icon fixes, org-migration cleanup) is untouched and
-> continues on `beta` as normal.
+> **Beta release** — a new Trackables column and GSAK-style icons for
+> Found/Premium/Fav. points, plus a batch of bugs found and fixed during
+> testing. Three of them were serious enough to also backport to stable
+> as v1.14.1 — noted individually below.
+
+### Added
+
+- **Trackables (travel bugs / geocoins) column** (#489) — a new opt-in
+  column (enable via Column Chooser) showing how many trackables are
+  logged in each cache, with an insect icon in the header. This builds
+  on the existing Trackable data model, which has quietly supported
+  import parsing and the "Has trackables" filter since v1.14.0 — only
+  the column itself was missing. The count is cached on the cache row
+  (same approach as the Last log column's log count), so displaying
+  and sorting it doesn't slow down large databases.
+
+- **GSAK-style icons for Found, Premium and Fav. points** (#489) — Found
+  and Premium now show an icon instead of plain text in the cache list
+  (a gold smiley reused from the map pins, and a checkered-circle-with-
+  cache icon for Premium), and Fav. points gets an emblem icon in its
+  header. All four new icon-only column headers — plus Trackables — get
+  the same icon-and-sort-arrow centering already introduced for
+  Corrected Coordinates in beta.2, so the pair stays together as the
+  column is resized.
 
 ### Fixed
 
-- **Removed `favorite_point` field — crashed on existing databases**
-  (closes #488) — this field shipped in v1.14.0 without a corresponding
-  migration and had no GSAK parity to begin with. Existing databases hit
-  `no such column` errors the moment it was touched. The field, its column
-  entry, and all related UI/filter references have been removed. As a
-  follow-up, previously persisted column-visibility settings that still
-  referenced the now-removed column are filtered out automatically, so
-  upgrading users don't see a stray/broken column entry.
+- **Potential crash on databases with a "Favourite" (★) column enabled**
+  (#488) — a manual per-cache favourite flag with no GSAK equivalent had
+  shipped without a database migration, which could leave the column
+  missing entirely on some databases. Removed — GSAK only tracks the
+  community "Fav. points" count, which is unaffected. As a safety net,
+  the column list now also ignores any other stale column ID left over
+  from a future column removal, instead of rendering an empty,
+  untranslated column.
 
-- **Trackables table missing its migration — crashed on existing databases**
-  (closes #491) — the Trackable model (travel bugs / geocoins) has shipped
-  since v1.14.0 with no migration to actually create its table. Any existing
-  database crashed with `no such table: trackables` as soon as anything
-  queried it — including the already-shipped "Has trackables" filter. A
-  migration now creates the table on upgrade.
+- **"Has trackables" filter crashed on any database created before
+  v1.14.0** (#491) — the Trackable table itself was missing its
+  creation migration since the feature was first added. **Also included
+  in v1.14.1.**
 
-- **Map didn't refresh when corrected coordinates were set via the context
-  menu** (closes #474) — setting corrected coordinates from the cache list's
-  right-click menu now refreshes the map, reveals the pin if it was hidden
-  inside a cluster, and preserves the current selection — matching the
-  behaviour already present when setting corrected coordinates from the
-  cache detail panel.
+- **Map didn't update when correcting coordinates via the cache list's
+  right-click menu** (#474) — unlike the same action from the cache
+  detail panel, the context-menu path never told the map to refresh.
+  Fixed in three parts: the map now refreshes at all; it reveals the
+  pin from an unopened marker cluster when the new location is far from
+  the current view (previously this only worked if the cache was
+  already selected); and correcting a *different* cache than the one
+  currently selected no longer shifts focus away from it. **Also
+  included in v1.14.1.**
 
-- **Small text-size setting silently ignored on some systems** (closes #490)
-  — Qt derives the cache table's minimum row height from platform/font
-  metrics, which on some systems exceeded OpenSAK's own "Small" row height
-  setting and silently clamped it back up. The minimum is now pinned
-  explicitly so the configured text size always applies.
+- **SMALL row-height setting silently ignored on some systems** (#490)
+  — Qt's platform/font-derived minimum row height could be larger than
+  our 20px SMALL setting, silently overriding it without any visible
+  error. **Also included in v1.14.1.**
+
+---
+
+## [1.15.0-beta.3] — 2026-07-02
+
+> **Beta release** — fixes two found-status bugs reported by the community
+> while testing beta.2.
+
+### Fixed
+
+- **Found date missing for webcam caches and events on import** (#457) —
+  `found_date` was derived only from "Found it" logs, so caches whose find
+  is logged under a different log type ended up with no found date on
+  import: webcam caches use "Webcam Photo Taken" and events use "Attended".
+  Reproduced with a real My Finds PQ. The cross-database found-status sync
+  tool had the same bug and is fixed too.
+
+- **FTF detection flagged logs that only mentioned "first to find" in
+  passing** (#458) — FTF was matched on free-text phrases (`ftf`,
+  `first to find`, `first finder`, `første til at finde`) anywhere in the
+  user's own found-log text, a heuristic introduced in 1.13.2. That flagged
+  logs which merely mentioned the concept without claiming it, e.g. a log
+  describing a *failed* attempt at being first finder. FTF is now matched
+  exclusively against ProjectGC's official tags — `{FTF}`, `{*FTF*}`,
+  `[FTF]` — the same tags most geocachers already use and that ProjectGC
+  itself requires. A tooltip on the FTF column header explains this.
+
+---
+
+## [1.15.0-beta.2] — 2026-07-02
+
+> **Beta release** — fixes for issues reported by the community while
+> testing GGZ export in beta.1. Please keep testing, especially with
+> larger databases.
+
+### Fixed
+
+- **GGZ export crash on databases with mixed dated/undated logs** (#348)
+  — exporting a database where at least one cache had a log without a
+  date crashed with `'<' not supported between instances of
+  'datetime.datetime' and 'int'`. Logs are now sorted safely regardless
+  of missing dates.
+
+- **GGZ files written to the wrong folder on the device** (#348) — GGZ
+  exports landed in `Garmin/GPX` instead of `Garmin/GGZ`, unlike GSAK's
+  GarminExport macro and what Garmin devices expect.
+
+- **Wrong dates inside exported .ggz files** (#348) — the ZIP directory
+  entries (`data/`, `index/`, etc.) always showed 1980-01-01 due to a
+  Python zipfile default; they now show the actual export time.
+
+- **Severe slowdown on large GGZ exports** (#466) — exporting several
+  thousand caches could take 50+ minutes and make the app unresponsive.
+  The byte-offset calculation for Garmin's index was accidentally O(n²);
+  it's now a single linear pass — 200–1000× faster depending on cache
+  count, with the gap widening for larger databases.
+
+- **Corrected Coordinates column icon inconsistency** (follow-up to
+  #354) — the "Choose columns" dialog still showed the old red pin
+  emoji instead of the warning-triangle icon used everywhere else in
+  the app. The column header's icon and sort arrow are now centered
+  together as a pair regardless of column width, and the per-row icon
+  in the column itself is centered instead of left-aligned.
+
+---
+
+## [1.15.0-beta.1] — 2026-07-01
+
+> **Beta release** — start of the 1.15.0 testing period. Feedback especially
+> welcome on the new GGZ export.
+
+### Added
+
+- **Export to Garmin GGZ format** (closes #348) — the GPS export dialog now
+  offers a GPX/GGZ format choice. GGZ packs the exported caches (unlimited
+  count, unlike GPX-based transfers) directly into a ZIP structure Garmin
+  devices read natively, matching GSAK's GGZ layout byte-for-byte.
+
+### Fixed
+
+- **Corrected Coordinates icon visibility** (closes #354) — the small red pin
+  emoji used to mark caches with corrected coordinates was hard to see or
+  missing entirely on some systems. Replaced everywhere (table column,
+  column header, right-click menu, and the cache detail panel) with a
+  consistent SVG warning-triangle icon, in the same style GSAK uses for the
+  same purpose.
+
+---
 
 ## [1.14.0] — 2026-06-29
 
@@ -224,7 +363,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   JSON settings store — existing corrupted values repair automatically on
   startup.
 
-For planned features and known issues see the [GitHub Issues list](https://github.com/AgreeDK/opensak/issues).
+For planned features and known issues see the [GitHub Issues list](https://github.com/OpenSAK-Org/opensak/issues).
 
 ---
 
@@ -258,7 +397,7 @@ For planned features and known issues see the [GitHub Issues list](https://githu
   `requirements.txt` is removed, the bundles ship the libraries' data files (GeoNames CSV, ISO
   tables), and a smoke test exercises the real lookup so a missing dependency fails CI.
 
-For planned features and known issues see the [GitHub Issues list](https://github.com/AgreeDK/opensak/issues).
+For planned features and known issues see the [GitHub Issues list](https://github.com/OpenSAK-Org/opensak/issues).
 
 ## [1.13.11] — 2026-05-29
 

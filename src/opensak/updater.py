@@ -43,9 +43,9 @@ def _build_ssl_context() -> ssl.SSLContext:
 
 _SSL_CONTEXT = _build_ssl_context()
 
-GITHUB_API_URL          = "https://api.github.com/repos/AgreeDK/opensak/releases/latest"
-GITHUB_API_ALL_URL      = "https://api.github.com/repos/AgreeDK/opensak/releases"
-RELEASES_PAGE   = "https://github.com/AgreeDK/opensak/releases/latest"
+GITHUB_API_URL          = "https://api.github.com/repos/OpenSAK-Org/opensak/releases/latest"
+GITHUB_API_ALL_URL      = "https://api.github.com/repos/OpenSAK-Org/opensak/releases"
+RELEASES_PAGE   = "https://github.com/OpenSAK-Org/opensak/releases/latest"
 REQUEST_TIMEOUT = 10  # sekunder
 MAX_RELEASES_TO_SCAN = 20  # antal releases vi henter for at finde nyeste beta
 

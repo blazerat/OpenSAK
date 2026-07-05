@@ -114,6 +114,8 @@ def test_old_schema_runs_every_migration(tmp_path):
     with engine.connect() as c:
         cache_cols = {r[1] for r in c.execute(text("PRAGMA table_info(caches)"))}
         note_cols = {r[1] for r in c.execute(text("PRAGMA table_info(user_notes)"))}
+        wpt_cols = {r[1] for r in c.execute(text("PRAGMA table_info(waypoints)"))}
+        log_cols = {r[1] for r in c.execute(text("PRAGMA table_info(logs)"))}
         idx_names = {r[0] for r in c.execute(text(
             "SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='waypoints'"
         ))}
@@ -122,7 +124,8 @@ def test_old_schema_runs_every_migration(tmp_path):
 
     for col in ("county", "log_count", "parent_gc_code", "owner_name", "last_log_date",
                 "dnf_date", "favorite_points", "distance", "bearing", "waypoint_count",
-                "locked"):
+                "locked", "gc_note", "url", "elevation", "color", "guid", "watch",
+                "gc_cache_id", "find_count"):
         assert col in cache_cols
     assert "is_corrected" in note_cols
     # The waypoints rebuild (migration 2) creates the named unique index
@@ -130,4 +133,10 @@ def test_old_schema_runs_every_migration(tmp_path):
     assert "uq_waypoint_cache_prefix_name" in idx_names
     assert "ix_waypoints_cache_id" in idx_names
     assert row == ("GPS Adventures Maze", "Micro")  # migration 5 + 7 normalisation
+
+    for col in ("wp_code", "url", "wp_date", "created_by_user", "wp_flag"):
+        assert col in wpt_cols
+    for col in ("latitude", "longitude", "logged_by_owner"):
+        assert col in log_cols
+
     assert version == SCHEMA_VERSION

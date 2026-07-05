@@ -39,6 +39,8 @@ STRINGS: dict[str, str] = {
     "count_caches":                 "{count} caches",
     "count_cache_single":           "1 cache",
     "filter_active_label":          "🔍 Filter active",
+    "filter_no_results_title":      "No matching caches",
+    "filter_no_results_msg":        "This filter doesn't match any caches, so it has not been applied. Adjust the criteria and try again.",
 
     # ── Menu bar ──────────────────────────────────────────────────────────────
     "menu_file":                    "&File",
@@ -223,12 +225,15 @@ STRINGS: dict[str, str] = {
     "gps_caches_ready":             "<b>{count} caches</b> ready for export (currently filtered/visible caches)",
     "gps_dest_group":               "Destination",
     "gps_rb_device":                "Send directly to GPS device:",
-    "gps_rb_file":                  "Save as GPX file:",
+    "gps_rb_file":                  "Save as file:",
     "gps_scan_btn":                 "🔍 Scan",
     "gps_scan_scanning":            "⏳",
     "gps_devices_found":            "✓ {count} Garmin device(s) found",
     "gps_no_device":                "(No GPS device found)",
-    "gps_no_device_hint":           "No Garmin device found — connect your GPS and click Scan again, or use 'Save as GPX file'",
+    "gps_no_device_hint":           "No Garmin device found — connect your GPS and click Scan again, or use 'Save as file'",
+    "gps_format_group":             "Export format",
+    "gps_format_gpx":               "GPX  —  standard Garmin format (max. ~5 000 caches)",
+    "gps_format_ggz":               "GGZ  —  compressed Garmin format (unlimited caches)",
     "gps_browse":                   "Browse…",
     "gps_file_placeholder":         "Choose location…",
     "gps_opt_group":                "Options",
@@ -245,6 +250,8 @@ STRINGS: dict[str, str] = {
     "gps_confirm_no_files_msg":     "No existing GPX files found on the device.\nDo you want to continue with the upload?",
     "gps_delete_file_list":         "Files to be deleted:\n{files}",
     "gps_no_dest":                  "Please select a destination first.",
+    "gps_file_exists_title":        "File already exists",
+    "gps_file_exists_prompt":       "\"{filename}\" already exists in this location. Enter a different filename:",
 
     # ── Settings dialog ───────────────────────────────────────────────────────
     "settings_dialog_title":        "Settings",
@@ -614,6 +621,7 @@ STRINGS: dict[str, str] = {
     "col_dnf_date":          "DNF date",
     "col_found_date":       "Found date",
     "col_first_to_find":     "FTF",
+    "col_first_to_find_header_tooltip": "FTF is only detected from {FTF}, {*FTF*} or [FTF] in your own log — the same tags ProjectGC requires",
     "col_user_flag":         "🚩",
     "col_user_flag_label":   "🚩 User Flag",
     "col_user_flag_header_tooltip": "User Flag — click to toggle",
@@ -632,6 +640,7 @@ STRINGS: dict[str, str] = {
     "col_user_data_3":       "User data 3",
     "col_user_data_4":       "User data 4",
     "col_favorite_points":   "Fav. points",
+    "col_trackables":        "Trackables",
 
     # ── Right-click context menu ──────────────────────────────────────────────
     "ctx_open_geocaching":  "🌐  Open on geocaching.com",
@@ -725,13 +734,12 @@ STRINGS: dict[str, str] = {
     "detail_corrected_clear_tooltip":"Clear corrected coordinates",
     "detail_corrected_add_btn":     "Add corrected coordinates…",
 
-    "col_corrected":                "📍",
-    "col_corrected_label":          "📍 Corrected coordinates",
+    "col_corrected":                "CC",
     "col_corrected_header_tooltip": "Corrected coordinates — double-click to edit",
     "col_corrected_tooltip":        "Corrected coordinates: {coords}",
 
-    "ctx_add_corrected":            "📍  Add corrected coordinates…",
-    "ctx_edit_corrected":           "📍  Edit corrected coordinates…",
+    "ctx_add_corrected":            "Add corrected coordinates…",
+    "ctx_edit_corrected":           "Edit corrected coordinates…",
     "ctx_clear_corrected":          "✕  Clear corrected coordinates",
 
     "corrected_dialog_title":       "Corrected Coordinates",
@@ -992,7 +1000,7 @@ STRINGS: dict[str, str] = {
     "kml_dialog_done_msg":                     "{count} cache(s) exported to:\n{path}\n\nImport the file at maps.google.com/d to view them on the map.",
     "kml_dialog_error_title":                  "Export error",
     "kml_dialog_error_msg":                    "Export failed:\n{message}",
-    "action_export":                 "&Export (GPX/LOC/...)",
+    "action_export":                 "&Export (GPX/LOC/GGZ)",
     "file_export_dialog_title":      "Export caches",
     "file_export_cache_count":       "{count} caches ready for export",
     "file_export_format_label":      "File format",

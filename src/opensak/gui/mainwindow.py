@@ -365,7 +365,7 @@ class MainWindow(QMainWindow):
         wp_menu.addAction(act_copy_caches)
 
         from opensak.utils import flags
-        if flags.update_location:
+        if flags.reverse_geocoding:
             wp_menu.addSeparator()
 
             act_update_location = QAction(tr("action_update_location"), self)
@@ -1726,12 +1726,38 @@ class MainWindow(QMainWindow):
         if self._trip_planner_active():
             self._warn_trip_planner_active()
             return
+        self._show_filter_dialog(self._current_filterset, self._active_filter_name)
+
+    def _show_filter_dialog(self, filterset, active_name: str) -> None:
+        """Åbn "Set filter"-dialogen forudfyldt med et givet filterset/navn.
+
+        Delt af den normale menu-indgang (_open_filter_dialog) og af
+        _on_filter_applied's "0 resultater"-genåbning (issue #444), så
+        brugerens netop indtastede — men afviste — kriterier ikke går tabt.
+        """
         from opensak.gui.dialogs.filter_dialog import FilterDialog
-        dlg = FilterDialog(self, self._current_filterset, self._active_filter_name)
+        dlg = FilterDialog(self, filterset, active_name)
         dlg.filter_applied.connect(self._on_filter_applied)
+        dlg.profile_deleted.connect(self._on_profile_deleted)
         dlg.exec()
 
     def _on_filter_applied(self, filterset, sort, profile_name: str) -> None:
+        with get_session() as session:
+            from opensak.filters.engine import apply_filters
+            caches = apply_filters(session, filterset, sort)
+
+        if not caches:
+            # Issue #444: match GSAK's behavior — warn instead of silently
+            # switching to an empty view, and reopen "Set filter" with the
+            # same (not-yet-applied) criteria still filled in so the user
+            # can adjust them, rather than committing to a filter that
+            # hides every cache. The current view/filter is left untouched.
+            QMessageBox.warning(
+                self, tr("filter_no_results_title"), tr("filter_no_results_msg")
+            )
+            QTimer.singleShot(0, lambda: self._show_filter_dialog(filterset, profile_name))
+            return
+
         self._current_filterset = filterset
         self._current_sort = sort
         self._active_filter_name = profile_name
@@ -1741,9 +1767,6 @@ class MainWindow(QMainWindow):
         self._filter_lbl.setText(f"🔍 {label}")
         self._quick_filter.setCurrentIndex(0)
         self._populate_filter_profile_combo(select_name=profile_name)
-        with get_session() as session:
-            from opensak.filters.engine import apply_filters
-            caches = apply_filters(session, filterset, sort)
         self._cache_table.load_caches(caches)
         self._map_widget.load_caches(caches)
         count = self._cache_table.row_count()
@@ -1753,6 +1776,30 @@ class MainWindow(QMainWindow):
             self._count_lbl.setText(tr("count_caches", count=count))
         self._statusbar.showMessage(tr("status_filter_result", count=count), 3000)
         self._update_info_bar()
+
+    def _on_profile_deleted(self, name: str) -> None:
+        """Reagér på at en gemt filter-profil er slettet i "Set filter"-dialogen.
+
+        Fires uanset om dialogen efterfølgende lukkes med Apply eller bare
+        Close/Escape (issue #491). Hvis den slettede profil var det aktive
+        filter i waypoint-listen, sættes filteret til None og cache-tabellen
+        opdateres. Rører IKKE quick-search-felterne (GC code / navn) — kun
+        det avancerede filter nulstilles, jf. _refresh_cache_list() som
+        allerede kombinerer korrekt med et evt. tomt _current_filterset.
+        Hvis en anden (ikke-aktiv) profil blev slettet, opdateres kun
+        toolbar-dropdownen så den døde profil forsvinder derfra.
+        """
+        if name and name == self._active_filter_name:
+            self._current_filterset = FilterSet()
+            self._active_filter_name = ""
+            has_search = bool(self._search_gc.text().strip() or self._search_box.text().strip())
+            self._set_clear_filter_active(has_search)
+            self._filter_lbl.setText("")
+            self._populate_filter_profile_combo(select_name=None)
+            self._refresh_cache_list()
+            self._statusbar.showMessage(tr("status_filter_reset"), 3000)
+        else:
+            self._populate_filter_profile_combo(select_name=self._active_filter_name or None)
 
     def _set_clear_filter_active(self, active: bool) -> None:
         """Sæt klar-filter knappens farve og tilstand — rød når aktiv, grå når inaktiv."""
@@ -2101,7 +2148,7 @@ class MainWindow(QMainWindow):
         # the `beta` branch and aren't merged to `main` until they go stable,
         # so a hardcoded main link showed the wrong (older) changelog entry
         # for anyone running a beta.
-        changelog_url = f"https://github.com/AgreeDK/opensak/blob/{latest_tag}/CHANGELOG.md"
+        changelog_url = f"https://github.com/OpenSAK-Org/opensak/blob/{latest_tag}/CHANGELOG.md"
 
         msg = QMessageBox(self)
         if is_prerelease:

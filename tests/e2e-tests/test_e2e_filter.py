@@ -166,6 +166,71 @@ def test_clear_filter_removes_advanced_filter(seeded_window, qtbot):
     assert window._filter_lbl.text() == ""
 
 
+# ── Deleting the active saved filter profile (issue #491) ────────────────────
+
+
+def test_profile_deleted_clears_active_filter(seeded_window, qtbot):
+    # Deleting the profile that is currently active must clear the filter
+    # and restore the full row count, even though the FilterDialog itself
+    # was never applied/closed here (mirrors "Close without Apply" repro).
+    from opensak.filters.engine import FilterSet, SortSpec, CacheTypeFilter
+
+    window = seeded_window
+    fs = FilterSet(mode="AND")
+    fs.add(CacheTypeFilter(["Traditional Cache"]))
+    window._on_filter_applied(fs, SortSpec("name", ascending=True), "Traditional only")
+    qtbot.wait(50)
+    assert window._cache_table.row_count() == 2
+    assert window._active_filter_name == "Traditional only"
+
+    window._on_profile_deleted("Traditional only")
+    qtbot.wait(50)
+
+    assert window._cache_table.row_count() == TOTAL
+    assert window._active_filter_name == ""
+    assert window._filter_lbl.text() == ""
+
+
+def test_profile_deleted_of_inactive_profile_leaves_active_filter(seeded_window, qtbot):
+    # Deleting a *different*, non-active profile must not touch the
+    # currently-applied filter or the cache table.
+    from opensak.filters.engine import FilterSet, SortSpec, CacheTypeFilter
+
+    window = seeded_window
+    fs = FilterSet(mode="AND")
+    fs.add(CacheTypeFilter(["Traditional Cache"]))
+    window._on_filter_applied(fs, SortSpec("name", ascending=True), "Traditional only")
+    qtbot.wait(50)
+    assert window._cache_table.row_count() == 2
+
+    window._on_profile_deleted("Some other profile")
+    qtbot.wait(50)
+
+    assert window._cache_table.row_count() == 2
+    assert window._active_filter_name == "Traditional only"
+
+
+def test_profile_deleted_preserves_quick_search_text(seeded_window, qtbot):
+    # Deleting the active advanced filter must not wipe unrelated quick
+    # search text (GC code / name) — only _clear_filter() should do that.
+    from opensak.filters.engine import FilterSet, SortSpec, CacheTypeFilter
+
+    window = seeded_window
+    window._search_gc.setText("GC")
+    qtbot.wait(50)
+
+    fs = FilterSet(mode="AND")
+    fs.add(CacheTypeFilter(["Traditional Cache"]))
+    window._on_filter_applied(fs, SortSpec("name", ascending=True), "Traditional only")
+    qtbot.wait(50)
+
+    window._on_profile_deleted("Traditional only")
+    qtbot.wait(50)
+
+    assert window._search_gc.text() == "GC"
+    assert window._active_filter_name == ""
+
+
 # ── WhereClauseFilter integration via _on_filter_applied ──────────────────────
 
 
@@ -188,18 +253,25 @@ def test_where_clause_filter_reduces_row_count(seeded_window, qtbot):
     assert window._cache_table.row_count() == 2
 
 
-def test_where_clause_invalid_sql_hides_all_rows(seeded_window, qtbot):
-    # Invalid SQL produces zero matches — the table empties without crashing.
+def test_where_clause_invalid_sql_hides_all_rows(seeded_window, qtbot, monkeypatch):
+    # Issue #444: invalid SQL still produces zero matches, but that no
+    # longer empties the table — the (rejected) filter warns and reopens
+    # "Set filter" instead, leaving the previous view untouched.
+    import opensak.gui.icon as icon_mod
     from opensak.filters.engine import FilterSet, SortSpec, WhereClauseFilter
 
     window = seeded_window
+    monkeypatch.setattr(icon_mod.QMessageBox, "exec",
+                         lambda self: icon_mod.QMessageBox.StandardButton.Ok)
+    monkeypatch.setattr(window, "_show_filter_dialog", lambda fs, name: None)
 
     fs = FilterSet()
     fs.add(WhereClauseFilter("NOT VALID SQL @@@"))
     window._on_filter_applied(fs, SortSpec("name"), "Bad SQL")
     qtbot.wait(50)
 
-    assert window._cache_table.row_count() == 0
+    assert window._cache_table.row_count() == TOTAL  # unchanged, not emptied
+    assert window._active_filter_name != "Bad SQL"
 
 
 def test_where_clause_clear_restores_full_count(seeded_window, qtbot):
@@ -345,17 +417,59 @@ def test_text_search_hint_narrows_rows(seeded_window, qtbot):
     assert window._cache_table.row_count() == 2
 
 
-def test_text_search_no_match_returns_zero(seeded_window, qtbot):
+def test_text_search_no_match_returns_zero(seeded_window, qtbot, monkeypatch):
+    # Issue #444: a filter matching zero caches must NOT be applied — the
+    # previous view stays as-is, a warning is shown, and "Set filter" is
+    # reopened with the same (rejected) criteria so the user can adjust them.
+    import opensak.gui.icon as icon_mod
     from opensak.filters.engine import FilterSet, SortSpec, TextSearchFilter
 
     window = seeded_window
+    assert window._cache_table.row_count() == TOTAL
+
+    warned = []
+    monkeypatch.setattr(icon_mod.QMessageBox, "exec",
+                         lambda self: warned.append(self.text()) or icon_mod.QMessageBox.StandardButton.Ok)
+    reopened = []
+    monkeypatch.setattr(window, "_show_filter_dialog",
+                         lambda fs, name: reopened.append((fs, name)))
 
     fs = FilterSet()
     fs.add(TextSearchFilter("zzznomatch"))
     window._on_filter_applied(fs, SortSpec("name"), "No match")
     qtbot.wait(50)
 
-    assert window._cache_table.row_count() == 0
+    assert warned  # the "no results" warning was shown
+    assert window._cache_table.row_count() == TOTAL  # previous view untouched
+    assert window._active_filter_name != "No match"  # filter was NOT committed
+    assert reopened and reopened[0][1] == "No match"  # dialog reopened with same criteria
+
+
+def test_filter_zero_results_leaves_existing_filter_active(seeded_window, qtbot, monkeypatch):
+    # Applying a second, zero-result filter must not clobber an already
+    # active filter — the view stays on the first filter's results.
+    import opensak.gui.icon as icon_mod
+    from opensak.filters.engine import FilterSet, SortSpec, CacheTypeFilter, TextSearchFilter
+
+    window = seeded_window
+    monkeypatch.setattr(icon_mod.QMessageBox, "exec",
+                         lambda self: icon_mod.QMessageBox.StandardButton.Ok)
+    monkeypatch.setattr(window, "_show_filter_dialog", lambda fs, name: None)
+
+    fs1 = FilterSet(mode="AND")
+    fs1.add(CacheTypeFilter(["Traditional Cache"]))
+    window._on_filter_applied(fs1, SortSpec("name", ascending=True), "Traditional only")
+    qtbot.wait(50)
+    assert window._cache_table.row_count() == 2
+    assert window._active_filter_name == "Traditional only"
+
+    fs2 = FilterSet()
+    fs2.add(TextSearchFilter("zzznomatch"))
+    window._on_filter_applied(fs2, SortSpec("name"), "No match")
+    qtbot.wait(50)
+
+    assert window._cache_table.row_count() == 2  # unchanged — still "Traditional only"
+    assert window._active_filter_name == "Traditional only"
 
 
 def test_where_exists_logs_narrows_rows(seeded_window, qtbot):

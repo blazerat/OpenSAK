@@ -39,6 +39,8 @@ STRINGS: dict[str, str] = {
     "count_caches":                 "{count} cacher",
     "count_cache_single":           "1 cache",
     "filter_active_label":          "🔍 Filter aktivt",
+    "filter_no_results_title":      "Inga matchande caches",
+    "filter_no_results_msg":        "Det här filtret matchar inga caches och har därför inte tillämpats. Justera kriterierna och försök igen.",
 
     # ── Menu bar ──────────────────────────────────────────────────────────────
     "menu_file":                    "&Fil",
@@ -223,12 +225,15 @@ STRINGS: dict[str, str] = {
     "gps_caches_ready":             "<b>{count} cacher</b> klara för export (filtrerade/synbara cacher)",
     "gps_dest_group":               "Destination",
     "gps_rb_device":                "Skicka direkt till GPS enhet:",
-    "gps_rb_file":                  "Spara som GPX fil:",
+    "gps_rb_file":                  "Spara som fil:",
     "gps_scan_btn":                 "🔍 Skanna",
     "gps_scan_scanning":            "⏳",
     "gps_devices_found":            "✓ {count} Garmin enhet(r) hittade",
     "gps_no_device":                "(Ingen GPS enhet hittad)",
-    "gps_no_device_hint":           "Ingen GPS enhet hittad — anslut din GPS och klicka Skanna igen eller använd 'Spara som GPX fil'",
+    "gps_no_device_hint":           "Ingen GPS enhet hittad — anslut din GPS och klicka Skanna igen eller använd 'Spara som fil'",
+    "gps_format_group":             "Exportformat",
+    "gps_format_gpx":               "GPX  —  standard Garmin-format (max. ~5 000 cachar)",
+    "gps_format_ggz":               "GGZ  —  komprimerat Garmin-format (obegränsat antal cachar)",
     "gps_browse":                   "Bläddra…",
     "gps_file_placeholder":         "Välj plats…",
     "gps_opt_group":                "Alternativ",
@@ -245,6 +250,8 @@ STRINGS: dict[str, str] = {
     "gps_confirm_no_files_msg":     "Inga GPX filer hittades på enheten.\nVill du fortsätta uppladdning?",
     "gps_delete_file_list":         "Filer som tas bort:\n{files}",
     "gps_no_dest":                  "Välj en måldestination först.",
+    "gps_file_exists_title":        "Filen finns redan",
+    "gps_file_exists_prompt":       "\"{filename}\" finns redan på denna plats. Ange ett annat filnamn:",
 
     # ── Settings dialog ───────────────────────────────────────────────────────
     "settings_dialog_title":        "Inställningar",
@@ -615,6 +622,7 @@ STRINGS: dict[str, str] = {
     "col_dnf_date":          "DNF-datum",
     "col_found_date":       "Hittad datum",
     "col_first_to_find":     "FTF",
+    "col_first_to_find_header_tooltip": "FTF upptäcks endast från {FTF}, {*FTF*} eller [FTF] i din egen logg — samma taggar som ProjectGC kräver",
     "col_user_flag":         "🚩",
     "col_user_flag_label":   "🚩 Användarflagga",
     "col_user_flag_header_tooltip": "Användarflagga — klicka för att växla",
@@ -633,6 +641,7 @@ STRINGS: dict[str, str] = {
     "col_user_data_3":       "Användardata 3",
     "col_user_data_4":       "Användardata 4",
     "col_favorite_points":   "Fav.-poäng",
+    "col_trackables":        "Trackables",
 
     # ── Right-click context menu ──────────────────────────────────────────────
     "ctx_open_geocaching":  "🌐  Öppna hos geocaching.com",
@@ -726,13 +735,12 @@ STRINGS: dict[str, str] = {
     "detail_corrected_clear_tooltip":"Rensa korrigerade koordinater",
     "detail_corrected_add_btn":     "Lägg till korrigerade koordinater…",
 
-    "col_corrected":                "📍",
-    "col_corrected_label":          "📍 Korrigerade koordinater",
+    "col_corrected":                "CC",
     "col_corrected_header_tooltip": "Korrigerade koordinater — dubbelklicka för att redigera",
     "col_corrected_tooltip":        "Korrigerade koordinater: {coords}",
 
-    "ctx_add_corrected":            "📍  Ange korrigerade koordinater…",
-    "ctx_edit_corrected":           "📍  Editera korrigerade koordinater…",
+    "ctx_add_corrected":            "Ange korrigerade koordinater…",
+    "ctx_edit_corrected":           "Editera korrigerade koordinater…",
     "ctx_clear_corrected":          "✕  Rensa korrigerade koordinater",
 
     "corrected_dialog_title":       "Korrigerade koordinater",
@@ -993,7 +1001,7 @@ STRINGS: dict[str, str] = {
     "kml_dialog_done_msg":                     "{count} cache(r) exporterade till:\n{path}\n\nImportera filen på maps.google.com/d.",
     "kml_dialog_error_title":                  "Exportfel",
     "kml_dialog_error_msg":                    "Export misslyckades:\n{message}",
-    "action_export":                 "&Exportera (GPX/LOC/...)",
+    "action_export":                 "&Exportera (GPX/LOC/GGZ)",
     "file_export_dialog_title":      "Exportera cacher",
     "file_export_cache_count":       "{count} cacher redo för export",
     "file_export_format_label":      "Filformat",

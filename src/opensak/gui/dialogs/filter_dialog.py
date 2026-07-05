@@ -204,6 +204,8 @@ class FilterDialog(QDialog):
     """Komplet filter dialog med tre faner."""
 
     filter_applied = Signal(object, object, str)  # FilterSet, SortSpec, profile_name
+    profile_deleted = Signal(str)  # profile_name — fires immediately on delete (issue #491),
+                                    # independent of whether the dialog is later applied or closed
 
     def __init__(self, parent=None, current_filterset: Optional[FilterSet] = None,
                  last_profile_name: str = ""):
@@ -1316,6 +1318,9 @@ class FilterDialog(QDialog):
             except Exception:
                 pass
             self._load_profiles_into_combo()
+            # issue #491: rapportér straks til MainWindow at profilen er væk, uanset
+            # om dialogen bagefter lukkes med Apply eller bare med Close/Escape.
+            self.profile_deleted.emit(name)
 
     def _load_filterset(self, fs: FilterSet) -> None:
         """Udfyld UI felter fra et eksisterende FilterSet.
