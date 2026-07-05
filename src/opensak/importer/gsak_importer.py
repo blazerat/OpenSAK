@@ -6,8 +6,7 @@ Reads a GSAK ``sqlite.db3`` file directly (confirmed genuine SQLite 3,
 see #469 investigation) and upserts caches straight into OpenSAK's own
 SQLAlchemy models, without going via GPX.
 
-── Session 1 scope (this file) ───────────────────────────────────────────────
-Core cache data only:
+── Session 1 (core cache data) ───────────────────────────────────────────────
     - Caches + CacheMemo   -> Cache (scalar fields, incl. the #469 schema
       additions: gc_note, url, elevation, color, guid, watch, gc_cache_id)
     - Corrected            -> UserNote.corrected_lat/lon/is_corrected
@@ -17,9 +16,21 @@ Core cache data only:
       Groundspeak attribute table + English strings, since GSAK's Attributes
       table only stores aId/aInc, unlike GPX's inline <gs:attribute> text)
 
+── Session 2 (this addition) ─────────────────────────────────────────────────
+    - Logs + LogMemo -> Log (full history, not capped like GPX/PQ exports).
+      ``log_id`` is built as ``f"{lParent}_{lLogId}"`` rather than using
+      GSAK's ``lLogId`` alone: verified against a real 1.1M-row database that
+      the same ``lLogId`` can appear on up to 45 *different* caches (e.g. a
+      single day's "Team Position Police" power-trail run) — GSAK's log ID
+      is not globally unique the way a real GC.com log GUID is, but
+      ``(lParent, lLogId)`` together always is (verified 1,123,992 rows =
+      1,123,992 distinct pairs). ``lEncoded`` maps straight to
+      ``text_encoded`` (same concept as GPX's ``<gs:text encoded="..">``).
+      ``lIsowner`` -> ``logged_by_owner`` (#469 schema addition).
+      ``log_count``/``last_log_date`` on Cache are (re)computed from the
+      imported logs, mirroring GPX import (#87/#186).
+
 Deliberately NOT imported yet (later sessions per #469 plan):
-    - Logs / LogMemo        (session 2 — full history, perf-tested against
-      a 1.1M-row real database)
     - UserNote.note         (session 3 — personal note *text*, needs the
       file:/// embedded-image placeholder pre-scan agreed in #472)
     - CacheMemo.TravelBugs, Custom/CustomLocal, Ignore (out of scope / #473)
@@ -27,26 +38,29 @@ Deliberately NOT imported yet (later sessions per #469 plan):
       turned out (verified against a real 12,600-cache database) to be
       identical to Found (0/1, "found by me"), not a true community find
       count, so there is no honest GSAK source for it yet. A count of
-      "Found it" logs per cache is the closest approximation once Logs
-      are imported in session 2 — revisit find_count then.
+      "Found it" logs per cache (now available, see session 2 above) is
+      the closest approximation — still deliberately not wired up to
+      find_count, since it would not match the real GC.com number for
+      caches with partial/capped log history, and it's better to make that
+      a conscious choice with Allan than a silent approximation.
 
 Because this is a *partial*-scope import, re-running it on a database that
-already has logs/trackables (e.g. from an earlier GPX import) must NEVER
-touch those tables — only Waypoints and Attributes are rebuilt on
-re-import here, unlike the GPX importer's ``_upsert_cache`` which rebuilds
-everything every time.
+already has trackables (e.g. from an earlier GPX import) must NEVER touch
+that table — only Waypoints, Attributes and (as of session 2) Logs are
+rebuilt on re-import here, unlike the GPX importer's ``_upsert_cache``
+which rebuilds everything every time.
 """
 
 from __future__ import annotations
 
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional
 
 from sqlalchemy.orm import Session
 
-from opensak.db.models import Attribute, Cache, UserNote, Waypoint
+from opensak.db.models import Attribute, Cache, Log, UserNote, Waypoint
 from opensak.importer import (
     ImportResult,
     _enter_bulk_import_pragmas,
@@ -152,16 +166,19 @@ def _attribute_name_lookup() -> dict[int, str]:
 
 
 class GsakImportResult(ImportResult):
-    """ImportResult plus GSAK-specific counters (attributes, corrected coords)."""
+    """ImportResult plus GSAK-specific counters (attributes, corrected coords, logs)."""
 
     def __init__(self):
         super().__init__()
         self.attributes: int = 0
         self.corrected: int = 0
+        self.logs: int = 0
 
     def __str__(self) -> str:
         base = super().__str__()
-        return base + f"\n  Attributes     : {self.attributes}\n  Corrected coords: {self.corrected}"
+        return (base + f"\n  Attributes     : {self.attributes}"
+                f"\n  Corrected coords: {self.corrected}"
+                f"\n  Logs           : {self.logs}")
 
 
 def _open_readonly(db_path: Path) -> sqlite3.Connection:
@@ -201,6 +218,58 @@ def _load_waypoints_by_parent(conn: sqlite3.Connection) -> dict[str, list[dict]]
             "wp_flag":         _b(row["cFlag"]),
             "comment":         _s(row["cComment"]),
             "url":             _s(row["cUrl"]),
+        })
+    return by_parent
+
+
+def _combine_date_time(date_val, time_val) -> Optional[datetime]:
+    """Combine GSAK's separate lDate ('YYYY-MM-DD') and lTime ('HH:MM:SS')
+    columns into one datetime. Falls back to midnight if lTime is missing."""
+    base = _d(date_val)
+    if base is None:
+        return None
+    raw_time = _s(time_val)
+    if raw_time is None:
+        return base
+    try:
+        h, m, sec = (int(p) for p in raw_time.split(":"))
+        return base + timedelta(hours=h, minutes=m, seconds=sec)
+    except (ValueError, TypeError):
+        return base
+
+
+def _load_logs_by_parent(conn: sqlite3.Connection) -> dict[str, list[dict]]:
+    """Return ``{parent_gc_code: [log dict, ...]}`` for every log entry.
+
+    LEFT JOINs LogMemo since the two tables can drift by a row or two in
+    practice (seen on the 12,600-cache sample: 1,123,992 Logs vs 1,123,991
+    LogMemo rows) — a missing LogMemo row must not drop the log itself.
+    """
+    cur = conn.execute("""
+        SELECT l.lParent, l.lLogId, l.lType, l.lBy, l.lDate, l.lTime,
+               l.lLat, l.lLon, l.lEncoded, l.lownerid, l.lIsowner,
+               m.lText
+        FROM Logs l
+        LEFT JOIN LogMemo m ON l.lParent = m.lParent AND l.lLogId = m.lLogId
+    """)
+    by_parent: dict[str, list[dict]] = {}
+    for row in cur.fetchall():
+        parent = row["lParent"]
+        # GSAK's lLogId is only unique *per cache*, not globally (verified:
+        # the same lLogId can appear on dozens of different caches — see
+        # module docstring). (lParent, lLogId) together is always unique,
+        # so that's what we build our globally-unique log_id from.
+        by_parent.setdefault(parent, []).append({
+            "log_id":       f"{parent}_{row['lLogId']}",
+            "log_type":     _s(row["lType"]) or "Note",
+            "log_date":     _combine_date_time(row["lDate"], row["lTime"]),
+            "finder":       _s(row["lBy"]),
+            "finder_id":    _s(row["lownerid"]),
+            "latitude":     _f(row["lLat"]),
+            "longitude":    _f(row["lLon"]),
+            "text_encoded": _b(row["lEncoded"]),
+            "logged_by_owner": _b(row["lIsowner"]),
+            "text":         _s(row["lText"]),
         })
     return by_parent
 
@@ -324,6 +393,7 @@ def _upsert_cache_from_gsak(
     data: dict,
     attr_rows: list[dict],
     wpt_rows: list[dict],
+    log_rows: list[dict],
     corrected: Optional[dict],
     attr_names: dict[int, str],
     source_file: str,
@@ -331,12 +401,12 @@ def _upsert_cache_from_gsak(
     warnings: Optional[list[str]] = None,
 ) -> tuple[Cache, bool]:
     """
-    Insert or update a Cache row from parsed GSAK data (session 1 scope).
+    Insert or update a Cache row from parsed GSAK data (sessions 1+2 scope).
 
     Unlike the GPX importer's ``_upsert_cache``, this only rebuilds
-    Waypoints and Attributes on re-import — Logs and Trackables are left
-    completely untouched, since they are out of scope for this session and
-    may already hold real data from an earlier GPX import.
+    Waypoints, Attributes and Logs on re-import — Trackables are left
+    completely untouched, since they are out of scope for now and may
+    already hold real data from an earlier GPX import.
     """
     gc_code = data["gc_code"]
     cid = existing_ids.get(gc_code)
@@ -352,6 +422,7 @@ def _upsert_cache_from_gsak(
         cache = existing
         session.query(Waypoint).filter_by(cache_id=cache.id).delete(synchronize_session=False)
         session.query(Attribute).filter_by(cache_id=cache.id).delete(synchronize_session=False)
+        session.query(Log).filter_by(cache_id=cache.id).delete(synchronize_session=False)
         cache.waypoint_count = 0
         session.flush()
 
@@ -428,6 +499,55 @@ def _upsert_cache_from_gsak(
         ))
     cache.waypoint_count = len(seen_wpt_keys)
 
+    # bulk_insert_mappings below needs a real cache.id — guaranteed for
+    # existing caches, but a brand-new cache only gets one on flush.
+    if cache.id is None:
+        session.flush()
+
+    # Logs
+    # log_id is built as f"{gc_code}_{lLogId}" in _load_logs_by_parent, which
+    # is verified unique per (parent, lLogId) pair — but guard with a seen-set
+    # anyway (defence in depth, e.g. if a future GSAK version's data doesn't
+    # hold that invariant) so a collision drops the duplicate instead of
+    # crashing the whole cache via the logs.log_id UNIQUE constraint.
+    #
+    # Uses bulk_insert_mappings rather than per-row session.add(Log(...)) —
+    # on the 1.1M-log real database, individual ORM object creation took
+    # ~185s total; bulk_insert_mappings bypasses per-object unit-of-work
+    # tracking for a large, uniform, insert-only batch like this.
+    seen_log_ids: set[str] = set()
+    log_dates: list[datetime] = []
+    log_mappings: list[dict] = []
+    for lg in log_rows:
+        log_id = lg["log_id"]
+        if log_id in seen_log_ids:
+            if warnings is not None:
+                warnings.append(f"{gc_code}: dropped duplicate log id {log_id!r}")
+            continue
+        seen_log_ids.add(log_id)
+        log_mappings.append({
+            "cache_id":        cache.id,
+            "log_id":          log_id,
+            "log_type":        lg["log_type"],
+            "log_date":        lg["log_date"],
+            "finder":          lg["finder"],
+            "finder_id":       lg["finder_id"],
+            "text":            lg["text"],
+            "text_encoded":    lg["text_encoded"],
+            "latitude":        lg["latitude"],
+            "longitude":       lg["longitude"],
+            "logged_by_owner": lg["logged_by_owner"],
+        })
+        if lg["log_date"] is not None:
+            log_dates.append(lg["log_date"])
+
+    if log_mappings:
+        session.bulk_insert_mappings(Log, log_mappings)
+
+    # ── Issue #87/#186: cached log_count / last_log_date for fast UI display
+    cache.log_count = len(seen_log_ids)
+    cache.last_log_date = max(log_dates) if log_dates else None
+
     # Corrected coordinates -> UserNote (note text itself is session 3 scope;
     # an existing note's text is left untouched here either way).
     if corrected is not None:
@@ -444,7 +564,7 @@ def _upsert_cache_from_gsak(
 
 def _flush_gsak_batch(
     session: Session,
-    batch: list[tuple[dict, list[dict], list[dict], Optional[dict]]],
+    batch: list[tuple[dict, list[dict], list[dict], list[dict], Optional[dict]]],
     attr_names: dict[int, str],
     source: str,
     existing_ids: dict[str, int],
@@ -458,9 +578,9 @@ def _flush_gsak_batch(
     sp = session.begin_nested()
     try:
         pending: list[tuple[Cache, bool, int, bool]] = []
-        for data, attr_rows, wpt_rows, corrected in batch:
+        for data, attr_rows, wpt_rows, log_rows, corrected in batch:
             cache, created = _upsert_cache_from_gsak(
-                session, data, attr_rows, wpt_rows, corrected,
+                session, data, attr_rows, wpt_rows, log_rows, corrected,
                 attr_names, source, existing_ids, result.warnings,
             )
             pending.append((cache, created, len(attr_rows), corrected is not None))
@@ -478,24 +598,25 @@ def _flush_gsak_batch(
             result.updated += 1
         result.waypoints += cache.waypoint_count
         result.attributes += n_attrs
+        result.logs += cache.log_count
         if had_corrected:
             result.corrected += 1
 
 
 def _flush_gsak_batch_isolated(
     session: Session,
-    batch: list[tuple[dict, list[dict], list[dict], Optional[dict]]],
+    batch: list[tuple[dict, list[dict], list[dict], list[dict], Optional[dict]]],
     attr_names: dict[int, str],
     source: str,
     existing_ids: dict[str, int],
     result: GsakImportResult,
 ) -> None:
     """Replay a batch one cache at a time so a single bad cache only skips itself."""
-    for data, attr_rows, wpt_rows, corrected in batch:
+    for data, attr_rows, wpt_rows, log_rows, corrected in batch:
         cell = session.begin_nested()
         try:
             cache, created = _upsert_cache_from_gsak(
-                session, data, attr_rows, wpt_rows, corrected,
+                session, data, attr_rows, wpt_rows, log_rows, corrected,
                 attr_names, source, existing_ids, result.warnings,
             )
             cell.commit()
@@ -506,6 +627,7 @@ def _flush_gsak_batch_isolated(
                 result.updated += 1
             result.waypoints += cache.waypoint_count
             result.attributes += len(attr_rows)
+            result.logs += cache.log_count
             if corrected is not None:
                 result.corrected += 1
         except Exception as e:
@@ -521,8 +643,8 @@ def import_gsak_db(
     batch_size: int = 200,
 ) -> GsakImportResult:
     """
-    Import a GSAK ``sqlite.db3`` file directly into OpenSAK (session 1 scope:
-    Caches/CacheMemo/Corrected/Waypoints/WayMemo/Attributes only).
+    Import a GSAK ``sqlite.db3`` file directly into OpenSAK (sessions 1+2
+    scope: Caches/CacheMemo/Corrected/Waypoints/WayMemo/Attributes/Logs).
 
     Parameters
     ----------
@@ -553,12 +675,13 @@ def import_gsak_db(
         wpts_by_parent = _load_waypoints_by_parent(conn)
         attrs_by_code = _load_attributes_by_code(conn)
         corrected_by_code = _load_corrected_by_code(conn)
+        logs_by_parent = _load_logs_by_parent(conn)
         attr_names = _attribute_name_lookup()
 
         existing_ids = _load_existing_gc_map(session)
         _enter_bulk_import_pragmas(session)
 
-        batch: list[tuple[dict, list[dict], list[dict], Optional[dict]]] = []
+        batch: list[tuple[dict, list[dict], list[dict], list[dict], Optional[dict]]] = []
         done = 0
         source = str(db_path)
 
@@ -575,6 +698,7 @@ def import_gsak_db(
                     data,
                     attrs_by_code.get(gc_code, []),
                     wpts_by_parent.get(gc_code, []),
+                    logs_by_parent.get(gc_code, []),
                     corrected_by_code.get(gc_code),
                 ))
                 if len(batch) >= batch_size:

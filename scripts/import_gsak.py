@@ -77,7 +77,7 @@ def main() -> None:
         print(f"No --db given: using a SCRATCH database (not your real one): {target_db}")
 
     print("=" * 60)
-    print("  OpenSAK — GSAK Direct Database Import (session 1)")
+    print("  OpenSAK — GSAK Direct Database Import (sessions 1+2)")
     print("=" * 60)
     print(f"\nSource GSAK database : {db3_path}")
     print(f"Target OpenSAK database: {target_db}\n")

@@ -16,7 +16,7 @@ from pathlib import Path
 
 import pytest
 
-from opensak.db.models import Attribute, Cache, UserNote, Waypoint
+from opensak.db.models import Attribute, Cache, Log, UserNote, Waypoint
 from opensak.importer.gsak_importer import (
     GSAK_CACHE_TYPE_MAP,
     GSAK_CONTAINER_MAP,
@@ -57,6 +57,14 @@ _SCHEMA = [
     """CREATE TABLE Attributes (
         aCode TEXT, aId INTEGER, aInc INTEGER
     )""",
+    """CREATE TABLE Logs (
+        lParent TEXT, lLogId INTEGER, lType TEXT, lBy TEXT, lDate TEXT,
+        lTime TEXT, lLat TEXT, lLon TEXT, lEncoded INTEGER,
+        lownerid INTEGER, lHasHtml INTEGER, lIsowner INTEGER
+    )""",
+    """CREATE TABLE LogMemo (
+        lParent TEXT, lLogId INTEGER, lText TEXT
+    )""",
 ]
 
 _DEFAULT_CACHE = dict(
@@ -80,6 +88,8 @@ def _make_gsak_db(
     waypoints: list[dict] | None = None,
     waymemos: list[dict] | None = None,
     attributes: list[dict] | None = None,
+    logs: list[dict] | None = None,
+    logmemos: list[dict] | None = None,
 ) -> Path:
     conn = sqlite3.connect(path)
     for ddl in _SCHEMA:
@@ -115,6 +125,16 @@ def _make_gsak_db(
         cols = ", ".join(a.keys())
         qs = ", ".join("?" for _ in a)
         conn.execute(f"INSERT INTO Attributes ({cols}) VALUES ({qs})", list(a.values()))
+
+    for lg in (logs or []):
+        cols = ", ".join(lg.keys())
+        qs = ", ".join("?" for _ in lg)
+        conn.execute(f"INSERT INTO Logs ({cols}) VALUES ({qs})", list(lg.values()))
+
+    for lm in (logmemos or []):
+        cols = ", ".join(lm.keys())
+        qs = ", ".join("?" for _ in lm)
+        conn.execute(f"INSERT INTO LogMemo ({cols}) VALUES ({qs})", list(lm.values()))
 
     conn.commit()
     conn.close()
@@ -325,20 +345,21 @@ def test_reimport_updates_not_duplicates(db_session, tmp_path):
     assert db_session.query(Cache).count() == 1
 
 
-def test_reimport_does_not_touch_existing_logs(db_session, tmp_path):
-    # GSAK import (session 1 scope) must never wipe Logs/Trackables that a
-    # prior GPX import may have populated — those tables are entirely out
-    # of scope here and are simply left alone.
-    from opensak.db.models import Log
+def test_reimport_does_not_touch_trackables(db_session, tmp_path):
+    # Trackables remain entirely out of scope (no GSAK source table maps to
+    # our Trackable model — see module docstring) — a prior GPX import's
+    # trackables must survive a GSAK re-import untouched, unlike Logs, which
+    # are legitimately rebuilt every time as of session 2.
+    from opensak.db.models import Trackable
 
     db = _make_gsak_db(tmp_path / "gsak.db3")
     import_gsak_db(db, db_session)
     cache = db_session.query(Cache).filter_by(gc_code="GC1TEST").one()
-    db_session.add(Log(cache=cache, log_type="Found it", finder="Someone"))
+    db_session.add(Trackable(cache=cache, ref="TB123", name="Some Travel Bug"))
     db_session.commit()
 
     import_gsak_db(db, db_session)
-    assert db_session.query(Log).count() == 1
+    assert db_session.query(Trackable).count() == 1
 
 
 def test_locked_cache_is_not_overwritten(db_session, tmp_path):
@@ -367,3 +388,111 @@ def test_row_with_missing_coordinates_is_skipped(db_session, tmp_path):
     result = import_gsak_db(db, db_session)
     assert result.skipped == 1
     assert result.created == 0
+
+
+# ── Logs (session 2) ──────────────────────────────────────────────────────────
+
+def test_log_mapping(db_session, tmp_path):
+    db = _make_gsak_db(
+        tmp_path / "gsak.db3",
+        logs=[{
+            "lParent": "GC1TEST", "lLogId": 123456, "lType": "Found it",
+            "lBy": "Someone", "lDate": "2024-03-01", "lTime": "14:30:00",
+            "lLat": "", "lLon": "", "lEncoded": 0,
+            "lownerid": 999, "lHasHtml": 0, "lIsowner": 0,
+        }],
+        logmemos=[{"lParent": "GC1TEST", "lLogId": 123456, "lText": "Nice find!"}],
+    )
+    result = import_gsak_db(db, db_session)
+    assert result.logs == 1
+
+    log = db_session.query(Log).one()
+    assert log.log_id == "GC1TEST_123456"
+    assert log.log_type == "Found it"
+    assert log.finder == "Someone"
+    assert log.finder_id == "999"
+    assert log.text == "Nice find!"
+    assert log.text_encoded is False
+    assert log.logged_by_owner is False
+    assert log.log_date.year == 2024 and log.log_date.hour == 14 and log.log_date.minute == 30
+
+    cache = db_session.query(Cache).filter_by(gc_code="GC1TEST").one()
+    assert cache.log_count == 1
+    assert cache.last_log_date == log.log_date
+
+
+def test_log_id_uniqueness_across_caches_with_same_gsak_log_id(db_session, tmp_path):
+    # Real-world edge case found during #469 testing: GSAK's own lLogId is
+    # NOT globally unique — the same lLogId can appear on many different
+    # caches (e.g. a power-trail run logged on one day). Our log_id is built
+    # as f"{lParent}_{lLogId}" specifically to stay unique across the whole
+    # database despite this.
+    db = _make_gsak_db(
+        tmp_path / "gsak.db3",
+        caches=[{"Code": "GC1TEST"}, {"Code": "GC2TEST"}],
+        memos=[{"Code": "GC1TEST"}, {"Code": "GC2TEST"}],
+        logs=[
+            {"lParent": "GC1TEST", "lLogId": 42, "lType": "Found it",
+             "lBy": "X", "lDate": "2024-01-01", "lTime": "", "lLat": "", "lLon": "",
+             "lEncoded": 0, "lownerid": 1, "lHasHtml": 0, "lIsowner": 0},
+            {"lParent": "GC2TEST", "lLogId": 42, "lType": "Found it",
+             "lBy": "X", "lDate": "2024-01-01", "lTime": "", "lLat": "", "lLon": "",
+             "lEncoded": 0, "lownerid": 1, "lHasHtml": 0, "lIsowner": 0},
+        ],
+    )
+    result = import_gsak_db(db, db_session)
+    assert result.errors == []
+    assert result.logs == 2
+    log_ids = {lg.log_id for lg in db_session.query(Log).all()}
+    assert log_ids == {"GC1TEST_42", "GC2TEST_42"}
+
+
+def test_log_owner_and_coordinates(db_session, tmp_path):
+    db = _make_gsak_db(
+        tmp_path / "gsak.db3",
+        logs=[{
+            "lParent": "GC1TEST", "lLogId": 1, "lType": "Update Coordinates",
+            "lBy": "Owner", "lDate": "2024-01-01", "lTime": "",
+            "lLat": "55.6001", "lLon": "11.2002", "lEncoded": 0,
+            "lownerid": 1, "lHasHtml": 0, "lIsowner": 1,
+        }],
+    )
+    import_gsak_db(db, db_session)
+    log = db_session.query(Log).one()
+    assert log.logged_by_owner is True
+    assert log.latitude == pytest.approx(55.6001)
+    assert log.longitude == pytest.approx(11.2002)
+
+
+def test_logmemo_missing_row_does_not_drop_log(db_session, tmp_path):
+    # Mirrors the Waypoints/WayMemo drift check — Logs/LogMemo can drift by
+    # a row or two in real GSAK databases (seen: 1,123,992 vs 1,123,991 on
+    # a real 12,600-cache DB).
+    db = _make_gsak_db(
+        tmp_path / "gsak.db3",
+        logs=[{
+            "lParent": "GC1TEST", "lLogId": 1, "lType": "Write note",
+            "lBy": "X", "lDate": "", "lTime": "", "lLat": "", "lLon": "",
+            "lEncoded": 0, "lownerid": 1, "lHasHtml": 0, "lIsowner": 0,
+        }],
+        logmemos=[],  # deliberately missing
+    )
+    result = import_gsak_db(db, db_session)
+    assert result.logs == 1
+    log = db_session.query(Log).one()
+    assert log.text is None
+
+
+def test_reimport_rebuilds_logs_not_duplicates(db_session, tmp_path):
+    db = _make_gsak_db(
+        tmp_path / "gsak.db3",
+        logs=[{
+            "lParent": "GC1TEST", "lLogId": 1, "lType": "Found it",
+            "lBy": "X", "lDate": "2024-01-01", "lTime": "", "lLat": "", "lLon": "",
+            "lEncoded": 0, "lownerid": 1, "lHasHtml": 0, "lIsowner": 0,
+        }],
+    )
+    import_gsak_db(db, db_session)
+    result = import_gsak_db(db, db_session)
+    assert result.logs == 1
+    assert db_session.query(Log).count() == 1
