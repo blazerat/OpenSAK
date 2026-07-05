@@ -1671,13 +1671,38 @@ class MainWindow(QMainWindow):
         if self._trip_planner_active():
             self._warn_trip_planner_active()
             return
+        self._show_filter_dialog(self._current_filterset, self._active_filter_name)
+
+    def _show_filter_dialog(self, filterset, active_name: str) -> None:
+        """Åbn "Set filter"-dialogen forudfyldt med et givet filterset/navn.
+
+        Delt af den normale menu-indgang (_open_filter_dialog) og af
+        _on_filter_applied's "0 resultater"-genåbning (issue #444), så
+        brugerens netop indtastede — men afviste — kriterier ikke går tabt.
+        """
         from opensak.gui.dialogs.filter_dialog import FilterDialog
-        dlg = FilterDialog(self, self._current_filterset, self._active_filter_name)
+        dlg = FilterDialog(self, filterset, active_name)
         dlg.filter_applied.connect(self._on_filter_applied)
         dlg.profile_deleted.connect(self._on_profile_deleted)
         dlg.exec()
 
     def _on_filter_applied(self, filterset, sort, profile_name: str) -> None:
+        with get_session() as session:
+            from opensak.filters.engine import apply_filters
+            caches = apply_filters(session, filterset, sort)
+
+        if not caches:
+            # Issue #444: match GSAK's behavior — warn instead of silently
+            # switching to an empty view, and reopen "Set filter" with the
+            # same (not-yet-applied) criteria still filled in so the user
+            # can adjust them, rather than committing to a filter that
+            # hides every cache. The current view/filter is left untouched.
+            QMessageBox.warning(
+                self, tr("filter_no_results_title"), tr("filter_no_results_msg")
+            )
+            QTimer.singleShot(0, lambda: self._show_filter_dialog(filterset, profile_name))
+            return
+
         self._current_filterset = filterset
         self._current_sort = sort
         self._active_filter_name = profile_name
@@ -1687,9 +1712,6 @@ class MainWindow(QMainWindow):
         self._filter_lbl.setText(f"🔍 {label}")
         self._quick_filter.setCurrentIndex(0)
         self._populate_filter_profile_combo(select_name=profile_name)
-        with get_session() as session:
-            from opensak.filters.engine import apply_filters
-            caches = apply_filters(session, filterset, sort)
         self._cache_table.load_caches(caches)
         self._map_widget.load_caches(caches)
         count = self._cache_table.row_count()

@@ -39,6 +39,8 @@ STRINGS: dict[str, str] = {
     "count_caches":                 "{count} keší",
     "count_cache_single":           "1 keš",
     "filter_active_label":          "🔍 Filtr aktivní",
+    "filter_no_results_title":      "Žádné odpovídající keše",
+    "filter_no_results_msg":        "Tento filtr neodpovídá žádné keši, a proto nebyl použit. Upravte kritéria a zkuste to znovu.",
 
     # ── Menu bar ──────────────────────────────────────────────────────────────
     "menu_file":                    "&Soubor",

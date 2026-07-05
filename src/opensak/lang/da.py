@@ -39,6 +39,8 @@ STRINGS: dict[str, str] = {
     "count_caches":                 "{count} caches",
     "count_cache_single":           "1 cache",
     "filter_active_label":          "🔍 Filter aktivt",
+    "filter_no_results_title":      "Ingen matchende caches",
+    "filter_no_results_msg":        "Dette filter matcher ingen caches og er derfor ikke blevet anvendt. Justér kriterierne og prøv igen.",
 
     # ── Menulinje ─────────────────────────────────────────────────────────────
     "menu_file":                    "&Fil",

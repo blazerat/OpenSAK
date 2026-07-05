@@ -39,6 +39,8 @@ STRINGS: dict[str, str] = {
     "count_caches":                 "{count} caches",
     "count_cache_single":           "1 cache",
     "filter_active_label":          "🔍 Filtro ativo",
+    "filter_no_results_title":      "Nenhuma cache correspondente",
+    "filter_no_results_msg":        "Este filtro não corresponde a nenhuma cache, por isso não foi aplicado. Ajuste os critérios e tente novamente.",
 
     # ── Menu bar ──────────────────────────────────────────────────────────────
     "menu_file":                    "&Ficheiro",
